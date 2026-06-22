@@ -195,7 +195,7 @@ app.use(
 app.use("/admin/live-session",  adminClassSessionRoutes)
 
     // Sync models AFTER models are loaded
-    await sequelize.sync({alter: true});
+    await sequelize.sync();
     console.log("🚀 Sequelize models synced");
 
     app.listen(PORT , () => {
