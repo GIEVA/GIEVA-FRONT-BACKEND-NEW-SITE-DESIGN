@@ -106,6 +106,7 @@ import ExamPayments from "./pages/admin/ExamPayments"
 import ExamPaymentDetails from "./pages/admin/ExamPaymentDetails";
 import ExamStats from "./pages/admin/ExamStats";
 import ExportRegistrations from "./pages/admin/ExportRegistrations"
+import Notifications from "./pages/admin/Notifications";
 
 
 // (Optional later)
@@ -457,6 +458,15 @@ function App() {
 
       <ActivityLogs />
 
+    </AdminLayout>
+  }
+/>
+
+<Route
+  path="/admin/notifications"
+  element={
+    <AdminLayout>
+      <Notifications />
     </AdminLayout>
   }
 />
