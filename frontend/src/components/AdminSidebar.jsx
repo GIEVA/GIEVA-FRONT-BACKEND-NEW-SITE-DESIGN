@@ -42,6 +42,8 @@ import {
   Quiz,
   Assessment,
   Download,
+  AccessTime,
+  Public,
 } from "@mui/icons-material";
 
 import NotificationsIcon
@@ -81,6 +83,8 @@ AdminSidebar() {
   const [examOpen,
     setExamOpen] =
     useState(true);
+
+    const [liveOpen, setLiveOpen] = useState(true);
 
 
 
@@ -164,20 +168,6 @@ AdminSidebar() {
 
 
 
-    // ======================================================
-    // LIVE CLASSES
-    // ======================================================
-
-    {
-      label:
-        "Live Sessions",
-
-      icon:
-        <VideoCall />,
-
-      path:
-        "/admin/live-sessions",
-    },
 
 
 
@@ -527,6 +517,109 @@ AdminSidebar() {
           </List>
 
         </Collapse>
+
+        {/* ======================================================
+    LIVE CLASS MANAGEMENT
+====================================================== */}
+
+<ListItemButton
+  onClick={() => setLiveOpen(!liveOpen)}
+  sx={{
+    borderRadius: 3,
+    mt: 1,
+  }}
+>
+  <ListItemIcon>
+    <VideoCall />
+  </ListItemIcon>
+
+  <ListItemText
+    primary="Live Classes"
+  />
+
+  {liveOpen ? (
+    <ExpandLess />
+  ) : (
+    <ExpandMore />
+  )}
+</ListItemButton>
+
+<Collapse in={liveOpen}>
+  <List
+    component="div"
+    disablePadding
+  >
+
+    {[
+      {
+        label: "Dashboard",
+        path: "/admin/live-sessions",
+        icon: <Dashboard />,
+      },
+      {
+        label: "Schedule Session",
+        path: "/admin/live-sessions?schedule=true",
+        icon: <AppRegistration />,
+      },
+      {
+        label: "Analytics",
+        path: "/admin/live-sessions?tab=analytics",
+        icon: <Analytics />,
+      },
+      {
+        label: "Tutor Hours",
+        path: "/admin/live-sessions?tab=tutor-hours",
+        icon: <AccessTime />,
+      },
+      {
+        label: "Public Sessions",
+        path: "/admin/public-sessions",
+        icon: <Public />,
+      }
+    ].map((item) => (
+
+      <ListItemButton
+        key={item.label}
+        component={Link}
+        to={item.path}
+        selected={
+          location.pathname.startsWith(
+            "/admin/live-sessions"
+          )
+        }
+        sx={{
+          pl: 5,
+          borderRadius: 3,
+          mb: 1,
+
+          "&.Mui-selected": {
+            bgcolor: "primary.main",
+            color: "#fff",
+
+            "& .MuiListItemIcon-root": {
+              color: "#fff",
+            },
+          },
+        }}
+      >
+        <ListItemIcon>
+          {item.icon}
+        </ListItemIcon>
+
+        <ListItemText
+          primary={item.label}
+        />
+
+      </ListItemButton>
+
+    ))}
+
+  </List>
+</Collapse>
+
+{/* ======================================================
+      EXAM MANAGEMENT
+====================================================== */}
 
         {/* ======================================================
               EXAM MANAGEMENT

@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { loginUser } from "../services/auth";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 import {
@@ -12,6 +12,7 @@ import {
   CircularProgress,
   InputAdornment,
   IconButton,
+  Alert,
 } from "@mui/material";
 
 import {
@@ -39,6 +40,26 @@ const [showPassword,
 
 const navigate =
   useNavigate();
+
+// ── Session-expired banner ──────────────────────────────────────
+// api.js's response interceptor redirects here with
+// ?reason=session_expired&message=... whenever a request comes back
+// 401 (expired/invalid token). We read that once on mount, show it,
+// then strip the query string so refreshing /login doesn't keep
+// re-showing the same banner forever.
+const [searchParams] = useSearchParams();
+const [sessionMessage, setSessionMessage] = useState(null);
+
+useEffect(() => {
+  const reason = searchParams.get("reason");
+  const message = searchParams.get("message");
+
+  if (reason === "session_expired" && message) {
+    setSessionMessage(message);
+    navigate("/login", { replace: true });
+  }
+}, [searchParams, navigate]);
+// ─────────────────────────────────────────────────────────────────
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -112,6 +133,17 @@ if (
             Login to continue your learning journey
           </Typography>
         </Box>
+
+        {/* Session-expired banner */}
+        {sessionMessage && (
+          <Alert
+            severity="warning"
+            onClose={() => setSessionMessage(null)}
+            sx={{ mb: 3, borderRadius: 2 }}
+          >
+            {sessionMessage}
+          </Alert>
+        )}
 
         {/* Form */}
         <Box component="form" onSubmit={handleSubmit}>

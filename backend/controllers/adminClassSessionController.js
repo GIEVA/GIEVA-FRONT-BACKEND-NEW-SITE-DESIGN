@@ -569,24 +569,50 @@ export const adminGetSessionAnalytics = async (req, res) => {
       raw: false,
     });
 
-    // Monthly breakdown (last 6 months)
-    const sixMonthsAgo = new Date();
-    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+   // Monthly breakdown (last 6 months)
+const sixMonthsAgo = new Date();
+sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
 
-    const monthly = await ClassSession.findAll({
-      where: {
-        scheduledAt: { [Op.gte]: sixMonthsAgo },
-        status: { [Op.in]: ["ended", "live"] },
-      },
-      attributes: [
-        [fn("DATE_TRUNC", "month", col("scheduledAt")), "month"],
-        [fn("COUNT", col("id")), "sessions"],
-        [fn("SUM", col("durationMinutes")), "minutes"],
-      ],
-      group: [fn("DATE_TRUNC", "month", col("scheduledAt"))],
-      order: [[fn("DATE_TRUNC", "month", col("scheduledAt")), "ASC"]],
-      raw: true,
-    });
+const monthly = await ClassSession.findAll({
+  where: {
+    scheduledAt: {
+      [Op.gte]: sixMonthsAgo,
+    },
+    status: {
+      [Op.in]: ["ended", "live"],
+    },
+  },
+
+  attributes: [
+    [
+      literal("DATE_FORMAT(scheduledAt, '%Y-%m')"),
+      "month",
+    ],
+
+    [
+      fn("COUNT", col("id")),
+      "sessions",
+    ],
+
+    [
+      fn("SUM", col("durationMinutes")),
+      "minutes",
+    ],
+  ],
+
+  group: [
+    literal("DATE_FORMAT(scheduledAt, '%Y-%m')"),
+  ],
+
+  order: [
+    [
+      literal("DATE_FORMAT(scheduledAt, '%Y-%m')"),
+      "ASC",
+    ],
+  ],
+
+  raw: true,
+});
 
     res.json({
       overview: {

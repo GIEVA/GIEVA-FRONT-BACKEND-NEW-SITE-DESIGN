@@ -107,8 +107,9 @@ import ExamPaymentDetails from "./pages/admin/ExamPaymentDetails";
 import ExamStats from "./pages/admin/ExamStats";
 import ExportRegistrations from "./pages/admin/ExportRegistrations"
 import Notifications from "./pages/admin/Notifications";
-
-
+import AdminLiveSessions from "./pages/adminLiveSessionPage";
+import AdminSessionDetail from "./pages/AdminSessionDetail";
+import PublicMeetings from "./pages/PublicMeetings";
 // (Optional later)
 // import Dashboard from "./pages/Dashboard";
 // import ProtectedRoute from "./components/ProtectedRoute";
@@ -530,6 +531,31 @@ function App() {
           path="/admin/exams/export"
           element={
             <AdminLayout><ExportRegistrations /></AdminLayout>
+          }
+        />
+        <Route
+          path="/admin/live-sessions"
+          element={
+            <AdminLayout>
+              <AdminLiveSessions />
+            </AdminLayout>
+          }
+        />
+
+        <Route
+          path="/admin/live-sessions/:sessionId"
+          element={
+            <AdminLayout>
+              <AdminSessionDetail />
+            </AdminLayout>
+          }
+        />
+          <Route
+          path="/admin/public-sessions"
+          element={
+            <AdminLayout>
+              <PublicMeetings />
+            </AdminLayout>
           }
         />
         </Routes>

@@ -2,7 +2,7 @@ import models from "../models/index.js";
 import sendEmail from "../utils/sendMail.js";
 import ExcelJS from "exceljs";
 import { generateReceiptPDF } from "../utils/generateReceipt.js";
-
+import { sequelize } from "../config/db.js";
 import {
   examStatusUpdateTemplate,
 } from "../utils/emailTemplates.js";
@@ -294,9 +294,9 @@ export const adminGetRegistration =
             attributes: [
               "examType",
               [
-                models.sequelize.fn(
+                sequelize.fn(
                   "COUNT",
-                  models.sequelize.col(
+                  sequelize.col(
                     "id"
                   )
                 ),

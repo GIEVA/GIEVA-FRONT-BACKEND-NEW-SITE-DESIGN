@@ -39,6 +39,7 @@ export default (sequelize) => {
     "CAMPAIGN_UNFEATURED",
     "CAMPAIGN_PUBLISHED",
     "CAMPAIGN_ARCHIVED",
+    "exam_registration",
   ),
 
   allowNull: false,

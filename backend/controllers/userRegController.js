@@ -161,63 +161,72 @@ const verificationTokenExpiry = new Date(Date.now() + 1000 * 60 * 60); // 1 hour
   }
 };
 
+ 
 export const verifyAccount = async (req, res) => {
   try {
     const { token } = req.params;
     const cleanToken = decodeURIComponent(token).trim();
-
+ 
     if (!cleanToken) {
       return res.status(400).json({ message: "Verification token is required" });
     }
-
-    // 1. First check if the token matches (valid or expired)
+ 
     const userByToken = await User.findOne({
-      where: { verificationToken: cleanToken }
+      where: { verificationToken: cleanToken },
     });
-
-    // 2. If already verified with this token (token was cleared), check by a broader query
+ 
     if (!userByToken) {
-      // Token is gone — either already verified or never existed
-      // Check if it was already verified (token cleared = already done)
+      // No user currently has this token. This used to always mean
+      // "invalid/expired" — but it can ALSO mean "a duplicate request
+      // for an already-verified account already cleared this token."
+      // We can't look the user up by token anymore in that case, so
+      // there's nothing more to check here — this really is an
+      // unrecognized token.
       return res.status(400).json({
         message: "Invalid or expired verification token",
       });
     }
-
-    // 3. Token exists but might be expired
+ 
+    // ── Already verified? Always return success, regardless of
+    //    whether the token has technically expired by now. This is
+    //    the line that makes the endpoint idempotent — a duplicate
+    //    request (StrictMode double-fire, double-click, multiple
+    //    tabs with the same link, etc.) for an account that's
+    //    already verified should never show an error. ──
+    if (userByToken.isVerified) {
+      return res.json({ message: "Account already verified. You can log in." });
+    }
+ 
+    // ── Not yet verified — NOW check expiry ──
     if (new Date() > new Date(userByToken.verificationTokenExpiry)) {
       return res.status(400).json({
         message: "Verification link has expired. Please request a new one.",
       });
     }
-
-    // 4. Already verified (edge case: token still in DB but isVerified is true)
-    if (userByToken.isVerified) {
-      return res.json({ message: "Account already verified. You can log in." });
-    }
-
-    // 5. Mark as verified
+ 
+    // ── Mark as verified. Token is intentionally LEFT IN PLACE
+    //    (not nulled) so that any duplicate in-flight request for
+    //    this same token still resolves via the isVerified branch
+    //    above instead of hitting "user not found". ──
     userByToken.isVerified = true;
-    userByToken.verificationToken = null;
-    userByToken.verificationTokenExpiry = null;
     await userByToken.save();
-
+ 
     await ActivityLog.create({ userId: userByToken.id, action: "USER_VERIFIED" });
-
+ 
     await Notification.create({
       title: "New User Signup",
       message: `${userByToken.fullName} just joined`,
       type: "user_registration",
       userId: userByToken.id,
     });
-
+ 
     return res.json({ message: "Account verified successfully" });
-
   } catch (error) {
     console.error("Verify Account Error:", error);
     return res.status(500).json({ message: "Server error" });
   }
 };
+ 
 // ---------------- READ ALL USERS ----------------
 export const getAllUsers = async (req, res) => {
   try {
