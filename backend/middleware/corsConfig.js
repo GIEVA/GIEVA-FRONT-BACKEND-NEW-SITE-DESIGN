@@ -15,6 +15,7 @@ export default function corsConfig(app) {
   "http://localhost:3000",
   "http://localhost:3001",
   "http://localhost:5173",
+  "https://gieva-front-backend-new-site-design.vercel.app/",
   ...splitCsv(process.env.CORS_ORIGINS),
 ]);
 
