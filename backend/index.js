@@ -104,7 +104,12 @@ const startServer = async () => {
   try {
     await testConnection(); // test DB connection
 
-
+app.get("/", (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: "GIEVA API is running 🚀",
+  });
+});
 
     // Routes
 app.use('/api', registerUserRoute);
