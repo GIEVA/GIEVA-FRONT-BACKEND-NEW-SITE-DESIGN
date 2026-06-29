@@ -38,6 +38,7 @@
     "react-router-dom": "^7.13.1",
     "react-scripts": "5.0.1",
     "recharts": "^3.8.1",
+    "slugify": "^1.6.9",
     "swiper": "^12.1.4",
     "tldraw": "^5.1.1",
     "web-vitals": "^2.1.4"
