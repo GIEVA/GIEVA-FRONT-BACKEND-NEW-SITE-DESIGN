@@ -162,7 +162,22 @@ const verificationTokenExpiry = new Date(Date.now() + 1000 * 60 * 60); // 1 hour
 };
 
  
+
 export const verifyAccount = async (req, res) => {
+  // ── Prevent ANY caching of this response. ──
+  // Verification tokens are one-time-use; this endpoint must always
+  // hit the server fresh. Without these headers, a browser can (and
+  // did, per the network log showing a 304) serve a stale cached
+  // response for the exact same URL on a later visit — meaning the
+  // controller never even runs, the frontend just gets whatever the
+  // browser cached the first time. Setting these explicitly closes
+  // that off regardless of any default caching behavior from Express,
+  // a CDN, or the browser itself.
+  res.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+  res.set("Pragma", "no-cache");
+  res.set("Expires", "0");
+  res.set("Surrogate-Control", "no-store");
+ 
   try {
     const { token } = req.params;
     const cleanToken = decodeURIComponent(token).trim();
@@ -226,6 +241,7 @@ export const verifyAccount = async (req, res) => {
     return res.status(500).json({ message: "Server error" });
   }
 };
+
  
 // ---------------- READ ALL USERS ----------------
 export const getAllUsers = async (req, res) => {

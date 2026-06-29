@@ -73,6 +73,7 @@ import adminExamRegistrationRoutes
 from "./routes/adminExamRegistration.routes.js";
 
 import adminClassSessionRoutes from "./routes/adminClassSessionRoutes.js"
+import corsConfig from "./middleware/corsConfig.js";
 
 dotenv.config({
   path: "./.env",
@@ -81,10 +82,13 @@ dotenv.config({
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-app.use(cors({
-  origin: "http://localhost:3000",
-  credentials: true,
-}));
+// app.use(cors({
+//   origin: "http://localhost:3000",
+//   credentials: true,
+// }));
+
+
+corsConfig(app);
 
 startSessionReminderCron();
 
@@ -197,7 +201,7 @@ app.use("/admin/live-session",  adminClassSessionRoutes)
 
 
     // Sync models AFTER models are loaded
-    await sequelize.sync({alter:true});
+    await sequelize.sync();
     console.log("🚀 Sequelize models synced");
 
     app.listen(PORT , () => {

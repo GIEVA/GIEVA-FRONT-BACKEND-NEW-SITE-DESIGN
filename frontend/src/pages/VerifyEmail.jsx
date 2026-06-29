@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import API from "../services/api";
 
@@ -18,23 +18,25 @@ const VerifyEmail = () => {
   const [status, setStatus] = useState("loading");
   const [message, setMessage] = useState("");
 
-  // ── Guard against the ACTUAL duplicate request, not just the
-  //    state update after it. ──
+  // ── NOTE: a previous version of this file added a `hasRequestedRef`
+  //    guard to stop StrictMode's double-mount from firing two
+  //    requests. That guard has been REMOVED here, for two reasons:
   //
-  // The previous `cancelled` flag (declared fresh inside the effect
-  // body) only stopped setState from firing on an unmounted instance
-  // — it did nothing to stop the SECOND network request from going
-  // out in the first place. Under React 18 StrictMode, the effect
-  // runs, cleans up, and runs again on initial mount, so two real
-  // requests for the same token were always being sent to the
-  // backend; only one of their responses ever got applied to state.
+  //    1. The backend (`verifyAccount`) is now idempotent — a second
+  //       request for an already-verified token returns the same
+  //       success response instead of a false "expired" error. So
+  //       there's no longer any need to suppress the duplicate
+  //       request on the frontend; the backend handles it safely.
   //
-  // A useRef survives across that mount→unmount→remount cycle within
-  // the same component instance (refs are not reset by re-running the
-  // effect), so checking it BEFORE firing the request actually
-  // prevents the second request from ever being sent.
-  const hasRequestedRef = useRef(false);
-
+  //    2. The ref-based guard is actively HARMFUL under dev hot-reload
+  //       (Vite/CRA fast refresh): if this component is hot-reloaded
+  //       without a full page navigation, the ref can persist as
+  //       `true` from a previous mount, permanently skipping the
+  //       effect's request on every future mount — which is exactly
+  //       what produced the "stuck on Verifying your account...
+  //       forever" symptom. A plain `cancelled` flag (scoped fresh
+  //       inside each effect run) is sufficient and doesn't have
+  //       this failure mode.
   useEffect(() => {
     if (!token) {
       setStatus("error");
@@ -42,21 +44,23 @@ const VerifyEmail = () => {
       return;
     }
 
-    if (hasRequestedRef.current) {
-      // StrictMode's remount — the first request is already in
-      // flight (or already completed). Don't send it again.
-      return;
-    }
-    hasRequestedRef.current = true;
-
-    let cancelled = false; // still useful to avoid setState-after-unmount warnings
+    let cancelled = false;
 
     const verify = async () => {
       try {
-        const res = await API.get(`/api/verify/${token}`);
+        // `params: { _t: Date.now() }` busts any HTTP/browser cache
+        // for this URL. Verification links are one-time-use tokens —
+        // they must NEVER be served from cache. Without this, a
+        // browser can return a cached 304 for the exact same URL on
+        // a later visit instead of re-hitting the server (confirmed
+        // in the network log: status 304, served from cache).
+        const res = await API.get(`/api/verify/${token}`, {
+          params: { _t: Date.now() },
+        });
+
         if (!cancelled) {
           setStatus("success");
-          setMessage(res.data.message || "Email verified successfully");
+          setMessage(res?.data?.message || "Email verified successfully");
           setTimeout(() => navigate("/login"), 3000);
         }
       } catch (err) {
@@ -73,10 +77,6 @@ const VerifyEmail = () => {
 
     return () => {
       cancelled = true;
-      // NOTE: hasRequestedRef is intentionally NOT reset here — that's
-      // the whole point. It must persist across StrictMode's
-      // mount→unmount→remount so the second mount sees it's already
-      // been requested and skips firing again.
     };
   }, [token, navigate]);
 
