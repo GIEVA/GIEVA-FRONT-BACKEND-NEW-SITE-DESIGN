@@ -1,6 +1,6 @@
 import UserModel from './user.js';
 import TutorProfileModel from './tutorProfile.js';
-import CourseModel from './Course.js';
+import CourseModel from './course.js';
 import ClassSessionModel from './ClassSession.js';
 import SessionAttendanceModel from './SessionAttendance.js';
 import ActivityLogModel from './activityLog.js';
