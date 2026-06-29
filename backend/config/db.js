@@ -1,93 +1,46 @@
-// db.js
-
-import {
-  Sequelize,
-} from "sequelize";
-
-import dotenv
-from "dotenv";
+import { Sequelize } from "sequelize";
+import dotenv from "dotenv";
 
 dotenv.config();
 
+export const sequelize = new Sequelize(
+  process.env.DB_NAME,
+  process.env.DB_USERNAME,
+  process.env.DB_PASSWORD,
+  {
+    host: process.env.DB_HOST,
+    port: Number(process.env.DB_PORT),
+    dialect: "mysql",
 
+    logging: false,
 
-// ======================================================
-// SEQUELIZE INSTANCE
-// ======================================================
+    define: {
+      freezeTableName: true,
+    },
 
-export const sequelize =
-  new Sequelize(
+    pool: {
+      max: 10,
+      min: 0,
+      acquire: 30000,
+      idle: 10000,
+    },
 
-    process.env.DB_NAME || "lms",
-
-    process.env.ROOT || "root",
-
-    process.env.PASSWORD || "1234",
-
-    {
-
-      host:
-        process.env.MSQL_HOST || "127.0.0.1",
-
-      dialect:
-        "mysql",
-
-      logging:
-        false,
-
-
-
-      // ======================================================
-      // VERY IMPORTANT
-      // prevents weird pluralized tables
-      // ======================================================
-
-      define: {
-
-        freezeTableName: true,
+    dialectOptions: {
+      ssl: {
+        rejectUnauthorized: false,
       },
+    },
+  }
+);
 
-
-
-      pool: {
-
-        max: 10,
-
-        min: 0,
-
-        acquire: 30000,
-
-        idle: 10000,
-      },
-    }
-  );
-
-
-
-// ======================================================
-// TEST CONNECTION
-// ======================================================
-
-export async function
-testConnection() {
-
+export async function testConnection() {
   try {
-
     await sequelize.authenticate();
-
-    console.log(
-      "✅ Sequelize MySQL Connected Successfully!"
-    );
-
+    console.log("✅ Sequelize connected successfully!");
   } catch (error) {
-
-    console.error(
-      "❌ Sequelize Connection Failed:",
-      error.message
-    );
+    console.error("❌ Database connection failed:");
+    console.error(error);
   }
 }
-
-
 
 export default sequelize;
