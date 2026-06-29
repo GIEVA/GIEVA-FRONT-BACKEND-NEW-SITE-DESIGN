@@ -2,7 +2,7 @@ import UserModel from './user.js';
 import TutorProfileModel from './tutorProfile.js';
 import CourseModel from './course.js';
 import ClassSessionModel from './classSession.js';
-import SessionAttendanceModel from './SessionAttendance.js';
+import SessionAttendanceModel from './sessionAttendance.js';
 import ActivityLogModel from './activityLog.js';
 import EnrollmentModel from './enrollment.js';
 import StudentProfileModel from './StudentProfile.js';
