@@ -253,6 +253,8 @@ const WhiteboardDrawer = ({
   const canvasRef  = useRef(null);
   const isDrawing  = useRef(false);
   const lastPos    = useRef({ x: 0, y: 0 });
+  const currentStroke = useRef([]);
+  const flushTimer = useRef(null);
   const rafRef     = useRef(null);
   const lastClearRef = useRef(0); // tracks which clear we last applied
 
@@ -315,9 +317,30 @@ const WhiteboardDrawer = ({
           // Splice out all pending strokes atomically
           const pending = strokeQueueRef.current.splice(0);
           for (const stroke of pending) {
-            const from = fromNorm(stroke.from.nx, stroke.from.ny, canvas);
-            const to   = fromNorm(stroke.to.nx,   stroke.to.ny,   canvas);
-            strokeOnCanvas(from, to, stroke.color, stroke.thickness);
+            // const from = fromNorm(stroke.from.nx, stroke.from.ny, canvas);
+            // const to   = fromNorm(stroke.to.nx,   stroke.to.ny,   canvas);
+            // strokeOnCanvas(from, to, stroke.color, stroke.thickness);
+            for (let i = 1; i < stroke.points.length; i++) {
+
+              const from = fromNorm(
+                  stroke.points[i - 1].nx,
+                  stroke.points[i - 1].ny,
+                  canvas
+              );
+
+              const to = fromNorm(
+                  stroke.points[i].nx,
+                  stroke.points[i].ny,
+                  canvas
+              );
+
+              strokeOnCanvas(
+                  from,
+                  to,
+                  stroke.color,
+                  stroke.thickness
+              );
+          }
           }
         }
       }
@@ -345,8 +368,20 @@ const WhiteboardDrawer = ({
     if (!isHost) return;
     e.preventDefault();
     const canvas = canvasRef.current; if (!canvas) return;
+    // isDrawing.current = true;
+    // lastPos.current   = getPos(e, canvas);
     isDrawing.current = true;
-    lastPos.current   = getPos(e, canvas);
+
+    lastPos.current = getPos(e, canvas);
+
+   currentStroke.current = [
+    toNorm(lastPos.current, canvas)
+    ];
+
+    flushTimer.current = setInterval(
+        flushStroke,
+        20
+    );
   }, [isHost]);
 
   const draw = useCallback((e) => {
@@ -361,17 +396,77 @@ const WhiteboardDrawer = ({
     strokeOnCanvas(lastPos.current, pos, sc, sw);
 
     // Broadcast using normalized coords
-    onLocalStroke?.({
-      from:      toNorm(lastPos.current, canvas),
-      to:        toNorm(pos, canvas),
-      color:     sc,
-      thickness: sw,
-    });
+    // onLocalStroke?.({
+    //   from:      toNorm(lastPos.current, canvas),
+    //   to:        toNorm(pos, canvas),
+    //   color:     sc,
+    //   thickness: sw,
+    // });
+
+    currentStroke.current.push(
+    toNorm(pos, canvas)
+);
 
     lastPos.current = pos;
   }, [isHost, tool, color, thickness, strokeOnCanvas, onLocalStroke]);
 
-  const stopDraw = useCallback(() => { isDrawing.current = false; }, []);
+  const flushStroke = useCallback(() => {
+
+    if (
+        currentStroke.current.length < 2
+    ) return;
+
+    // onLocalStroke?.({
+    //     points: [...currentStroke.current],
+    //     color,
+    //     thickness,
+    // });
+
+    currentStroke.current.push(
+    toNorm(pos, canvas)
+);
+
+    // keep only the last point so the
+    // next packet connects seamlessly
+
+    currentStroke.current = [
+        currentStroke.current[
+            currentStroke.current.length - 1
+        ]
+    ];
+
+}, [
+    color,
+    thickness,
+    onLocalStroke,
+]);
+
+  // const stopDraw = useCallback(() => { isDrawing.current = false; }, []);
+  const stopDraw = useCallback(() => {
+
+    if (!isDrawing.current) return;
+
+    isDrawing.current = false;
+
+clearInterval(
+    flushTimer.current
+);
+
+flushStroke();
+
+currentStroke.current = [];
+
+    if (currentStroke.current.length < 2) return;
+
+    onLocalStroke?.({
+        points: currentStroke.current,
+        color,
+        thickness,
+    });
+
+    currentStroke.current = [];
+
+}, [color, thickness, onLocalStroke]);
 
   const handleClearClick = () => {
     if (!isHost) return;
@@ -944,10 +1039,21 @@ const RoomInner = ({ role, sessionId, navigate, currentUser, phase, onRequestTok
     if (isHost) await broadcast({ type: MSG.WHITEBOARD_CLOSE });
   }, [isHost, broadcast]);
 
+  // const handleLocalStroke = useCallback((stroke) => {
+  //   strokeLogRef.current.push(stroke);
+  //   broadcast({ type: MSG.WHITEBOARD_STROKE, stroke }, false);
+  // }, [broadcast]);
+
   const handleLocalStroke = useCallback((stroke) => {
+
     strokeLogRef.current.push(stroke);
-    broadcast({ type: MSG.WHITEBOARD_STROKE, stroke }, false);
-  }, [broadcast]);
+
+    broadcast({
+        type: MSG.WHITEBOARD_STROKE,
+        stroke,
+    }, true);
+
+}, [broadcast]);
 
   const handleLocalClear = useCallback(() => {
     strokeLogRef.current = [];
