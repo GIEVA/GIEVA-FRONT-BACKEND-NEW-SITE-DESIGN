@@ -410,63 +410,33 @@ const WhiteboardDrawer = ({
     lastPos.current = pos;
   }, [isHost, tool, color, thickness, strokeOnCanvas, onLocalStroke]);
 
-  const flushStroke = useCallback(() => {
-
-    if (
-        currentStroke.current.length < 2
-    ) return;
-
-    // onLocalStroke?.({
-    //     points: [...currentStroke.current],
-    //     color,
-    //     thickness,
-    // });
-
-    currentStroke.current.push(
-    toNorm(pos, canvas)
-);
-
-    // keep only the last point so the
-    // next packet connects seamlessly
-
-    currentStroke.current = [
-        currentStroke.current[
-            currentStroke.current.length - 1
-        ]
-    ];
-
-}, [
-    color,
-    thickness,
-    onLocalStroke,
-]);
-
-  // const stopDraw = useCallback(() => { isDrawing.current = false; }, []);
-  const stopDraw = useCallback(() => {
-
-    if (!isDrawing.current) return;
-
-    isDrawing.current = false;
-
-clearInterval(
-    flushTimer.current
-);
-
-flushStroke();
-
-currentStroke.current = [];
-
+const flushStroke = useCallback(() => {
     if (currentStroke.current.length < 2) return;
 
     onLocalStroke?.({
-        points: currentStroke.current,
+        points: [...currentStroke.current],
         color,
         thickness,
     });
 
-    currentStroke.current = [];
-
+    // Keep the last point so the next batch continues smoothly
+    currentStroke.current = [
+        currentStroke.current[currentStroke.current.length - 1],
+    ];
 }, [color, thickness, onLocalStroke]);
+
+  // const stopDraw = useCallback(() => { isDrawing.current = false; }, []);
+const stopDraw = useCallback(() => {
+    if (!isDrawing.current) return;
+
+    isDrawing.current = false;
+
+    clearInterval(flushTimer.current);
+
+    flushStroke();
+
+    currentStroke.current = [];
+}, [flushStroke]);
 
   const handleClearClick = () => {
     if (!isHost) return;
