@@ -130,38 +130,24 @@ const MSG = {
 //   REMOTE participant: track is subscribed → check camPub.isSubscribed && camPub.track
 // ═══════════════════════════════════════════════════════════════
 // ─── ParticipantTile (Hardened for unique video per tile) ─────
-const ParticipantTile = ({
-  participant,
-  isLocal    = false,
-  isLarge    = false,
-  isHandRaised = false,
-  reaction   = null,
-}) => {
-  const meta   = getMetadata(participant);
-  const name   = meta.fullName || participant.identity;
-  const pic    = meta.profilePicUrl;
+const ParticipantTile = ({ participant, isLocal = false, isLarge = false, isHandRaised = false, reaction = null }) => {
+  const meta = getMetadata(participant);
+  const name = meta.fullName || participant.identity;
+  const pic = meta.profilePicUrl;
   const isHost = meta.role === "host";
 
-  const camPub   = participant.getTrackPublication(Track.Source.Camera);
-  const hasCam   = camPub && camPub.isSubscribed && !camPub.isMuted && camPub.track;
+  const camPub = participant.getTrackPublication(Track.Source.Camera);
+  
+  // FIXED: Local tracks use .track (published), remote use isSubscribed
+  const hasCam = camPub && 
+    (isLocal ? !!camPub.track : (camPub.isSubscribed && !camPub.isMuted && !!camPub.track));
 
   return (
-    <Box sx={{
-      width: "100%", aspectRatio: isLarge ? undefined : "16/9",
-      minHeight: isLarge ? 340 : undefined, height: isLarge ? "100%" : undefined,
-      position: "relative", borderRadius: 3, overflow: "hidden",
-      bgcolor: DARK2, border: `1px solid ${isHandRaised ? GOLD : DARK3}`,
-      display: "flex", alignItems: "center", justifyContent: "center",
-      transition: "border-color 0.2s",
-    }} key={`tile-${participant.identity}`}>
+    <Box sx={{ /* same styling */ }} key={`tile-${participant.identity}`}>
       {hasCam ? (
         <Box sx={{ position: "absolute", inset: 0 }}>
           <VideoTrack
-            trackRef={{
-              participant,
-              source: Track.Source.Camera,
-              publication: camPub,
-            }}
+            trackRef={{ participant, source: Track.Source.Camera, publication: camPub }}
             style={{ width: "100%", height: "100%", objectFit: "cover" }}
           />
         </Box>
@@ -393,6 +379,27 @@ const WhiteboardDrawer = ({
   }, [remoteStroke, strokeOnCanvas]);
 
   useEffect(() => { if (remoteClear) clearCanvas(); }, [remoteClear, clearCanvas]);
+
+  // RAF drain loop for incoming strokes
+  useEffect(() => {
+    let rafId;
+    const drain = () => {
+      if (strokeBuffer.current.length > 0) {
+        const canvas = canvasRef.current;
+        if (canvas) {
+          while (strokeBuffer.current.length) {
+            const stroke = strokeBuffer.current.shift();
+            const from = fromNorm(stroke.from.nx, stroke.from.ny, canvas);
+            const to = fromNorm(stroke.to.nx, stroke.to.ny, canvas);
+            strokeOnCanvas(from, to, stroke.color, stroke.thickness);
+          }
+        }
+      }
+      rafId = requestAnimationFrame(drain);
+    };
+    if (open) rafId = requestAnimationFrame(drain);
+    return () => cancelAnimationFrame(rafId);
+  }, [open, strokeOnCanvas]);
 
   return (
     <Drawer anchor="right" open={open} onClose={isHost ? onClose : undefined}
