@@ -1,40 +1,4 @@
-// pages/LiveClassroom.jsx — PATCH 2: Shared Whiteboard + Raised Hand + Reactions
-//
-// ═══════════════════════════════════════════════════════════════
-// WHAT THIS ADDS
-// ═══════════════════════════════════════════════════════════════
-//
-// 1. SHARED WHITEBOARD
-//    - Host opens it → WHITEBOARD_OPEN broadcasts → everyone's drawer
-//      auto-opens (read-only for non-hosts: no toolbar, can't draw)
-//    - Host draws → every stroke segment broadcasts as WHITEBOARD_STROKE
-//      → all participants replay it on their own canvas in real time
-//    - Host clears → WHITEBOARD_CLEAR broadcasts → everyone's canvas clears
-//    - Host closes → WHITEBOARD_CLOSE broadcasts → everyone's drawer closes
-//    - If a participant joins mid-session after strokes were drawn, we
-//      keep a lightweight in-memory stroke log on the HOST side and
-//      replay it to any newly-opened drawer (see WHITEBOARD_SYNC below)
-//
-// 2. RAISED HAND ON TILE
-//    - RAISE_HAND now carries {identity, fullName, raised: true|false}
-//      instead of a one-shot toast-only event
-//    - A small map `raisedHands: { [identity]: true }` lives in RoomInner
-//      and is passed down to ParticipantTile, which renders a pulsing
-//      ✋ badge in the tile's top-right corner for as long as raised=true
-//    - Clicking "Raise hand" again lowers it (toggle), matching Zoom/Meet
-//
-// 3. REACTION BUBBLE ON TILE
-//    - REACTION now carries {identity, fullName, emoji}
-//    - A transient per-identity reaction state holds the emoji for ~3s,
-//      rendered as a floating bubble with the person's first name right
-//      above their tile, then auto-clears
-//
-// All of this rides the SAME room.on("dataReceived") pipe you already
-// have — no new connections, no new polling.
-//
-// ═══════════════════════════════════════════════════════════════
-// FULL REPLACEMENT SECTIONS BELOW
-// ═══════════════════════════════════════════════════════════════
+
 
 import {
   LiveKitRoom,
@@ -80,6 +44,12 @@ import {
   getParticipantToken,
 } from "../services/classSessionService";
 import { joinPublicMeetingAsHost } from "../services/publicMeetingService";
+import {
+  guestJoinPublicMeeting,
+  guestCheckAdmissionStatus,
+  guestGetParticipantToken,
+} from "../services/guestMeetingService";
+
 
 // ─── Design tokens ────────────────────────────────────────────
 const NAVY    = "#0B1F3A";
@@ -129,34 +99,42 @@ const MSG = {
 // ─── Participant Tile — NOW shows raised-hand badge + reaction bubble ──
 const ParticipantTile = ({
   participant, isLocal = false, isLarge = false,
-  isHandRaised = false,       // NEW
-  reaction = null,             // NEW — { emoji, fullName } | null
+  isHandRaised = false,
+  reaction = null,
 }) => {
   const meta   = getMetadata(participant);
   const name   = meta.fullName || participant.identity;
   const pic    = meta.profilePicUrl;
   const isHost = meta.role === "host";
 
-  const tracks   = useTracks(
+  // ── FIX 3: useTracks scoped to THIS participant only ──────────
+  // Without `{ participant }`, the hook returns ALL camera tracks
+  // in the room, and the first one gets picked for every tile.
+  const tracks = useTracks(
     [{ source: Track.Source.Camera, withPlaceholder: true }],
-    { participant }
+    { participant }   // ← critical: scope to this participant
   );
+
   const camTrack = tracks.find((t) => t.source === Track.Source.Camera);
   const hasCam   = camTrack && !camTrack.isMuted && camTrack.publication;
 
   return (
     <Box sx={{
-      width: "100%", aspectRatio: isLarge ? undefined : "16/9",
-      minHeight: isLarge ? 340 : undefined, height: isLarge ? "100%" : undefined,
+      width: "100%",
+      aspectRatio: isLarge ? undefined : "16/9",
+      minHeight: isLarge ? 340 : undefined,
+      height: isLarge ? "100%" : undefined,
       position: "relative", borderRadius: 3, overflow: "hidden",
-      bgcolor: DARK2, border: `1px solid ${DARK3}`,
+      bgcolor: DARK2, border: `1px solid ${isHandRaised ? GOLD : DARK3}`,
       display: "flex", alignItems: "center", justifyContent: "center",
       transition: "border-color 0.2s",
-      ...(isHandRaised && { borderColor: GOLD }),
     }}>
       {hasCam ? (
         <Box sx={{ position: "absolute", inset: 0 }}>
-          <VideoTrack trackRef={camTrack} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+          <VideoTrack
+            trackRef={camTrack}
+            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+          />
         </Box>
       ) : (
         <Avatar src={pic || undefined}
@@ -167,7 +145,7 @@ const ParticipantTile = ({
         </Avatar>
       )}
 
-      {/* ── RAISED HAND BADGE (top-right, persists until lowered) ── */}
+      {/* Raised hand badge */}
       {isHandRaised && (
         <Box sx={{
           position: "absolute", top: 8, right: 8,
@@ -179,12 +157,10 @@ const ParticipantTile = ({
             "0%,100%": { transform: "scale(1)" },
             "50%":     { transform: "scale(1.12)" },
           },
-        }}>
-          ✋
-        </Box>
+        }}>✋</Box>
       )}
 
-      {/* ── REACTION BUBBLE (floats above tile, auto-dismisses) ── */}
+      {/* Reaction bubble */}
       {reaction && (
         <Box sx={{
           position: "absolute", top: -6, left: "50%",
@@ -228,16 +204,14 @@ const ParticipantTile = ({
 };
 
 // ─── Participant Grid — now passes raisedHands/reactions down ─────────
-const ParticipantGrid = ({ raisedHands, reactions }) => {
+const ParticipantGrid = ({ raisedHands = {}, reactions = {} }) => {
   const participants         = useParticipants();
   const { localParticipant } = useLocalParticipant();
-
-  const isAdmitted = (p) => getMetadata(p).role !== "lobby";
 
   const all = [
     localParticipant,
     ...participants.filter((p) => p.identity !== localParticipant?.identity),
-  ].filter(Boolean).filter(isAdmitted);
+  ].filter(Boolean).filter((p) => getMetadata(p).role !== "lobby");
 
   const count = all.length;
   const cols  = count === 1 ? 1 : count <= 4 ? 2 : count <= 9 ? 3 : 4;
@@ -271,41 +245,45 @@ const ParticipantGrid = ({ raisedHands, reactions }) => {
 const WhiteboardDrawer = ({
   open, onClose, isHost,
   onLocalStroke, onLocalClear,
-  remoteStroke, remoteClear, syncStrokes,
+  // ── FIX 1: replaced remoteStroke/remoteClear state props with refs ──
+  strokeQueueRef,    // React.MutableRefObject<stroke[]>  — append from outside
+  clearTriggerRef,   // React.MutableRefObject<number>    — increment from outside
+  syncStrokes,
 }) => {
   const canvasRef  = useRef(null);
   const isDrawing  = useRef(false);
   const lastPos    = useRef({ x: 0, y: 0 });
+  const rafRef     = useRef(null);
+  const lastClearRef = useRef(0); // tracks which clear we last applied
+
   const [tool, setTool]           = useState("pen");
   const [color, setColor]         = useState("#000000");
   const [thickness, setThickness] = useState(3);
-
   const COLORS = ["#000000","#ffffff","#ef4444","#f97316","#eab308","#22c55e","#3b82f6","#8b5cf6"];
 
   const getPos = (e, canvas) => {
-    const rect    = canvas.getBoundingClientRect();
-    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    const rect = canvas.getBoundingClientRect();
+    const cx = e.touches ? e.touches[0].clientX : e.clientX;
+    const cy = e.touches ? e.touches[0].clientY : e.clientY;
     return {
-      x: (clientX - rect.left) * (canvas.width  / rect.width),
-      y: (clientY - rect.top)  * (canvas.height / rect.height),
+      x: (cx - rect.left) * (canvas.width  / rect.width),
+      y: (cy - rect.top)  * (canvas.height / rect.height),
     };
   };
 
-  // Normalized [0..1] coords so strokes replay correctly across
-  // different screen sizes / canvas dimensions on each participant.
-  const toNorm = (pos, canvas) => ({ nx: pos.x / canvas.width, ny: pos.y / canvas.height });
+  const toNorm   = (pos, canvas) => ({ nx: pos.x / canvas.width, ny: pos.y / canvas.height });
   const fromNorm = (nx, ny, canvas) => ({ x: nx * canvas.width, y: ny * canvas.height });
 
   const strokeOnCanvas = useCallback((from, to, strokeColor, strokeWidth) => {
     const canvas = canvasRef.current; if (!canvas) return;
-    const ctx = canvas.getContext("2d");
+    const ctx    = canvas.getContext("2d");
     ctx.beginPath();
     ctx.moveTo(from.x, from.y);
     ctx.lineTo(to.x, to.y);
     ctx.strokeStyle = strokeColor;
     ctx.lineWidth   = strokeWidth;
-    ctx.lineCap     = "round"; ctx.lineJoin = "round";
+    ctx.lineCap     = "round";
+    ctx.lineJoin    = "round";
     ctx.stroke();
   }, []);
 
@@ -316,8 +294,55 @@ const WhiteboardDrawer = ({
     ctx.fillRect(0, 0, canvas.width, canvas.height);
   }, []);
 
+  // ── FIX 1: RAF loop — drain stroke queue every animation frame ──
+  // This runs continuously while the drawer is open, applying all
+  // queued strokes in order. Because it runs outside React's render
+  // cycle, no batching can drop strokes.
+  useEffect(() => {
+    if (!open || isHost) return; // host draws locally; only viewers need the RAF loop
+
+    const loop = () => {
+      // Apply any pending clear first
+      if (clearTriggerRef && clearTriggerRef.current > lastClearRef.current) {
+        clearCanvas();
+        lastClearRef.current = clearTriggerRef.current;
+      }
+
+      // Drain the stroke queue
+      if (strokeQueueRef && strokeQueueRef.current.length > 0) {
+        const canvas = canvasRef.current;
+        if (canvas) {
+          // Splice out all pending strokes atomically
+          const pending = strokeQueueRef.current.splice(0);
+          for (const stroke of pending) {
+            const from = fromNorm(stroke.from.nx, stroke.from.ny, canvas);
+            const to   = fromNorm(stroke.to.nx,   stroke.to.ny,   canvas);
+            strokeOnCanvas(from, to, stroke.color, stroke.thickness);
+          }
+        }
+      }
+
+      rafRef.current = requestAnimationFrame(loop);
+    };
+
+    rafRef.current = requestAnimationFrame(loop);
+    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
+  }, [open, isHost, strokeQueueRef, clearTriggerRef, strokeOnCanvas, clearCanvas]);
+
+  // Init canvas when opened
+  useEffect(() => {
+    if (!open) return;
+    setTimeout(() => {
+      const canvas = canvasRef.current; if (!canvas) return;
+      canvas.width  = canvas.offsetWidth;
+      canvas.height = canvas.offsetHeight;
+      clearCanvas();
+      if (!isHost) syncStrokes?.();
+    }, 120);
+  }, [open, isHost, clearCanvas, syncStrokes]);
+
   const startDraw = useCallback((e) => {
-    if (!isHost) return; // non-hosts are view-only
+    if (!isHost) return;
     e.preventDefault();
     const canvas = canvasRef.current; if (!canvas) return;
     isDrawing.current = true;
@@ -325,23 +350,22 @@ const WhiteboardDrawer = ({
   }, [isHost]);
 
   const draw = useCallback((e) => {
-    if (!isHost) return;
+    if (!isHost || !isDrawing.current) return;
     e.preventDefault();
-    if (!isDrawing.current) return;
     const canvas = canvasRef.current;
     const pos    = getPos(e, canvas);
-    const strokeColor = tool === "eraser" ? "#ffffff" : color;
-    const strokeWidth = tool === "eraser" ? thickness * 5 : thickness;
+    const sc     = tool === "eraser" ? "#ffffff" : color;
+    const sw     = tool === "eraser" ? thickness * 5 : thickness;
 
-    strokeOnCanvas(lastPos.current, pos, strokeColor, strokeWidth);
+    // Apply locally for zero-latency host drawing
+    strokeOnCanvas(lastPos.current, pos, sc, sw);
 
-    // Broadcast this segment so everyone else replays it live
-    const canvasEl = canvasRef.current;
+    // Broadcast using normalized coords
     onLocalStroke?.({
-      from: toNorm(lastPos.current, canvasEl),
-      to:   toNorm(pos, canvasEl),
-      color: strokeColor,
-      thickness: strokeWidth,
+      from:      toNorm(lastPos.current, canvas),
+      to:        toNorm(pos, canvas),
+      color:     sc,
+      thickness: sw,
     });
 
     lastPos.current = pos;
@@ -355,49 +379,16 @@ const WhiteboardDrawer = ({
     onLocalClear?.();
   };
 
-  // Init white background whenever opened
-  useEffect(() => {
-    if (!open) return;
-    setTimeout(() => {
-      const canvas = canvasRef.current; if (!canvas) return;
-      canvas.width  = canvas.offsetWidth;
-      canvas.height = canvas.offsetHeight;
-      clearCanvas();
-      // Non-hosts ask the host to replay the current board state
-      if (!isHost) syncStrokes?.();
-    }, 120);
-  }, [open, isHost, clearCanvas, syncStrokes]);
-
-  // Apply a stroke that arrived from the host via the data channel
-  useEffect(() => {
-    if (!remoteStroke) return;
-    const canvas = canvasRef.current; if (!canvas) return;
-    const from = fromNorm(remoteStroke.from.nx, remoteStroke.from.ny, canvas);
-    const to   = fromNorm(remoteStroke.to.nx,   remoteStroke.to.ny,   canvas);
-    strokeOnCanvas(from, to, remoteStroke.color, remoteStroke.thickness);
-  }, [remoteStroke, strokeOnCanvas]);
-
-  // Apply a clear that arrived from the host
-  useEffect(() => {
-    if (remoteClear) clearCanvas();
-  }, [remoteClear, clearCanvas]);
-
   return (
     <Drawer anchor="right" open={open} onClose={isHost ? onClose : undefined}
       PaperProps={{ sx: { width: { xs: "100vw", md: 700 }, bgcolor: "#f8fafc", display: "flex", flexDirection: "column" } }}>
       <Box sx={{ p: 1.5, bgcolor: DARK, display: "flex", alignItems: "center", gap: 1.5, flexWrap: "wrap" }}>
-        <Typography sx={{ color: TEXT, fontWeight: 800, fontSize: 15, mr: 1 }}>
-          Whiteboard
-        </Typography>
+        <Typography sx={{ color: TEXT, fontWeight: 800, fontSize: 15, mr: 1 }}>Whiteboard</Typography>
 
         {!isHost && (
-          <Chip
-            icon={<Visibility sx={{ fontSize: 13 }} />}
-            label="View only"
-            size="small"
+          <Chip icon={<Visibility sx={{ fontSize: 13 }} />} label="View only" size="small"
             sx={{ bgcolor: "rgba(255,255,255,0.1)", color: MUTED_D, fontWeight: 700, fontSize: 11,
-                  "& .MuiChip-icon": { color: MUTED_D } }}
-          />
+                  "& .MuiChip-icon": { color: MUTED_D } }} />
         )}
 
         {isHost && (
@@ -421,16 +412,20 @@ const WhiteboardDrawer = ({
             <Box sx={{ width: 80 }}>
               <Slider size="small" min={1} max={20} value={thickness} onChange={(_, v) => setThickness(v)} sx={{ color: GOLD }} />
             </Box>
-            <Tooltip title="Clear"><IconButton onClick={handleClearClick} sx={{ color: "#ef4444" }}><DeleteSweep /></IconButton></Tooltip>
+            <Tooltip title="Clear">
+              <IconButton onClick={handleClearClick} sx={{ color: "#ef4444" }}><DeleteSweep /></IconButton>
+            </Tooltip>
           </>
         )}
 
         <Box flex={1} />
-        {isHost && (
-          <IconButton onClick={onClose} sx={{ color: MUTED_D }}><Close /></IconButton>
-        )}
+        {isHost && <IconButton onClick={onClose} sx={{ color: MUTED_D }}><Close /></IconButton>}
       </Box>
-      <Box sx={{ flex: 1, overflow: "hidden", cursor: isHost ? (tool === "eraser" ? "cell" : "crosshair") : "default" }}>
+
+      <Box sx={{
+        flex: 1, overflow: "hidden",
+        cursor: isHost ? (tool === "eraser" ? "cell" : "crosshair") : "default",
+      }}>
         <canvas ref={canvasRef}
           style={{ width: "100%", height: "100%", display: "block", touchAction: "none" }}
           onMouseDown={startDraw} onMouseMove={draw} onMouseUp={stopDraw} onMouseLeave={stopDraw}
@@ -577,21 +572,36 @@ const AdmitPanel = ({ open, onClose, sessionId, onAdmit, onDeny, triggerRefresh 
                   {!w.profilePicUrl && getInitials(w.fullName)}
                 </Avatar>
                 <Box>
+                <Stack direction="row" spacing={0.75} alignItems="center">
+                  <Typography sx={{ color: TEXT, fontWeight: 700, fontSize: 14 }}>{w.fullName}</Typography>
+                  {w.isGuest && (
+                    <Chip
+                      label="Guest"
+                      size="small"
+                      sx={{ height: 18, fontSize: 10, fontWeight: 800, bgcolor: "rgba(212,160,23,0.18)", color: GOLD }}
+                    />
+                  )}
+                </Stack>
+                <Typography sx={{ color: MUTED_D, fontSize: 12 }}>Waiting to join</Typography>
+              </Box>
+                {/* <Box>
                   <Typography sx={{ color: TEXT, fontWeight: 700, fontSize: 14 }}>{w.fullName}</Typography>
                   <Typography sx={{ color: MUTED_D, fontSize: 12 }}>Waiting to join</Typography>
-                </Box>
+                </Box> */}
               </Stack>
               <Stack direction="row" spacing={1}>
                 <Button fullWidth variant="contained" size="small"
                   startIcon={<CheckCircle sx={{ fontSize: 15 }} />}
-                  onClick={() => handleAdmit(w.userId)}
+                  onClick={() => handleAdmit(w.isGuest ? w.guestId : w.userId)}
+                  // onClick={() => handleAdmit(w.userId)}
                   sx={{ bgcolor: GREEN, textTransform: "none", fontWeight: 700, borderRadius: 2,
                         "&:hover": { bgcolor: "#166d3e" } }}>
                   Admit
                 </Button>
                 <Button fullWidth variant="outlined" size="small"
                   startIcon={<Cancel sx={{ fontSize: 15 }} />}
-                  onClick={() => handleDeny(w.userId)}
+                  onClick={() => handleDeny(w.isGuest ? w.guestId : w.userId)}
+                  // onClick={() => handleDeny(w.userId)}
                   sx={{ borderColor: "#ef4444", color: "#ef4444", textTransform: "none", fontWeight: 700,
                         borderRadius: 2, "&:hover": { borderColor: "#dc2626", bgcolor: "rgba(239,68,68,0.08)" } }}>
                   Deny
@@ -853,10 +863,7 @@ const LobbyScreen = ({ currentUser, onLeave }) => (
 );
 
 // ─── RoomInner — now owns whiteboard/hand/reaction shared state ───────
-const RoomInner = ({
-  role, sessionId, navigate, currentUser, phase,
-  onRequestTokenSwap,
-}) => {
+const RoomInner = ({ role, sessionId, navigate, currentUser, phase, onRequestTokenSwap, guestId }) => {
   const participants         = useParticipants();
   const { localParticipant } = useLocalParticipant();
   const room                 = useRoomContext();
@@ -868,88 +875,68 @@ const RoomInner = ({
   const [joinRequestTick,  setJoinRequestTick]   = useState(0);
   const [toast,            setToast]             = useState(null);
   const [upgrading,        setUpgrading]         = useState(false);
+  const [raisedHands,      setRaisedHands]       = useState({});
+  const [reactions,        setReactions]         = useState({});
+  const [myHandRaised,     setMyHandRaised]      = useState(false);
 
-  // ── NEW shared state ──
-  const [raisedHands, setRaisedHands] = useState({});     // { [identity]: true }
-  const [reactions,   setReactions]   = useState({});     // { [identity]: {emoji, fullName} }
-  const [myHandRaised, setMyHandRaised] = useState(false);
-  const [whiteboardStroke, setWhiteboardStroke] = useState(null); // last incoming stroke
-  const [whiteboardClearTick, setWhiteboardClearTick] = useState(0);
+  // ── FIX 1: stroke queue refs — written by data handler, read by RAF loop ──
+  const strokeQueueRef   = useRef([]);   // { from, to, color, thickness }[]
+  const clearTriggerRef  = useRef(0);    // increment to trigger a clear
 
-  // Host keeps an in-memory stroke log so late-openers can be synced
-  const strokeLogRef = useRef([]);
-
-  const reactionTimers = useRef({}); // identity -> setTimeout id
-
-  const myIdentityRef = useRef(localParticipant?.identity);
+  // Host's full stroke log for sync-on-open
+  const strokeLogRef     = useRef([]);
+  const reactionTimers   = useRef({});
+  const myIdentityRef    = useRef(localParticipant?.identity);
   useEffect(() => { myIdentityRef.current = localParticipant?.identity; }, [localParticipant?.identity]);
 
-  const totalParticipants = (localParticipant ? 1 : 0) + participants.length;
   const isHost = role === "host";
+  const totalParticipants = (localParticipant ? 1 : 0) + participants.length;
 
-  // ── Poll waiting-room count badge (host only) ──
+  // Waiting room poll (host only)
   useEffect(() => {
     if (role !== "host") return;
     const poll = async () => {
-      try {
-        const res = await getWaitingRoom(sessionId);
-        setWaitingCount((res.waiting || []).length);
-      } catch { /* silent */ }
+      try { const res = await getWaitingRoom(sessionId); setWaitingCount((res.waiting || []).length); } catch { /* silent */ }
     };
     poll();
     const id = setInterval(poll, 5000);
     return () => clearInterval(id);
   }, [role, sessionId]);
 
-  // ── Student poll fallback for admission (unchanged) ──
+  // Admission poll fallback (student/guest in lobby)
   useEffect(() => {
     if (phase !== "lobby" || role === "host") return;
     const poll = async () => {
       if (upgrading) return;
       try {
-        const res = await getParticipantToken(sessionId);
-        if (res?.token) {
-          setUpgrading(true);
-          onRequestTokenSwap(res.token, res.serverUrl);
-        }
+        const res = guestId
+          ? await guestGetParticipantToken(sessionId, guestId)
+          : await getParticipantToken(sessionId);
+        if (res?.token) { setUpgrading(true); onRequestTokenSwap(res.token, res.serverUrl); }
       } catch { /* 403 = still waiting */ }
     };
     const id = setInterval(poll, 3000);
     return () => clearInterval(id);
-  }, [phase, role, sessionId, upgrading, onRequestTokenSwap]);
+  }, [phase, role, sessionId, upgrading, onRequestTokenSwap, guestId]);
 
-  // ── Helper: broadcast a data message to the room ──
   const broadcast = useCallback(async (msg, reliable = true) => {
     try {
       const payload = new TextEncoder().encode(JSON.stringify(msg));
       await room?.localParticipant?.publishData(payload, { reliable });
-    } catch (err) {
-      console.error("broadcast failed:", err);
-    }
+    } catch (err) { console.error("broadcast:", err); }
   }, [room]);
 
-  // ── Toggle my own raised hand ──
   const handleToggleHand = useCallback(async () => {
     const next = !myHandRaised;
     setMyHandRaised(next);
-    setRaisedHands((prev) => ({ ...prev, [myIdentityRef.current]: next || undefined }));
-    await broadcast({
-      type: MSG.RAISE_HAND,
-      identity: myIdentityRef.current,
-      fullName: getMetadata(localParticipant).fullName,
-      raised: next,
-    });
+    setRaisedHands((p) => { const n = { ...p }; if (next) n[myIdentityRef.current] = true; else delete n[myIdentityRef.current]; return n; });
+    await broadcast({ type: MSG.RAISE_HAND, identity: myIdentityRef.current, fullName: getMetadata(localParticipant).fullName, raised: next });
     try { await raiseHand(sessionId); } catch { /* best effort */ }
   }, [myHandRaised, broadcast, localParticipant, sessionId]);
 
-  // ── Whiteboard control handlers (host only — buttons are hidden for
-  //     non-hosts anyway, but guard here too) ──
   const handleOpenWhiteboard = useCallback(async () => {
     setWhiteboardOpen(true);
-    if (isHost) {
-      strokeLogRef.current = []; // fresh board each time host opens it
-      await broadcast({ type: MSG.WHITEBOARD_OPEN });
-    }
+    if (isHost) { strokeLogRef.current = []; await broadcast({ type: MSG.WHITEBOARD_OPEN }); }
   }, [isHost, broadcast]);
 
   const handleCloseWhiteboard = useCallback(async () => {
@@ -959,7 +946,7 @@ const RoomInner = ({
 
   const handleLocalStroke = useCallback((stroke) => {
     strokeLogRef.current.push(stroke);
-    broadcast({ type: MSG.WHITEBOARD_STROKE, stroke }, false); // unreliable = lower latency, fine for drawing
+    broadcast({ type: MSG.WHITEBOARD_STROKE, stroke }, false);
   }, [broadcast]);
 
   const handleLocalClear = useCallback(() => {
@@ -967,21 +954,18 @@ const RoomInner = ({
     broadcast({ type: MSG.WHITEBOARD_CLEAR });
   }, [broadcast]);
 
-  // Non-host asks host to replay the board when they open their drawer
   const handleRequestSync = useCallback(() => {
     if (isHost) return;
     broadcast({ type: MSG.WHITEBOARD_SYNC, requesterIdentity: myIdentityRef.current });
   }, [isHost, broadcast]);
 
-  // ── Data message handler ──
+  // Data handler
   useEffect(() => {
     if (!room) return;
-
     const handleData = async (payload) => {
       const data = decodeMsg(payload);
       if (!data) return;
 
-      // HOST receives JOIN_REQUEST
       if (data.type === MSG.JOIN_REQUEST && role === "host") {
         setWaitingCount((c) => c + 1);
         setJoinRequestTick((t) => t + 1);
@@ -989,15 +973,14 @@ const RoomInner = ({
         setToast({ msg: `✋ ${data.fullName || "Someone"} is waiting to join`, severity: "info" });
         return;
       }
-
-      // STUDENT receives ADMITTED
       if (data.type === MSG.ADMITTED && phase === "lobby") {
-        const myId = myIdentityRef.current;
-        if (data.identity && data.identity !== myId) return;
+        if (data.identity && data.identity !== myIdentityRef.current) return;
         if (upgrading) return;
         setUpgrading(true);
         try {
-          const res = await getParticipantToken(sessionId);
+          const res = guestId
+            ? await guestGetParticipantToken(sessionId, guestId)
+            : await getParticipantToken(sessionId);
           onRequestTokenSwap(res.token, res.serverUrl);
           setToast({ msg: "You've been admitted! 🎉", severity: "success" });
         } catch (err) {
@@ -1007,191 +990,121 @@ const RoomInner = ({
         }
         return;
       }
-
-      // STUDENT receives DENIED
       if (data.type === MSG.DENIED && phase === "lobby") {
-        const myId = myIdentityRef.current;
-        if (data.identity && data.identity !== myId) return;
-        setToast({ msg: `Your request to join was declined.${data.reason ? ` Reason: ${data.reason}` : ""}`, severity: "error" });
+        if (data.identity && data.identity !== myIdentityRef.current) return;
+        setToast({ msg: `Request declined.${data.reason ? ` Reason: ${data.reason}` : ""}`, severity: "error" });
         setTimeout(() => navigate("/student/live-classes"), 3500);
         return;
       }
-
-      // ── RAISE_HAND (any participant, toggles per-identity state) ──
       if (data.type === MSG.RAISE_HAND) {
-        setRaisedHands((prev) => {
-          const next = { ...prev };
-          if (data.raised) next[data.identity] = true;
-          else delete next[data.identity];
-          return next;
-        });
-        if (data.raised) {
-          setToast({ msg: `✋ ${data.fullName || "Someone"} raised their hand`, severity: "info" });
-        }
+        setRaisedHands((p) => { const n = { ...p }; if (data.raised) n[data.identity] = true; else delete n[data.identity]; return n; });
+        if (data.raised) setToast({ msg: `✋ ${data.fullName || "Someone"} raised their hand`, severity: "info" });
         return;
       }
-
-      // ── REACTION (any participant — show bubble on their tile) ──
       if (data.type === MSG.REACTION) {
-        const id = data.identity;
-        if (!id) return;
-        setReactions((prev) => ({ ...prev, [id]: { emoji: data.emoji, fullName: data.fullName } }));
+        const id = data.identity; if (!id) return;
+        setReactions((p) => ({ ...p, [id]: { emoji: data.emoji, fullName: data.fullName } }));
         clearTimeout(reactionTimers.current[id]);
         reactionTimers.current[id] = setTimeout(() => {
-          setReactions((prev) => {
-            const next = { ...prev };
-            delete next[id];
-            return next;
-          });
+          setReactions((p) => { const n = { ...p }; delete n[id]; return n; });
         }, 2500);
         return;
       }
+      if (data.type === MSG.WHITEBOARD_OPEN)  { setWhiteboardOpen(true);  if (!isHost) setToast({ msg: "Host opened the whiteboard", severity: "info" }); return; }
+      if (data.type === MSG.WHITEBOARD_CLOSE) { setWhiteboardOpen(false); return; }
 
-      // ── WHITEBOARD: host opened it → everyone auto-opens ──
-      if (data.type === MSG.WHITEBOARD_OPEN) {
-        setWhiteboardOpen(true);
-        if (!isHost) {
-          setToast({ msg: "Host opened the whiteboard", severity: "info" });
-        }
-        return;
-      }
-
-      // ── WHITEBOARD: host closed it → everyone auto-closes ──
-      if (data.type === MSG.WHITEBOARD_CLOSE) {
-        setWhiteboardOpen(false);
-        return;
-      }
-
-      // ── WHITEBOARD: a stroke segment from the host ──
+      // ── FIX 1: push stroke into queue ref (no React setState) ──
       if (data.type === MSG.WHITEBOARD_STROKE && !isHost) {
-        setWhiteboardStroke(data.stroke);
+        strokeQueueRef.current.push(data.stroke);
         return;
       }
-
-      // ── WHITEBOARD: host cleared the board ──
+      // ── FIX 1: increment clear trigger ref ──
       if (data.type === MSG.WHITEBOARD_CLEAR && !isHost) {
-        setWhiteboardClearTick((t) => t + 1);
+        clearTriggerRef.current += 1;
         return;
       }
-
-      // ── WHITEBOARD: host receives a sync request from a late-joiner ──
       if (data.type === MSG.WHITEBOARD_SYNC && isHost) {
-        // Replay the full stroke log as a burst of STROKE messages.
-        // Simple and good enough for typical whiteboard usage volumes.
         for (const stroke of strokeLogRef.current) {
           await broadcast({ type: MSG.WHITEBOARD_STROKE, stroke }, false);
         }
         return;
       }
     };
-
     room.on("dataReceived", handleData);
     return () => { room.off("dataReceived", handleData); };
-  }, [room, role, phase, sessionId, navigate, upgrading, onRequestTokenSwap, isHost, broadcast]);
+  }, [room, role, phase, sessionId, navigate, upgrading, onRequestTokenSwap, isHost, broadcast, guestId]);
 
   const handleAdmit = async (userId) => {
-    try {
-      await admitParticipant(sessionId, userId);
-      setWaitingCount((c) => Math.max(0, c - 1));
-      setToast({ msg: "Participant admitted ✓", severity: "success" });
-    } catch (err) {
-      console.error(err);
-      setToast({ msg: "Failed to admit participant", severity: "error" });
-    }
+    try { await admitParticipant(sessionId, userId); setWaitingCount((c) => Math.max(0, c - 1)); setToast({ msg: "Participant admitted ✓", severity: "success" }); }
+    catch (err) { console.error(err); setToast({ msg: "Failed to admit", severity: "error" }); }
   };
-
   const handleDeny = async (userId) => {
-    try {
-      await denyParticipant(sessionId, userId);
-      setWaitingCount((c) => Math.max(0, c - 1));
-    } catch (err) {
-      console.error(err);
-    }
+    try { await denyParticipant(sessionId, userId); setWaitingCount((c) => Math.max(0, c - 1)); }
+    catch (err) { console.error(err); }
   };
 
+  // ════════════════════════════════════════════════════════════
+  // FIX 2: handleLeave — routes correctly for host, observer, admin
+  // Previously always sent non-hosts to /student/live-classes.
+  // Now: host/tutor → /tutor/live-classes
+  //      observer/admin → /admin/live-sessions
+  //      student/participant → /student/live-classes
+  // ════════════════════════════════════════════════════════════
   const handleLeave = async () => {
     try { await leaveAttendance(sessionId); } catch { /* ignore */ }
-    navigate(role === "host" ? "/tutor/live-classes" : "/student/live-classes");
+
+    if (role === "host" || role === "tutor") {
+      navigate("/tutor/live-classes");
+    } else if (role === "observer" || role === "admin") {
+      navigate("/admin/live-sessions");
+    } else {
+      navigate("/student/live-classes");
+    }
   };
 
-  // ── LOBBY PHASE ──
+  // Lobby phase
   if (phase === "lobby") {
     return (
       <>
         <RoomAudioRenderer />
         <LobbyScreen currentUser={currentUser} onLeave={handleLeave} />
         {upgrading && (
-          <Box sx={{
-            position: "fixed", inset: 0, bgcolor: "rgba(0,0,0,0.75)",
-            display: "flex", flexDirection: "column",
-            alignItems: "center", justifyContent: "center", gap: 2, zIndex: 9999,
-          }}>
+          <Box sx={{ position: "fixed", inset: 0, bgcolor: "rgba(0,0,0,0.75)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 2, zIndex: 9999 }}>
             <CircularProgress sx={{ color: GREEN }} size={48} />
-            <Typography sx={{ color: TEXT, fontWeight: 700, fontSize: 18 }}>
-              Joining the class…
-            </Typography>
+            <Typography sx={{ color: TEXT, fontWeight: 700, fontSize: 18 }}>Joining the class…</Typography>
           </Box>
         )}
-        <Snackbar open={!!toast} autoHideDuration={5000} onClose={() => setToast(null)}
-          anchorOrigin={{ vertical: "top", horizontal: "center" }}>
-          <Alert severity={toast?.severity || "info"} onClose={() => setToast(null)}>
-            {toast?.msg}
-          </Alert>
+        <Snackbar open={!!toast} autoHideDuration={5000} onClose={() => setToast(null)} anchorOrigin={{ vertical: "top", horizontal: "center" }}>
+          <Alert severity={toast?.severity || "info"} onClose={() => setToast(null)}>{toast?.msg}</Alert>
         </Snackbar>
       </>
     );
   }
 
-  // ── LIVE PHASE ──
+  // Live phase
   return (
     <Box sx={{ display: "flex", flexDirection: "column", height: "100vh", bgcolor: DARK, overflow: "hidden" }}>
-
       {/* TOP BAR */}
-      <Box sx={{ bgcolor: DARK2, borderBottom: "1px solid rgba(255,255,255,0.06)",
-                 px: 3, py: 1.25, display: "flex", alignItems: "center", gap: 2 }}>
+      <Box sx={{ bgcolor: DARK2, borderBottom: "1px solid rgba(255,255,255,0.06)", px: 3, py: 1.25, display: "flex", alignItems: "center", gap: 2 }}>
         <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-          <Box sx={{
-            width: 10, height: 10, borderRadius: "50%", bgcolor: GREEN,
-            boxShadow: `0 0 0 3px ${GREEN}44`, animation: "pulse 2s infinite",
-            "@keyframes pulse": { "0%,100%": { opacity: 1 }, "50%": { opacity: 0.4 } },
-          }} />
+          <Box sx={{ width: 10, height: 10, borderRadius: "50%", bgcolor: GREEN, boxShadow: `0 0 0 3px ${GREEN}44`,
+                      animation: "p 2s infinite", "@keyframes p": { "0%,100%": { opacity: 1 }, "50%": { opacity: 0.4 } } }} />
           <Typography sx={{ color: TEXT, fontWeight: 800, fontSize: 15 }}>GIEVA Live</Typography>
         </Box>
-
-        <Chip label="LIVE" size="small"
-          sx={{ bgcolor: "#ef444433", color: "#ef4444", fontWeight: 800, fontSize: 11 }} />
-
+        <Chip label="LIVE" size="small" sx={{ bgcolor: "#ef444433", color: "#ef4444", fontWeight: 800, fontSize: 11 }} />
         <Box flex={1} />
-
         {waitingCount > 0 && role === "host" && (
-          <Chip
-            icon={<PersonAdd sx={{ fontSize: 14 }} />}
-            label={`${waitingCount} waiting`}
-            onClick={() => setAdmitPanelOpen(true)}
-            size="small"
-            sx={{
-              bgcolor: "rgba(239,68,68,0.18)", color: "#fca5a5", fontWeight: 800,
-              border: "1px solid rgba(239,68,68,0.35)", cursor: "pointer",
-              "& .MuiChip-icon": { color: "#f87171" },
-              animation: "pulse 1.5s infinite",
-              "@keyframes pulse": {
-                "0%,100%": { boxShadow: "0 0 0 0 rgba(239,68,68,0.4)" },
-                "50%":     { boxShadow: "0 0 0 8px rgba(239,68,68,0)" },
-              },
-            }}
-          />
+          <Chip icon={<PersonAdd sx={{ fontSize: 14 }} />} label={`${waitingCount} waiting`} onClick={() => setAdmitPanelOpen(true)} size="small"
+            sx={{ bgcolor: "rgba(239,68,68,0.18)", color: "#fca5a5", fontWeight: 800, border: "1px solid rgba(239,68,68,0.35)", cursor: "pointer", "& .MuiChip-icon": { color: "#f87171" } }} />
         )}
-
         <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
           <Avatar src={currentUser?.profilePicUrl || undefined}
             sx={{ width: 30, height: 30, bgcolor: avatarColor(currentUser?.fullName || ""), fontSize: 12 }}>
             {!currentUser?.profilePicUrl && getInitials(currentUser?.fullName || "")}
           </Avatar>
           <Typography sx={{ fontSize: 13, color: MUTED_D }}>{currentUser?.fullName}</Typography>
-          {role === "host" && (
-            <Chip label="Host" size="small"
-              sx={{ bgcolor: GOLD, color: NAVY, fontWeight: 800, height: 20, fontSize: 11 }} />
-          )}
+          {role === "host" && <Chip label="Host" size="small" sx={{ bgcolor: GOLD, color: NAVY, fontWeight: 800, height: 20, fontSize: 11 }} />}
+          {role === "observer" && <Chip label="Observer" size="small" sx={{ bgcolor: "rgba(148,163,184,0.15)", color: MUTED_D, fontWeight: 800, height: 20, fontSize: 11 }} />}
         </Box>
       </Box>
 
@@ -1199,49 +1112,116 @@ const RoomInner = ({
       <RoomAudioRenderer />
 
       <ControlBar
-        role={role}
-        sessionId={sessionId}
-        onLeave={handleLeave}
-        onWhiteboard={handleOpenWhiteboard}
-        onParticipants={() => setParticipantsOpen(true)}
+        role={role} sessionId={sessionId} onLeave={handleLeave}
+        onWhiteboard={handleOpenWhiteboard} onParticipants={() => setParticipantsOpen(true)}
         onAdmitPanel={() => setAdmitPanelOpen(true)}
-        participantCount={totalParticipants}
-        waitingCount={waitingCount}
-        handRaised={myHandRaised}
-        onToggleHand={handleToggleHand}
+        participantCount={totalParticipants} waitingCount={waitingCount}
+        handRaised={myHandRaised} onToggleHand={handleToggleHand}
       />
 
+      {/* FIX 1: pass ref objects instead of React state to WhiteboardDrawer */}
       <WhiteboardDrawer
         open={whiteboardOpen}
         onClose={handleCloseWhiteboard}
         isHost={isHost}
         onLocalStroke={handleLocalStroke}
         onLocalClear={handleLocalClear}
-        remoteStroke={whiteboardStroke}
-        remoteClear={whiteboardClearTick}
+        strokeQueueRef={strokeQueueRef}
+        clearTriggerRef={clearTriggerRef}
         syncStrokes={handleRequestSync}
       />
       <ParticipantsDrawer open={participantsOpen} onClose={() => setParticipantsOpen(false)} />
-      <AdmitPanel
-        open={admitPanelOpen}
-        onClose={() => setAdmitPanelOpen(false)}
-        sessionId={sessionId}
-        onAdmit={handleAdmit}
-        onDeny={handleDeny}
-        triggerRefresh={joinRequestTick}
-      />
+      <AdmitPanel open={admitPanelOpen} onClose={() => setAdmitPanelOpen(false)}
+        sessionId={sessionId} onAdmit={handleAdmit} onDeny={handleDeny} triggerRefresh={joinRequestTick} />
 
-      <Snackbar open={!!toast} autoHideDuration={4000} onClose={() => setToast(null)}
-        anchorOrigin={{ vertical: "top", horizontal: "center" }}>
-        <Alert severity={toast?.severity || "info"} onClose={() => setToast(null)}>
-          {toast?.msg}
-        </Alert>
+      <Snackbar open={!!toast} autoHideDuration={4000} onClose={() => setToast(null)} anchorOrigin={{ vertical: "top", horizontal: "center" }}>
+        <Alert severity={toast?.severity || "info"} onClose={() => setToast(null)}>{toast?.msg}</Alert>
       </Snackbar>
     </Box>
   );
 };
 
-// ─── Main Export (unchanged from the public-meeting-host patch) ───────
+
+const GuestGate = ({ onSubmit, loading, error }) => {
+  const [name, setName] = useState("");
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!name.trim()) return;
+    onSubmit(name.trim());
+  };
+
+  return (
+    <Box sx={{ height: "100vh", bgcolor: DARK, display: "flex", flexDirection: "column",
+               alignItems: "center", justifyContent: "center", gap: 3, px: 3 }}>
+      <Box sx={{
+        width: 72, height: 72, borderRadius: "50%", bgcolor: `${GREEN}22`,
+        display: "flex", alignItems: "center", justifyContent: "center",
+      }}>
+        <Videocam sx={{ fontSize: 32, color: GREEN }} />
+      </Box>
+
+      <Box sx={{ textAlign: "center" }}>
+        <Typography sx={{ color: TEXT, fontSize: 22, fontWeight: 800, mb: 0.75 }}>
+          Join this meeting
+        </Typography>
+        <Typography sx={{ color: MUTED_D, fontSize: 14 }}>
+          Enter your name to request entry — no account needed.
+        </Typography>
+      </Box>
+
+      <Box component="form" onSubmit={handleSubmit} sx={{ width: "100%", maxWidth: 360 }}>
+        <Box
+          component="input"
+          autoFocus
+          placeholder="Your name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          maxLength={80}
+          sx={{
+            width: "100%", height: 48, borderRadius: 2.5, px: 2,
+            bgcolor: DARK2, border: `1px solid ${DARK3}`, color: TEXT,
+            fontSize: 15, outline: "none", mb: 2,
+            "&:focus": { borderColor: GREEN },
+          }}
+        />
+
+        {error && (
+          <Typography sx={{ color: "#ef4444", fontSize: 13, mb: 2, textAlign: "center" }}>
+            {error}
+          </Typography>
+        )}
+
+        <Button
+          type="submit"
+          fullWidth
+          variant="contained"
+          disabled={loading || !name.trim()}
+          sx={{
+            bgcolor: GREEN, color: "#fff", textTransform: "none", fontWeight: 700,
+            borderRadius: 2.5, py: 1.25, "&:hover": { bgcolor: "#166d3e" },
+          }}
+        >
+          {loading ? <CircularProgress size={20} color="inherit" /> : "Ask to Join"}
+        </Button>
+      </Box>
+
+      <Typography sx={{ color: MUTED_D, fontSize: 12, mt: 1 }}>
+        Have an account?{" "}
+        <Box component="span" sx={{ color: GREEN, cursor: "pointer", fontWeight: 700 }}
+          onClick={() => window.location.assign("/login")}>
+          Log in
+        </Box>{" "}
+        instead
+      </Typography>
+    </Box>
+  );
+};
+
+// ═══════════════════════════════════════════════════════════════
+// MAIN EXPORT — full replacement
+// ═══════════════════════════════════════════════════════════════
+
 export default function LiveClassroom() {
   const { roomName, sessionId } = useParams();
   const location      = useLocation();
@@ -1255,18 +1235,45 @@ export default function LiveClassroom() {
   const [error,       setError]       = useState("");
   const [currentUser, setCurrentUser] = useState(null);
 
+  // ── NEW: guest-mode state ──
+  const isPublicRoom = roomName?.startsWith("public-");
+  const hasAuthToken = !!localStorage.getItem("token");
+
+  // sessionStorage (not localStorage) — guest identity should not
+  // outlive the tab/browser session the way a real login persists.
+  const [guestId, setGuestId] = useState(() => sessionStorage.getItem(`guestId:${sessionId}`));
+  const [needsGuestGate, setNeedsGuestGate] = useState(false);
+  const [guestGateLoading, setGuestGateLoading] = useState(false);
+  const [guestGateError, setGuestGateError] = useState("");
+
+  const isHostRole = role === "tutor" || role === "host";
+
   useEffect(() => {
+    // ── Decide the entry path up front ──
+    if (!hasAuthToken) {
+      if (isPublicRoom) {
+        // Unauthenticated + public meeting → show the guest gate
+        // instead of attempting any join call yet.
+        setNeedsGuestGate(true);
+        setLoading(false);
+        return;
+      }
+      // Unauthenticated + NOT a public meeting → this replaces what
+      // <ProtectedRoute> used to do for this route.
+      navigate("/login", { replace: true });
+      return;
+    }
+
+    // Authenticated path — unchanged from before.
     loadClass();
     return () => { leaveAttendance(sessionId).catch(() => {}); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId]);
 
   const loadClass = async () => {
     try {
       setLoading(true);
       let response;
-
-      const isHostRole   = role === "tutor" || role === "host";
-      const isPublicRoom = roomName?.startsWith("public-");
 
       if (isHostRole && isPublicRoom) {
         response = await joinPublicMeetingAsHost(sessionId);
@@ -1288,11 +1295,47 @@ export default function LiveClassroom() {
     }
   };
 
+  // ── NEW: guest gate submit handler ──
+  const handleGuestSubmit = async (displayName) => {
+    try {
+      setGuestGateLoading(true);
+      setGuestGateError("");
+
+      const response = await guestJoinPublicMeeting(sessionId, displayName);
+
+      sessionStorage.setItem(`guestId:${sessionId}`, response.guestId);
+      setGuestId(response.guestId);
+
+      setToken(response.token);
+      setServerUrl(response.serverUrl);
+      setPhase(response.phase || "lobby");
+      setCurrentUser(response.currentUser || null);
+      setNeedsGuestGate(false);
+    } catch (err) {
+      console.error(err);
+      setGuestGateError(err?.response?.data?.message || "Failed to join — please try again");
+    } finally {
+      setGuestGateLoading(false);
+    }
+  };
+
+  // ── Admission token-swap callback — branches on guest vs. registered ──
   const handleTokenSwap = useCallback((newToken, newServerUrl) => {
     setToken(newToken);
     if (newServerUrl) setServerUrl(newServerUrl);
     setPhase("live");
   }, []);
+
+  // ── GUEST GATE — shown before any LiveKit connection exists ──
+  if (needsGuestGate) {
+    return (
+      <GuestGate
+        onSubmit={handleGuestSubmit}
+        loading={guestGateLoading}
+        error={guestGateError}
+      />
+    );
+  }
 
   if (loading) {
     return (
@@ -1343,10 +1386,122 @@ export default function LiveClassroom() {
         currentUser={currentUser}
         phase={phase}
         onRequestTokenSwap={handleTokenSwap}
+        // NEW: tells RoomInner's poll-fallback effect which endpoints
+        // to use for this participant
+        guestId={guestId}
       />
     </LiveKitRoom>
   );
 }
+
+
+
+// ─── Main Export (unchanged from the public-meeting-host patch) ───────
+// export default function LiveClassroom() {
+//   const { roomName, sessionId } = useParams();
+//   const location      = useLocation();
+//   const navigate      = useNavigate();
+//   const role          = location.state?.role || "student";
+
+//   const [token,       setToken]       = useState("");
+//   const [serverUrl,   setServerUrl]   = useState("");
+//   const [phase,       setPhase]       = useState("lobby");
+//   const [loading,     setLoading]     = useState(true);
+//   const [error,       setError]       = useState("");
+//   const [currentUser, setCurrentUser] = useState(null);
+
+//   useEffect(() => {
+//     loadClass();
+//     return () => { leaveAttendance(sessionId).catch(() => {}); };
+//   }, [sessionId]);
+
+//   const loadClass = async () => {
+//     try {
+//       setLoading(true);
+//       let response;
+
+//       const isHostRole   = role === "tutor" || role === "host";
+//       const isPublicRoom = roomName?.startsWith("public-");
+
+//       if (isHostRole && isPublicRoom) {
+//         response = await joinPublicMeetingAsHost(sessionId);
+//       } else if (isHostRole) {
+//         response = await joinTutorSession(sessionId);
+//       } else {
+//         response = await joinClassSession(sessionId);
+//       }
+
+//       setToken(response.token);
+//       setServerUrl(response.serverUrl);
+//       setPhase(response.phase || (isHostRole ? "live" : "lobby"));
+//       setCurrentUser(response.currentUser || null);
+//     } catch (err) {
+//       console.error(err);
+//       setError(err?.response?.data?.message || "Failed to join class");
+//     } finally {
+//       setLoading(false);
+//     }
+//   };
+
+//   const handleTokenSwap = useCallback((newToken, newServerUrl) => {
+//     setToken(newToken);
+//     if (newServerUrl) setServerUrl(newServerUrl);
+//     setPhase("live");
+//   }, []);
+
+//   if (loading) {
+//     return (
+//       <Box sx={{ height: "100vh", display: "flex", justifyContent: "center",
+//                  alignItems: "center", flexDirection: "column", bgcolor: DARK, gap: 2 }}>
+//         <Box sx={{ width: 64, height: 64, borderRadius: "50%", bgcolor: `${GREEN}22`,
+//                    display: "flex", alignItems: "center", justifyContent: "center" }}>
+//           <Videocam sx={{ fontSize: 32, color: GREEN }} />
+//         </Box>
+//         <Typography sx={{ color: TEXT, fontWeight: 700, fontSize: 18 }}>Joining classroom…</Typography>
+//         <Typography sx={{ color: MUTED_D, fontSize: 14 }}>Setting up your session</Typography>
+//       </Box>
+//     );
+//   }
+
+//   if (error) {
+//     return (
+//       <Box sx={{ height: "100vh", display: "flex", justifyContent: "center",
+//                  alignItems: "center", flexDirection: "column", bgcolor: DARK, gap: 2, p: 3 }}>
+//         <Typography sx={{ color: "#ef4444", fontWeight: 700, fontSize: 18, textAlign: "center" }}>
+//           {error}
+//         </Typography>
+//         <Button variant="outlined"
+//           onClick={() => navigate(role === "tutor" ? "/tutor/live-classes" : "/student/live-classes")}
+//           sx={{ borderColor: MUTED_D, color: MUTED_D, textTransform: "none", borderRadius: 2 }}>
+//           Go back
+//         </Button>
+//       </Box>
+//     );
+//   }
+
+//   return (
+//     <LiveKitRoom
+//       key={token}
+//       token={token}
+//       serverUrl={serverUrl}
+//       connect
+//       audio={phase === "live"}
+//       video={phase === "live"}
+//       onDisconnected={() =>
+//         navigate(role === "host" || role === "tutor" ? "/tutor/live-classes" : "/student/live-classes")
+//       }
+//     >
+//       <RoomInner
+//         role={role === "tutor" ? "host" : role}
+//         sessionId={sessionId}
+//         navigate={navigate}
+//         currentUser={currentUser}
+//         phase={phase}
+//         onRequestTokenSwap={handleTokenSwap}
+//       />
+//     </LiveKitRoom>
+//   );
+// }
 
 
 

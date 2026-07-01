@@ -2420,3 +2420,319 @@ export const raiseHand = async (req, res) => {
       });
     }
   };
+
+
+  // controllers/classSessionController.js — ADDITIONS for guest access
+//
+// ═══════════════════════════════════════════════════════════════
+// NEW: guestJoinPublicMeeting
+// ═══════════════════════════════════════════════════════════════
+// Unauthenticated equivalent of joinClassSession's public-meeting
+// branch. Does NOT go through the `authenticate` middleware — this
+// route must be registered WITHOUT it. Takes a display name from the
+// request body (no account needed), generates a stable guest
+// identity, and reuses the exact same lobby-token + waiting-room +
+// host-notification flow that registered attendees use.
+//
+// Add this import at the top of classSessionController.js alongside
+// your existing imports:
+//   import { v4 as uuid } from "uuid";   ← already imported in your file
+
+export const guestJoinPublicMeeting = async (req, res) => {
+  try {
+    const sessionId = req.params.sessionId;
+    const { displayName } = req.body;
+
+    if (!displayName || !displayName.trim()) {
+      return res.status(400).json({ message: "Please enter your name to join" });
+    }
+
+    const session = await ClassSession.findByPk(sessionId);
+    if (!session) return res.status(404).json({ message: "Session not found" });
+
+    if (session.sessionType !== "public") {
+      return res.status(403).json({
+        message: "Guest access is only available for public meetings. Please log in to join this session.",
+      });
+    }
+
+    const now = new Date();
+    if (session.linkExpiresAt && now > session.linkExpiresAt) {
+      return res.status(403).json({ message: "This meeting link has expired" });
+    }
+
+    // ── Generate a stable per-guest identity for this join attempt ──
+    // Re-used across admit/deny/poll calls via the `guestId` the
+    // frontend stores (in sessionStorage, not localStorage — a guest
+    // identity should not persist across browser sessions/tabs the
+    // way a real login would).
+    const guestId = `guest-${uuid()}`;
+    const identity = guestId; // LiveKit identity == guestId for guests
+    const fullName = displayName.trim().slice(0, 80); // basic length guard
+    const profilePicUrl = "";
+
+    const lobbyToken = await createLiveKitToken(
+      session.roomName, identity, "lobby", { fullName, profilePicUrl }
+    );
+
+    await SessionWaitingRoom.create({
+      classSessionId: session.id,
+      userId:         null,
+      guestId,
+      isGuest:        true,
+      fullName,
+      profilePicUrl,
+      status:         "waiting",
+      requestedAt:    new Date(),
+    });
+
+    // Realtime push to the host (fast path; poll is the fallback)
+    await pushData(session.roomName, {
+      type: "JOIN_REQUEST",
+      guestId,
+      identity,
+      fullName,
+      profilePicUrl,
+      isGuest: true,
+    });
+
+    // In-app notification to the host — this still works fine since
+    // the HOST is a real registered admin/user; only the ATTENDEE is
+    // a guest here.
+    const hostUserId = await resolveHostUserId(session);
+    if (hostUserId) {
+      await Notification.create({
+        userId:     hostUserId,
+        title:      "Guest Wants to Join Your Meeting",
+        message:    `${fullName} (guest) is waiting to join "${session.title}"`,
+        type:       "live_class",
+        entityId:   session.id,
+        entityType: "class_session",
+      });
+    }
+
+    await ActivityLog.create({
+      userId: null,
+      action: "GUEST_JOIN_PUBLIC_MEETING_LOBBY",
+      meta:   { sessionId: session.id, guestId, fullName },
+    });
+
+    return res.json({
+      token:       lobbyToken,
+      roomName:    session.roomName,
+      serverUrl:   process.env.LIVEKIT_URL,
+      phase:       "lobby",
+      identity,
+      guestId,
+      currentUser: { fullName, profilePicUrl, role: "lobby", isGuest: true },
+    });
+  } catch (err) {
+    console.error("guestJoinPublicMeeting error:", err);
+    res.status(500).json({ message: "Join failed" });
+  }
+};
+
+
+// ═══════════════════════════════════════════════════════════════
+// NEW: guestCheckAdmissionStatus + guestGetParticipantToken
+// ═══════════════════════════════════════════════════════════════
+// Guest equivalents of checkAdmissionStatus / getParticipantToken.
+// Identified by guestId (sent in the request body/query — there's no
+// req.user for an unauthenticated route) instead of req.user.id.
+
+export const guestCheckAdmissionStatus = async (req, res) => {
+  try {
+    const sessionId = req.params.sessionId;
+    const { guestId } = req.query;
+
+    if (!guestId) return res.status(400).json({ message: "Missing guestId" });
+
+    const entry = await SessionWaitingRoom.findOne({
+      where: { classSessionId: sessionId, guestId },
+    });
+
+    if (!entry) return res.json({ status: "unknown" });
+
+    res.json({ status: entry.status, reason: entry.reason || null });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to check admission status" });
+  }
+};
+
+export const guestGetParticipantToken = async (req, res) => {
+  try {
+    const sessionId = req.params.sessionId;
+    const { guestId } = req.body;
+
+    if (!guestId) return res.status(400).json({ message: "Missing guestId" });
+
+    const session = await ClassSession.findByPk(sessionId);
+    if (!session) return res.status(404).json({ message: "Session not found" });
+
+    const waitingEntry = await SessionWaitingRoom.findOne({
+      where: { classSessionId: sessionId, guestId, status: "admitted" },
+    });
+    if (!waitingEntry) {
+      return res.status(403).json({ message: "You have not been admitted yet" });
+    }
+
+    const identity = guestId;
+    const fullName = waitingEntry.fullName;
+    const profilePicUrl = waitingEntry.profilePicUrl || "";
+
+    const token = await createLiveKitToken(
+      session.roomName, identity, "participant", { fullName, profilePicUrl }
+    );
+
+    res.json({
+      token,
+      roomName:    session.roomName,
+      serverUrl:   process.env.LIVEKIT_URL,
+      phase:       "live",
+      currentUser: { fullName, profilePicUrl, role: "participant", isGuest: true },
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Token upgrade failed" });
+  }
+};
+
+
+// ═══════════════════════════════════════════════════════════════
+// UPDATED: getWaitingRoom, admitParticipant, denyParticipant
+// ═══════════════════════════════════════════════════════════════
+// These already key lookups by `userId` in their `where` clauses.
+// Since admit/deny are called by the HOST (always a real authenticated
+// user — guests never host), the `:userId` route param continues to
+// identify the WAITING ENTRY to act on, but that entry might actually
+// be a guest row. The fix: accept EITHER a numeric userId OR a guestId
+// string in that same route param slot, and branch the lookup
+// accordingly. This means admitParticipant/denyParticipant's `:userId`
+// param is now better thought of as `:identityParam` — but keeping the
+// route shape unchanged avoids touching the frontend's AdmitPanel
+// component, which already calls admit/deny with whatever identifier
+// getWaitingRoom returned for each row.
+
+const isGuestIdentity = (value) => typeof value === "string" && value.startsWith("guest-");
+
+// Replace the `where` clause construction in getWaitingRoom's response
+// mapping — no change needed there, it already returns full rows
+// including guestId/isGuest once the model has those columns.
+
+export const admitParticipantGuestAware = async (req, res) => {
+  try {
+    if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+
+    const { sessionId, userId } = req.params; // userId may actually be a guestId string
+
+    const session = await ClassSession.findByPk(sessionId);
+    if (!session) return res.status(404).json({ message: "Session not found" });
+
+    const allowed = await isSessionHostOrAdmin(session, req.user);
+    if (!allowed) return res.status(403).json({ message: "Unauthorized" });
+
+    const where = isGuestIdentity(userId)
+      ? { classSessionId: sessionId, guestId: userId }
+      : { classSessionId: sessionId, userId };
+
+    const entry = await SessionWaitingRoom.findOne({ where });
+    if (!entry) return res.status(404).json({ message: "User not in waiting room" });
+
+    entry.status     = "admitted";
+    entry.admittedAt = new Date();
+    await entry.save();
+
+    const targetIdentity = entry.isGuest ? entry.guestId : `user-${entry.userId}`;
+
+    await pushData(session.roomName, {
+      type:     "ADMITTED",
+      userId:   entry.isGuest ? null : Number(entry.userId),
+      guestId:  entry.isGuest ? entry.guestId : null,
+      identity: targetIdentity,
+    });
+
+    // Guests have no account to notify in-app — skip Notification.create
+    // for guest rows; only notify real registered users.
+    if (!entry.isGuest) {
+      await Notification.create({
+        userId:     Number(entry.userId),
+        title:      "You've Been Admitted",
+        message:    `You have been admitted to "${session.title}"`,
+        type:       "live_class",
+        entityId:   session.id,
+        entityType: "class_session",
+      });
+    }
+
+    await ActivityLog.create({
+      userId: req.user.id,
+      action: "PARTICIPANT_ADMITTED",
+      meta:   { sessionId, admittedIdentity: targetIdentity, isGuest: entry.isGuest },
+    });
+
+    res.json({ message: "Participant admitted", identity: targetIdentity });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to admit participant" });
+  }
+};
+
+export const denyParticipantGuestAware = async (req, res) => {
+  try {
+    if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+
+    const { sessionId, userId } = req.params; // may be a guestId string
+    const { reason = "" } = req.body;
+
+    const session = await ClassSession.findByPk(sessionId);
+    if (!session) return res.status(404).json({ message: "Session not found" });
+
+    const allowed = await isSessionHostOrAdmin(session, req.user);
+    if (!allowed) return res.status(403).json({ message: "Unauthorized" });
+
+    const where = isGuestIdentity(userId)
+      ? { classSessionId: sessionId, guestId: userId }
+      : { classSessionId: sessionId, userId };
+
+    const entry = await SessionWaitingRoom.findOne({ where });
+    if (!entry) return res.status(404).json({ message: "User not in waiting room" });
+
+    entry.status   = "denied";
+    entry.deniedAt = new Date();
+    entry.reason   = reason;
+    await entry.save();
+
+    const targetIdentity = entry.isGuest ? entry.guestId : `user-${entry.userId}`;
+
+    await pushData(session.roomName, {
+      type:     "DENIED",
+      userId:   entry.isGuest ? null : Number(entry.userId),
+      guestId:  entry.isGuest ? entry.guestId : null,
+      identity: targetIdentity,
+      reason,
+    });
+
+    if (!entry.isGuest) {
+      await Notification.create({
+        userId:     Number(entry.userId),
+        title:      "Join Request Declined",
+        message:    `Your request to join "${session.title}" was declined.${reason ? ` Reason: ${reason}` : ""}`,
+        type:       "live_class",
+        entityId:   session.id,
+        entityType: "class_session",
+      });
+    }
+
+    await ActivityLog.create({
+      userId: req.user.id,
+      action: "PARTICIPANT_DENIED",
+      meta:   { sessionId, deniedIdentity: targetIdentity, reason, isGuest: entry.isGuest },
+    });
+
+    res.json({ message: "Participant denied", identity: targetIdentity });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to deny participant" });
+  }
+};

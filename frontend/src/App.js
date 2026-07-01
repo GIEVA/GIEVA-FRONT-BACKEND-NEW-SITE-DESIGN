@@ -325,9 +325,9 @@ function App() {
         <Route
           path="/live/:roomName/:sessionId"
           element={
-            <ProtectedRoute>
+            
               <LiveClassroom />
-            </ProtectedRoute>
+            
           }
         />
 

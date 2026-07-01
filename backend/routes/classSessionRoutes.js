@@ -26,6 +26,11 @@ import {
   startRecording,
   stopRecording,
   leaveSession,
+  guestJoinPublicMeeting,
+  guestCheckAdmissionStatus,
+  guestGetParticipantToken,
+  admitParticipantGuestAware,   // ← replaces admitParticipant in route wiring below
+  denyParticipantGuestAware, 
 } from "../controllers/classSessionController.js";
 
 import { authenticate, authorizeRoles } from "../middleware/auth.js";
@@ -94,6 +99,38 @@ router.get("/:sessionId/admission-status", authenticate, checkAdmissionStatus);
 router.get("/:sessionId/waiting-room", authenticate, getWaitingRoom);
 router.post("/:sessionId/admit/:userId", authenticate, admitParticipant);
 router.post("/:sessionId/deny/:userId", authenticate, denyParticipant);
+
+
+
+
+
+// ══════════════════════════════════════════════════════════════
+// GUEST ROUTES — CRITICAL: no `authenticate` middleware on these.
+// These are the ONLY three endpoints in the entire app that should
+// be reachable without a valid Bearer token, and ONLY because the
+// controller internally re-validates that the target session is
+// sessionType === "public" before doing anything else.
+// ══════════════════════════════════════════════════════════════
+ 
+router.post("/public-meetings/:sessionId/guest-join", guestJoinPublicMeeting);
+router.get("/public-meetings/:sessionId/guest-admission-status", guestCheckAdmissionStatus);
+router.post("/public-meetings/:sessionId/guest-participant-token", guestGetParticipantToken);
+ 
+// ══════════════════════════════════════════════════════════════
+// UPDATE existing admit/deny routes to use the guest-aware versions
+// ══════════════════════════════════════════════════════════════
+// Replace your existing two lines:
+//   router.post("/:sessionId/admit/:userId", authenticate, admitParticipant);
+//   router.post("/:sessionId/deny/:userId", authenticate, denyParticipant);
+// WITH:
+ 
+router.post("/:sessionId/admit/:userId", authenticate, admitParticipantGuestAware);
+router.post("/:sessionId/deny/:userId", authenticate, denyParticipantGuestAware);
+ 
+// (admitParticipant / denyParticipant — the originals — are no longer
+// referenced by any route once this change is applied; you can leave
+// them defined and unused in the controller, or remove them.)
+ 
 
 
 // ======================================================
