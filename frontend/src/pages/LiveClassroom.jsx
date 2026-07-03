@@ -42,6 +42,9 @@ import {
 } from "@livekit/components-react";
 import { Track } from "livekit-client";
 import "@livekit/components-styles";
+import {
+    useTracks
+} from "@livekit/components-react";
 
 import {
   useEffect, useRef, useState, useCallback,
@@ -261,16 +264,24 @@ const hasCam = camPub
 
 // ─── ScreenShareView ──────────────────────────────────────────
 // Full-area screen share display — shown during presentation mode.
-const ScreenShareView = ({ participant, screenPub, presenterName }) => (
+const ScreenShareView = ({ trackRef, presenterName }) => (
   <Box sx={{
     flex: 1, position: "relative", bgcolor: "#000",
     display: "flex", alignItems: "center", justifyContent: "center",
     minHeight: 0, // allow flex shrinking
   }}>
-    <VideoTrack
+    {/* <VideoTrack
       trackRef={{ participant, source: Track.Source.ScreenShare, publication: screenPub }}
       style={{ width: "100%", height: "100%", objectFit: "contain" }}
-    />
+    /> */}
+    <VideoTrack
+    trackRef={trackRef}
+    style={{
+        width: "100%",
+        height: "100%",
+        objectFit: "contain",
+    }}
+/>
     <Chip
       label={`${presenterName} is presenting`}
       size="small"
@@ -305,26 +316,49 @@ const sharingParticipant = all.find((p) => {
   return isLocalP ? true : !!pub.isSubscribed;
 });
 
-  const isPresenting = !!sharingParticipant;
+const screenTracks = useTracks([
+    {
+        source: Track.Source.ScreenShare,
+        withPlaceholder: false,
+    },
+]);
+
+const activeScreenTrack = screenTracks.find(
+    t => t.publication.track
+);
+
+const isPresenting = !!activeScreenTrack;
+
+  // const isPresenting = !!sharingParticipant;
 
   // ── PRESENTATION LAYOUT ──────────────────────────────────────
   if (isPresenting) {
-    const screenPub      = sharingParticipant.getTrackPublication(Track.Source.ScreenShare);
-    const sharerMeta     = getMetadata(sharingParticipant);
-    const presenterName  = sharerMeta.fullName || sharingParticipant.identity;
+    //const screenPub      = sharingParticipant.getTrackPublication(Track.Source.ScreenShare);
+    // const sharerMeta     = getMetadata(sharingParticipant);
+    // const presenterName  = sharerMeta.fullName || sharingParticipant.identity;
+    const presenter =
+    activeScreenTrack.participant;
+
+    const sharerMeta =
+        getMetadata(presenter);
+
+    const presenterName =
+        sharerMeta.fullName
+        || presenter.identity;
 
     return (
       <Box sx={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minHeight: 0 }}>
         {/* Main screen share area */}
         <ScreenShareView
-          participant={sharingParticipant}
-          screenPub={screenPub}
+          // participant={sharingParticipant}
+          // screenPub={screenPub}
+          trackRef={activeScreenTrack}
           presenterName={presenterName}
         />
 
         {/* Bottom strip — all participant camera tiles */}
         <Box sx={{
-          height: 110,
+          height: 120,
           bgcolor: DARK,
           borderTop: "1px solid rgba(255,255,255,0.08)",
           display: "flex",
