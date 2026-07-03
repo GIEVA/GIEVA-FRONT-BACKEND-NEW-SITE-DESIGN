@@ -158,10 +158,14 @@ const ParticipantTile = ({
   const pic    = meta.profilePicUrl;
   const isHost = meta.role === "host";
 
-  // Directly read the publication from the participant — never
-  // touches any shared hook context, so each tile is 100% isolated.
-  const camPub   = participant.getTrackPublication(Track.Source.Camera);
-  const hasCam   = camPub && camPub.isSubscribed && !camPub.isMuted && camPub.track;
+  // Check both camera and screen share publications directly on the
+  // participant object — never via the useTracks hook which can
+  // resolve ambiguously across tiles.
+  const camPub    = participant.getTrackPublication(Track.Source.Camera);
+  const screenPub = participant.getTrackPublication(Track.Source.ScreenShare);
+
+  const hasCam    = camPub    && camPub.isSubscribed    && !camPub.isMuted    && camPub.track;
+  const hasScreen = screenPub && screenPub.isSubscribed && !screenPub.isMuted && screenPub.track;
 
   return (
     <Box sx={{
@@ -172,10 +176,36 @@ const ParticipantTile = ({
       display: "flex", alignItems: "center", justifyContent: "center",
       transition: "border-color 0.2s",
     }}>
-      {hasCam ? (
+      {/* Screen share takes priority — renders above camera */}
+      {hasScreen ? (
+        <Box sx={{ position: "absolute", inset: 0, bgcolor: "#000" }}>
+          <VideoTrack
+            trackRef={{
+              participant,
+              source: Track.Source.ScreenShare,
+              publication: screenPub,
+            }}
+            style={{ width: "100%", height: "100%", objectFit: "contain" }}
+          />
+          {/* Small camera PiP overlay when screen-sharing */}
+          {hasCam && (
+            <Box sx={{ position: "absolute", bottom: 40, right: 8,
+                       width: 80, height: 60, borderRadius: 1.5,
+                       overflow: "hidden", border: "2px solid rgba(255,255,255,0.3)" }}>
+              <VideoTrack
+                trackRef={{ participant, source: Track.Source.Camera, publication: camPub }}
+                style={{ width: "100%", height: "100%", objectFit: "cover" }}
+              />
+            </Box>
+          )}
+          {/* Screen share label */}
+          <Chip label="Sharing screen" size="small"
+            sx={{ position: "absolute", top: 8, left: 8, bgcolor: "rgba(0,0,0,0.6)",
+                  color: TEXT, fontSize: 11, fontWeight: 700,
+                  "& .MuiChip-label": { px: 1 } }} />
+        </Box>
+      ) : hasCam ? (
         <Box sx={{ position: "absolute", inset: 0 }}>
-          {/* Pass an explicit trackRef built from the publication
-              we already have — no hook lookup, fully per-participant */}
           <VideoTrack
             trackRef={{
               participant,
@@ -765,7 +795,7 @@ const AdmitPanel = ({ open, onClose, sessionId, onAdmit, onDeny, triggerRefresh 
 // ─── ControlBar ───────────────────────────────────────────────
 const ControlBar = ({
   role, sessionId, onLeave,
-  onWhiteboard, onParticipants, onAdmitPanel, onChat,
+  onWhiteboard, onParticipants, onAdmitPanel, onChat, onReact,
   participantCount, waitingCount, chatUnread,
   handRaised, onToggleHand,
 }) => {
@@ -774,7 +804,6 @@ const ControlBar = ({
 
   const [micOn,             setMicOn]             = useState(true);
   const [camOn,             setCamOn]             = useState(true);
-  const [screenSharing,     setScreenSharing]     = useState(false);
   const [recording,         setRecording]         = useState(false);
   const [reactionPickerOpen, setReactionPickerOpen] = useState(false);
   const [screenShareError,  setScreenShareError]  = useState("");
@@ -790,26 +819,28 @@ const ControlBar = ({
     setCamOn(!camOn);
   };
 
-  // BUG 4 FIX: surface the actual screen-share error instead of
-  // swallowing it. Common causes: browser permission denied, the
-  // LiveKit room not configured for screen share, or the browser
-  // not supporting getDisplayMedia in this context.
+  // BUG FIX: don't rely on React state for the current screen-share
+  // status — use LiveKit's authoritative value directly. Using a stale
+  // React boolean caused the track to be unpublished then immediately
+  // re-published on every click, so participants never got a stable
+  // subscription (visible in webhook log: "unpublishing" then
+  // "publishing" on the same click).
+  const isCurrentlySharing = localParticipant?.isScreenShareEnabled ?? false;
+
   const toggleScreen = async () => {
     try {
       setScreenShareError("");
-      await localParticipant?.setScreenShareEnabled(!screenSharing);
-      setScreenSharing(!screenSharing);
+      await localParticipant?.setScreenShareEnabled(!isCurrentlySharing);
+      // No need to call setScreenSharing() — we derive from LiveKit directly
     } catch (err) {
       if (err?.name === "NotAllowedError" || err?.message?.includes("Permission denied")) {
         setScreenShareError("Screen share permission denied by browser.");
-      } else if (err?.message?.includes("user cancelled") || err?.name === "AbortError") {
-        // User dismissed the picker — not an error worth showing
+      } else if (err?.name === "AbortError" || err?.message?.toLowerCase().includes("cancel")) {
         setScreenShareError("");
       } else {
-        setScreenShareError(err?.message || "Screen share failed.");
+        setScreenShareError(err?.message || "Screen share failed — check browser permissions.");
         console.error("Screen share error:", err);
       }
-      setScreenSharing(false);
     }
   };
 
@@ -822,14 +853,19 @@ const ControlBar = ({
 
   const handleReaction = async (emoji) => {
     setReactionPickerOpen(false);
+    const identity = localParticipant?.identity;
+    const fullName = getMetadata(localParticipant).fullName || identity;
+
+    // Notify RoomInner to show locally immediately (sender doesn't
+    // receive own data-channel messages, so we add it here via callback)
+    onReact?.({ identity, fullName, emoji });
+
     try {
       const payload = new TextEncoder().encode(JSON.stringify({
-        type:     MSG.REACTION,
-        identity: localParticipant?.identity,
-        fullName: getMetadata(localParticipant).fullName,
-        emoji,
+        type: MSG.REACTION, identity, fullName, emoji,
       }));
-      await room?.localParticipant?.publishData(payload, { reliable: false });
+      // reliable: true — was false, causing drops under load
+      await room?.localParticipant?.publishData(payload, { reliable: true });
       await sendSessionReaction(sessionId, emoji);
     } catch (err) { console.error(err); }
   };
@@ -878,9 +914,9 @@ const ControlBar = ({
         <CtrlBtn title={camOn ? "Camera off" : "Camera on"} onClick={toggleCam} active={camOn}>
           {camOn ? <Videocam /> : <VideocamOff />}
         </CtrlBtn>
-        <CtrlBtn title={screenSharing ? "Stop sharing" : "Share screen"}
-          onClick={toggleScreen} active={screenSharing} activeColor={GOLD}>
-          {screenSharing ? <StopScreenShare /> : <ScreenShare />}
+        <CtrlBtn title={isCurrentlySharing ? "Stop sharing" : "Share screen"}
+          onClick={toggleScreen} active={isCurrentlySharing} activeColor={GOLD}>
+          {isCurrentlySharing ? <StopScreenShare /> : <ScreenShare />}
         </CtrlBtn>
       </Box>
 
@@ -1202,6 +1238,17 @@ const RoomInner = ({
     await broadcast(msg, true);
   }, [localParticipant, broadcast]);
 
+  // ── Local reaction handler — called by ControlBar so the sender
+  //    sees their own reaction bubble immediately, since the data
+  //    channel never echoes back to the sender. ──
+  const handleLocalReaction = useCallback(({ identity, fullName, emoji }) => {
+    setReactions((prev) => ({ ...prev, [identity]: { emoji, fullName } }));
+    clearTimeout(reactionTimers.current[identity]);
+    reactionTimers.current[identity] = setTimeout(() => {
+      setReactions((prev) => { const n = { ...prev }; delete n[identity]; return n; });
+    }, 2500);
+  }, []);
+
   const handleOpenWhiteboard = useCallback(async () => {
     setWhiteboardOpen(true);
     if (isHost) {
@@ -1392,6 +1439,7 @@ const RoomInner = ({
         onWhiteboard={handleOpenWhiteboard} onParticipants={() => setParticipantsOpen(true)}
         onAdmitPanel={() => setAdmitPanelOpen(true)}
         onChat={handleOpenChat} chatUnread={unreadCount}
+        onReact={handleLocalReaction}
         participantCount={totalParticipants} waitingCount={waitingCount}
         handRaised={myHandRaised} onToggleHand={handleToggleHand}
       />
