@@ -141,85 +141,53 @@ const leaveDestination = (role) => {
 };
 
 // ─── ParticipantTile ─────────────────────────────────────────
-// BUG 3 FIX: stop using useTracks hook (which can resolve
-// ambiguously across tiles when multiple participants share the
-// same RoomContext). Instead, directly read the camera publication
-// from the participant object itself — this is always scoped to
-// exactly that one participant, no hook ambiguity possible.
+// Now only shows camera / avatar — screen share is handled
+// separately in the presentation layout (ScreenShareView).
 const ParticipantTile = ({
   participant,
-  isLocal    = false,
-  isLarge    = false,
+  isLocal      = false,
+  isLarge      = false,
   isHandRaised = false,
-  reaction   = null,
+  reaction     = null,
+  compact      = false,   // true when in the bottom strip during screen share
 }) => {
   const meta   = getMetadata(participant);
   const name   = meta.fullName || participant.identity;
   const pic    = meta.profilePicUrl;
   const isHost = meta.role === "host";
 
-  // Check both camera and screen share publications directly on the
-  // participant object — never via the useTracks hook which can
-  // resolve ambiguously across tiles.
-  const camPub    = participant.getTrackPublication(Track.Source.Camera);
-  const screenPub = participant.getTrackPublication(Track.Source.ScreenShare);
-
-  const hasCam    = camPub    && camPub.isSubscribed    && !camPub.isMuted    && camPub.track;
-  const hasScreen = screenPub && screenPub.isSubscribed && !screenPub.isMuted && screenPub.track;
+  const camPub = participant.getTrackPublication(Track.Source.Camera);
+  const hasCam = camPub && camPub.isSubscribed && !camPub.isMuted && camPub.track;
 
   return (
     <Box sx={{
-      width: "100%", aspectRatio: isLarge ? undefined : "16/9",
-      minHeight: isLarge ? 340 : undefined, height: isLarge ? "100%" : undefined,
-      position: "relative", borderRadius: 3, overflow: "hidden",
-      bgcolor: DARK2, border: `1px solid ${isHandRaised ? GOLD : DARK3}`,
+      width: "100%",
+      aspectRatio: "16/9",
+      minHeight: compact ? 80  : isLarge ? 340 : undefined,
+      height:    compact ? 90  : isLarge ? "100%" : undefined,
+      position: "relative", borderRadius: compact ? 2 : 3, overflow: "hidden",
+      bgcolor: DARK2, border: `1.5px solid ${isHandRaised ? GOLD : DARK3}`,
       display: "flex", alignItems: "center", justifyContent: "center",
+      flexShrink: 0,
       transition: "border-color 0.2s",
     }}>
-      {/* Screen share takes priority — renders above camera */}
-      {hasScreen ? (
-        <Box sx={{ position: "absolute", inset: 0, bgcolor: "#000" }}>
-          <VideoTrack
-            trackRef={{
-              participant,
-              source: Track.Source.ScreenShare,
-              publication: screenPub,
-            }}
-            style={{ width: "100%", height: "100%", objectFit: "contain" }}
-          />
-          {/* Small camera PiP overlay when screen-sharing */}
-          {hasCam && (
-            <Box sx={{ position: "absolute", bottom: 40, right: 8,
-                       width: 80, height: 60, borderRadius: 1.5,
-                       overflow: "hidden", border: "2px solid rgba(255,255,255,0.3)" }}>
-              <VideoTrack
-                trackRef={{ participant, source: Track.Source.Camera, publication: camPub }}
-                style={{ width: "100%", height: "100%", objectFit: "cover" }}
-              />
-            </Box>
-          )}
-          {/* Screen share label */}
-          <Chip label="Sharing screen" size="small"
-            sx={{ position: "absolute", top: 8, left: 8, bgcolor: "rgba(0,0,0,0.6)",
-                  color: TEXT, fontSize: 11, fontWeight: 700,
-                  "& .MuiChip-label": { px: 1 } }} />
-        </Box>
-      ) : hasCam ? (
+      {hasCam ? (
         <Box sx={{ position: "absolute", inset: 0 }}>
           <VideoTrack
-            trackRef={{
-              participant,
-              source: Track.Source.Camera,
-              publication: camPub,
-            }}
+            trackRef={{ participant, source: Track.Source.Camera, publication: camPub }}
             style={{ width: "100%", height: "100%", objectFit: "cover" }}
           />
         </Box>
       ) : (
         <Avatar src={pic || undefined}
-          sx={{ width: isLarge ? 120 : 68, height: isLarge ? 120 : 68,
-                fontSize: isLarge ? 44 : 26, fontWeight: 800,
-                bgcolor: avatarColor(name), border: "3px solid rgba(255,255,255,0.13)" }}>
+          sx={{
+            width:     compact ? 32 : isLarge ? 120 : 68,
+            height:    compact ? 32 : isLarge ? 120 : 68,
+            fontSize:  compact ? 13 : isLarge ? 44  : 26,
+            fontWeight: 800,
+            bgcolor: avatarColor(name),
+            border: "3px solid rgba(255,255,255,0.13)",
+          }}>
           {!pic && getInitials(name)}
         </Avatar>
       )}
@@ -227,10 +195,11 @@ const ParticipantTile = ({
       {/* Raised hand badge */}
       {isHandRaised && (
         <Box sx={{
-          position: "absolute", top: 8, right: 8,
-          width: 34, height: 34, borderRadius: "50%",
-          bgcolor: GOLD, display: "flex", alignItems: "center", justifyContent: "center",
-          fontSize: 18, boxShadow: "0 2px 8px rgba(0,0,0,0.35)",
+          position: "absolute", top: 6, right: 6,
+          width: compact ? 22 : 34, height: compact ? 22 : 34,
+          borderRadius: "50%", bgcolor: GOLD,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          fontSize: compact ? 12 : 18, boxShadow: "0 2px 8px rgba(0,0,0,0.35)",
           animation: "handPulse 1s ease-in-out infinite",
           "@keyframes handPulse": {
             "0%,100%": { transform: "scale(1)" },
@@ -240,7 +209,7 @@ const ParticipantTile = ({
       )}
 
       {/* Reaction bubble */}
-      {reaction && (
+      {reaction && !compact && (
         <Box sx={{
           position: "absolute", top: -6, left: "50%",
           transform: "translate(-50%, -100%)",
@@ -262,27 +231,54 @@ const ParticipantTile = ({
         </Box>
       )}
 
+      {/* Name bar */}
       <Box sx={{
         position: "absolute", bottom: 0, left: 0, right: 0,
         background: "linear-gradient(transparent, rgba(0,0,0,0.72))",
-        px: 1.5, py: 1, display: "flex", alignItems: "center", gap: 1,
+        px: compact ? 0.75 : 1.5, py: compact ? 0.5 : 1,
+        display: "flex", alignItems: "center", gap: 0.5,
       }}>
-        <Typography sx={{ fontSize: 13, fontWeight: 700, color: TEXT, flex: 1 }} noWrap>
+        <Typography sx={{ fontSize: compact ? 10 : 13, fontWeight: 700, color: TEXT, flex: 1 }} noWrap>
           {isLocal ? `${name} (You)` : name}
         </Typography>
-        {isHost && (
+        {!compact && isHost && (
           <Chip label="Host" size="small"
             sx={{ bgcolor: GOLD, color: NAVY, fontWeight: 800, height: 20, fontSize: 11 }} />
         )}
         {participant.isMicrophoneEnabled
-          ? <Mic sx={{ fontSize: 14, color: GREEN }} />
-          : <MicOff sx={{ fontSize: 14, color: "#ef4444" }} />}
+          ? <Mic sx={{ fontSize: compact ? 11 : 14, color: GREEN }} />
+          : <MicOff sx={{ fontSize: compact ? 11 : 14, color: "#ef4444" }} />}
       </Box>
     </Box>
   );
 };
 
-// ─── ParticipantGrid ─────────────────────────────────────────
+// ─── ScreenShareView ──────────────────────────────────────────
+// Full-area screen share display — shown during presentation mode.
+const ScreenShareView = ({ participant, screenPub, presenterName }) => (
+  <Box sx={{
+    flex: 1, position: "relative", bgcolor: "#000",
+    display: "flex", alignItems: "center", justifyContent: "center",
+    minHeight: 0, // allow flex shrinking
+  }}>
+    <VideoTrack
+      trackRef={{ participant, source: Track.Source.ScreenShare, publication: screenPub }}
+      style={{ width: "100%", height: "100%", objectFit: "contain" }}
+    />
+    <Chip
+      label={`${presenterName} is presenting`}
+      size="small"
+      sx={{
+        position: "absolute", top: 12, left: 12,
+        bgcolor: "rgba(0,0,0,0.65)", color: TEXT,
+        fontWeight: 700, fontSize: 12,
+        "& .MuiChip-label": { px: 1.5 },
+      }}
+    />
+  </Box>
+);
+
+// ─── ParticipantGrid (presentation-layout aware) ─────────────
 const ParticipantGrid = ({ raisedHands, reactions }) => {
   const participants         = useParticipants();
   const { localParticipant } = useLocalParticipant();
@@ -294,6 +290,61 @@ const ParticipantGrid = ({ raisedHands, reactions }) => {
     ...participants.filter((p) => p.identity !== localParticipant?.identity),
   ].filter(Boolean).filter(isAdmitted);
 
+  // ── Detect active screen share across all participants ──────
+  const sharingParticipant = all.find((p) => {
+    const pub = p.getTrackPublication(Track.Source.ScreenShare);
+    return pub && pub.isSubscribed && !pub.isMuted && pub.track;
+  });
+
+  const isPresenting = !!sharingParticipant;
+
+  // ── PRESENTATION LAYOUT ──────────────────────────────────────
+  if (isPresenting) {
+    const screenPub      = sharingParticipant.getTrackPublication(Track.Source.ScreenShare);
+    const sharerMeta     = getMetadata(sharingParticipant);
+    const presenterName  = sharerMeta.fullName || sharingParticipant.identity;
+
+    return (
+      <Box sx={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minHeight: 0 }}>
+        {/* Main screen share area */}
+        <ScreenShareView
+          participant={sharingParticipant}
+          screenPub={screenPub}
+          presenterName={presenterName}
+        />
+
+        {/* Bottom strip — all participant camera tiles */}
+        <Box sx={{
+          height: 110,
+          bgcolor: DARK,
+          borderTop: "1px solid rgba(255,255,255,0.08)",
+          display: "flex",
+          alignItems: "center",
+          gap: 1,
+          px: 1.5,
+          overflowX: "auto",
+          flexShrink: 0,
+          "&::-webkit-scrollbar": { height: 4 },
+          "&::-webkit-scrollbar-track": { bgcolor: "transparent" },
+          "&::-webkit-scrollbar-thumb": { bgcolor: DARK3, borderRadius: 2 },
+        }}>
+          {all.map((p) => (
+            <Box key={p.identity} sx={{ width: 140, flexShrink: 0 }}>
+              <ParticipantTile
+                participant={p}
+                isLocal={p.identity === localParticipant?.identity}
+                compact
+                isHandRaised={!!raisedHands[p.identity]}
+                reaction={reactions[p.identity] || null}
+              />
+            </Box>
+          ))}
+        </Box>
+      </Box>
+    );
+  }
+
+  // ── NORMAL GRID LAYOUT (no screen share active) ─────────────
   const count = all.length;
   const cols  = count === 1 ? 1 : count <= 4 ? 2 : count <= 9 ? 3 : 4;
 
