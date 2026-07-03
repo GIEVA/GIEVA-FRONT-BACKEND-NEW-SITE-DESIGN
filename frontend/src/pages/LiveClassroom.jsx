@@ -157,7 +157,13 @@ const ParticipantTile = ({
   const isHost = meta.role === "host";
 
   const camPub = participant.getTrackPublication(Track.Source.Camera);
-  const hasCam = camPub && camPub.isSubscribed && !camPub.isMuted && camPub.track;
+// Explicitly exclude screen share — tiles only show camera, never screen
+const hasCam = camPub
+  && !camPub.isMuted
+  && camPub.track
+  && camPub.source !== Track.Source.ScreenShare  // safety guard
+  ? (isLocal ? true : !!camPub.isSubscribed)
+  : false;
 
   return (
     <Box sx={{
@@ -291,10 +297,13 @@ const ParticipantGrid = ({ raisedHands, reactions }) => {
   ].filter(Boolean).filter(isAdmitted);
 
   // ── Detect active screen share across all participants ──────
-  const sharingParticipant = all.find((p) => {
-    const pub = p.getTrackPublication(Track.Source.ScreenShare);
-    return pub && pub.isSubscribed && !pub.isMuted && pub.track;
-  });
+const sharingParticipant = all.find((p) => {
+  const pub = p.getTrackPublication(Track.Source.ScreenShare);
+  if (!pub || pub.isMuted || !pub.track) return false;
+  // Local participant publishes (not subscribes), remote participants subscribe
+  const isLocalP = p.identity === localParticipant?.identity;
+  return isLocalP ? true : !!pub.isSubscribed;
+});
 
   const isPresenting = !!sharingParticipant;
 
@@ -329,8 +338,8 @@ const ParticipantGrid = ({ raisedHands, reactions }) => {
           "&::-webkit-scrollbar-thumb": { bgcolor: DARK3, borderRadius: 2 },
         }}>
           {all.map((p) => (
-            <Box key={p.identity} sx={{ width: 140, flexShrink: 0 }}>
-              <ParticipantTile
+              <Box key={p.identity} sx={{ width: 140, flexShrink: 0, borderRadius: 2, overflow: "hidden" }}>
+                <ParticipantTile
                 participant={p}
                 isLocal={p.identity === localParticipant?.identity}
                 compact
