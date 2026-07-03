@@ -129,91 +129,112 @@ const MSG = {
 //   LOCAL  participant: track is published → check camPub.track
 //   REMOTE participant: track is subscribed → check camPub.isSubscribed && camPub.track
 // ═══════════════════════════════════════════════════════════════
-// ─── ParticipantTile (Hardened for unique video per tile) ─────
-const ParticipantTile = ({ participant, isLocal = false, isLarge = false, isHandRaised = false, reaction = null }) => {
-  const meta = getMetadata(participant);
-  const name = meta.fullName || participant.identity;
-  const pic = meta.profilePicUrl;
+const ParticipantTile = ({
+  participant, isLocal = false, isLarge = false,
+  isHandRaised = false, reaction = null,
+}) => {
+  const meta   = getMetadata(participant);
+  const name   = meta.fullName || participant.identity;
+  const pic    = meta.profilePicUrl;
   const isHost = meta.role === "host";
 
   const camPub = participant.getTrackPublication(Track.Source.Camera);
-  
-  // FIXED: Local tracks use .track (published), remote use isSubscribed
-  const hasCam = camPub && 
-    (isLocal ? !!camPub.track : (camPub.isSubscribed && !camPub.isMuted && !!camPub.track));
+
+  // FIX 3: different readiness checks for local vs remote
+  const hasCam = camPub && !camPub.isMuted && camPub.track
+    ? (isLocal ? true : camPub.isSubscribed)
+    : false;
 
   return (
-    <Box sx={{ /* same styling */ }} key={`tile-${participant.identity}`}>
-      {hasCam ? (
-        <Box sx={{ position: "absolute", inset: 0 }}>
+    <Box sx={{
+      width: "100%",
+      aspectRatio: isLarge ? undefined : "16/9",
+      minHeight: isLarge ? 340 : undefined,
+      height: isLarge ? "100%" : undefined,
+      position: "relative", borderRadius: 3, overflow: "visible",
+      bgcolor: DARK2, border: `1px solid ${isHandRaised ? GOLD : DARK3}`,
+      display: "flex", alignItems: "center", justifyContent: "center",
+      transition: "border-color 0.2s",
+    }}>
+      {/* Clip the video but allow reaction bubble to overflow */}
+      <Box sx={{ position: "absolute", inset: 0, borderRadius: 3, overflow: "hidden" }}>
+        {hasCam ? (
           <VideoTrack
             trackRef={{ participant, source: Track.Source.Camera, publication: camPub }}
             style={{ width: "100%", height: "100%", objectFit: "cover" }}
           />
-        </Box>
-      ) : (
-        <Avatar src={pic || undefined}
-          sx={{ width: isLarge ? 120 : 68, height: isLarge ? 120 : 68,
-                fontSize: isLarge ? 44 : 26, fontWeight: 800,
-                bgcolor: avatarColor(name), border: "3px solid rgba(255,255,255,0.13)" }}>
-          {!pic && getInitials(name)}
-        </Avatar>
-      )}
+        ) : (
+          <Box sx={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <Avatar src={pic || undefined}
+              sx={{ width: isLarge ? 120 : 68, height: isLarge ? 120 : 68,
+                    fontSize: isLarge ? 44 : 26, fontWeight: 800,
+                    bgcolor: avatarColor(name), border: "3px solid rgba(255,255,255,0.13)" }}>
+              {!pic && getInitials(name)}
+            </Avatar>
+          </Box>
+        )}
 
+        {/* Name bar */}
+        <Box sx={{
+          position: "absolute", bottom: 0, left: 0, right: 0,
+          background: "linear-gradient(transparent, rgba(0,0,0,0.72))",
+          px: 1.5, py: 1, display: "flex", alignItems: "center", gap: 1,
+        }}>
+          <Typography sx={{ fontSize: 13, fontWeight: 700, color: TEXT, flex: 1 }} noWrap>
+            {isLocal ? `${name} (You)` : name}
+          </Typography>
+          {isHost && <Chip label="Host" size="small" sx={{ bgcolor: GOLD, color: NAVY, fontWeight: 800, height: 20, fontSize: 11 }} />}
+          {participant.isMicrophoneEnabled
+            ? <Mic sx={{ fontSize: 14, color: GREEN }} />
+            : <MicOff sx={{ fontSize: 14, color: "#ef4444" }} />}
+        </Box>
+      </Box>
+
+      {/* Raised hand badge — outside the clipping box */}
       {isHandRaised && (
         <Box sx={{
-          position: "absolute", top: 8, right: 8,
+          position: "absolute", top: 8, right: 8, zIndex: 2,
           width: 34, height: 34, borderRadius: "50%",
           bgcolor: GOLD, display: "flex", alignItems: "center", justifyContent: "center",
           fontSize: 18, boxShadow: "0 2px 8px rgba(0,0,0,0.35)",
           animation: "handPulse 1s ease-in-out infinite",
+          "@keyframes handPulse": { "0%,100%": { transform: "scale(1)" }, "50%": { transform: "scale(1.12)" } },
         }}>✋</Box>
       )}
 
+      {/* Reaction bubble — floats above tile */}
       {reaction && (
         <Box sx={{
-          position: "absolute", top: -6, left: "50%",
-          transform: "translate(-50%, -100%)",
+          position: "absolute", top: 0, left: "50%",
+          transform: "translate(-50%, -110%)",
           bgcolor: "rgba(15,23,42,0.92)", borderRadius: 3,
           px: 1.5, py: 0.75, display: "flex", alignItems: "center", gap: 0.75,
-          border: `1px solid ${DARK3}`, whiteSpace: "nowrap",
+          border: `1px solid ${DARK3}`, whiteSpace: "nowrap", zIndex: 3,
           animation: "floatUp 2.5s ease-out forwards",
+          "@keyframes floatUp": {
+            "0%":   { opacity: 0, transform: "translate(-50%, -90%)" },
+            "15%":  { opacity: 1, transform: "translate(-50%, -110%)" },
+            "80%":  { opacity: 1 },
+            "100%": { opacity: 0, transform: "translate(-50%, -130%)" },
+          },
         }}>
           <Typography sx={{ fontSize: 20, lineHeight: 1 }}>{reaction.emoji}</Typography>
-          <Typography sx={{ fontSize: 12, fontWeight: 700, color: TEXT }}>
-            {firstName(reaction.fullName)}
-          </Typography>
+          <Typography sx={{ fontSize: 12, fontWeight: 700, color: TEXT }}>{firstName(reaction.fullName)}</Typography>
         </Box>
       )}
-
-      <Box sx={{
-        position: "absolute", bottom: 0, left: 0, right: 0,
-        background: "linear-gradient(transparent, rgba(0,0,0,0.72))",
-        px: 1.5, py: 1, display: "flex", alignItems: "center", gap: 1,
-      }}>
-        <Typography sx={{ fontSize: 13, fontWeight: 700, color: TEXT, flex: 1 }} noWrap>
-          {isLocal ? `${name} (You)` : name}
-        </Typography>
-        {isHost && <Chip label="Host" size="small" sx={{ bgcolor: GOLD, color: NAVY, fontWeight: 800, height: 20, fontSize: 11 }} />}
-        {participant.isMicrophoneEnabled
-          ? <Mic sx={{ fontSize: 14, color: GREEN }} />
-          : <MicOff sx={{ fontSize: 14, color: "#ef4444" }} />}
-      </Box>
     </Box>
   );
 };
 
-// ─── ParticipantGrid ─────────────────────────────────────────
-const ParticipantGrid = ({ raisedHands, reactions }) => {
+// ─── ParticipantGrid ──────────────────────────────────────────
+const ParticipantGrid = ({ raisedHands = {}, reactions = {} }) => {
   const participants         = useParticipants();
   const { localParticipant } = useLocalParticipant();
 
-  const isAdmitted = (p) => getMetadata(p).role !== "lobby";
-
   const all = [
     localParticipant,
-    ...participants.filter((p) => p.identity !== localParticipant?.identity),
-  ].filter(Boolean).filter(isAdmitted);
+    ...participants.filter(p => p.identity !== localParticipant?.identity),
+  ].filter(Boolean).filter(p => getMetadata(p).role !== "lobby");
 
   const count = all.length;
   const cols  = count === 1 ? 1 : count <= 4 ? 2 : count <= 9 ? 3 : 4;
@@ -224,7 +245,7 @@ const ParticipantGrid = ({ raisedHands, reactions }) => {
       gridTemplateColumns: `repeat(${cols}, 1fr)`,
       gap: 1.5, p: 2, alignContent: "start", overflowY: "auto",
     }}>
-      {all.map((p) => (
+      {all.map(p => (
         <ParticipantTile
           key={p.identity}
           participant={p}
@@ -238,193 +259,146 @@ const ParticipantGrid = ({ raisedHands, reactions }) => {
   );
 };
 
-// ─── WhiteboardDrawer (Improved stroke reliability) ───────────
+// ═══════════════════════════════════════════════════════════════
+// FIX 1 — WhiteboardDrawer: RAF queue replaces remoteStroke state
+//
+// Props change:
+//   REMOVED: remoteStroke (React state → caused dropped strokes)
+//   REMOVED: remoteClear  (React state → could miss rapid clears)
+//   ADDED:   strokeQueueRef  — MutableRefObject<stroke[]>
+//              caller appends to this array on every incoming stroke;
+//              RAF loop drains it each animation frame
+//   ADDED:   clearTriggerRef — MutableRefObject<number>
+//              caller increments this on each incoming clear;
+//              RAF loop detects any change and clears the canvas
+// ═══════════════════════════════════════════════════════════════
 const WhiteboardDrawer = ({
   open, onClose, isHost,
   onLocalStroke, onLocalClear,
-  remoteStroke, remoteClear, syncStrokes,
+  strokeQueueRef,   // ref { current: stroke[] }  — append from RoomInner
+  clearTriggerRef,  // ref { current: number }     — increment from RoomInner
+  syncStrokes,
 }) => {
   const canvasRef  = useRef(null);
   const isDrawing  = useRef(false);
   const lastPos    = useRef({ x: 0, y: 0 });
-  const strokeBuffer = useRef([]); // Buffer for receiver
+  const rafRef     = useRef(null);
+  const lastSeen   = useRef(0); // last clearTriggerRef value we applied
+
   const [tool, setTool]           = useState("pen");
   const [color, setColor]         = useState("#000000");
   const [thickness, setThickness] = useState(3);
-
   const COLORS = ["#000000","#ffffff","#ef4444","#f97316","#eab308","#22c55e","#3b82f6","#8b5cf6"];
 
   const getPos = (e, canvas) => {
-    const rect    = canvas.getBoundingClientRect();
-    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-    return {
-      x: (clientX - rect.left) * (canvas.width  / rect.width),
-      y: (clientY - rect.top)  * (canvas.height / rect.height),
-    };
+    const r  = canvas.getBoundingClientRect();
+    const cx = e.touches ? e.touches[0].clientX : e.clientX;
+    const cy = e.touches ? e.touches[0].clientY : e.clientY;
+    return { x: (cx - r.left) * (canvas.width / r.width), y: (cy - r.top) * (canvas.height / r.height) };
   };
+  const toNorm   = (pos, c) => ({ nx: pos.x / c.width, ny: pos.y / c.height });
+  const fromNorm = (nx, ny, c) => ({ x: nx * c.width, y: ny * c.height });
 
-  const toNorm   = (pos, canvas) => ({ nx: pos.x / canvas.width,  ny: pos.y / canvas.height });
-  const fromNorm = (nx, ny, canvas) => ({ x: nx * canvas.width, y: ny * canvas.height });
-
-  const strokeOnCanvas = useCallback((from, to, strokeColor, strokeWidth) => {
-    const canvas = canvasRef.current; if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    ctx.beginPath();
-    ctx.moveTo(from.x, from.y);
-    ctx.lineTo(to.x, to.y);
-    ctx.strokeStyle = strokeColor;
-    ctx.lineWidth   = strokeWidth;
-    ctx.lineCap     = "round"; ctx.lineJoin = "round";
+  const strokeOnCanvas = useCallback((from, to, sc, sw) => {
+    const c = canvasRef.current; if (!c) return;
+    const ctx = c.getContext("2d");
+    ctx.beginPath(); ctx.moveTo(from.x, from.y); ctx.lineTo(to.x, to.y);
+    ctx.strokeStyle = sc; ctx.lineWidth = sw; ctx.lineCap = "round"; ctx.lineJoin = "round";
     ctx.stroke();
   }, []);
 
   const clearCanvas = useCallback(() => {
-    const canvas = canvasRef.current; if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    strokeBuffer.current = [];
+    const c = canvasRef.current; if (!c) return;
+    const ctx = c.getContext("2d");
+    ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, c.width, c.height);
   }, []);
 
-  const initCanvas = useCallback(() => {
-    const canvas = canvasRef.current; if (!canvas) return;
-    canvas.width  = canvas.offsetWidth || 700;
-    canvas.height = canvas.offsetHeight || 500;
-    clearCanvas();
-  }, [clearCanvas]);
-
-  const startDraw = useCallback((e) => {
-    if (!isHost) return;
-    e.preventDefault();
-    const canvas = canvasRef.current; if (!canvas) return;
-    isDrawing.current = true;
-    lastPos.current   = getPos(e, canvas);
-  }, [isHost]);
-
-  const draw = useCallback((e) => {
-    if (!isHost || !isDrawing.current) return;
-    e.preventDefault();
-    const canvas = canvasRef.current; if (!canvas) return;
-    const pos    = getPos(e, canvas);
-    const strokeColor = tool === "eraser" ? "#ffffff" : color;
-    const strokeWidth = tool === "eraser" ? thickness * 5 : thickness;
-
-    strokeOnCanvas(lastPos.current, pos, strokeColor, strokeWidth);
-
-    onLocalStroke?.({
-      from: toNorm(lastPos.current, canvas),
-      to:   toNorm(pos, canvas),
-      color: strokeColor,
-      thickness: strokeWidth,
-    });
-
-    lastPos.current = pos;
-  }, [isHost, tool, color, thickness, strokeOnCanvas, onLocalStroke]);
-
-  const stopDraw = useCallback(() => { isDrawing.current = false; }, []);
-
-  const handleClearClick = () => {
-    if (!isHost) return;
-    clearCanvas();
-    onLocalClear?.();
-  };
-
-  // Improved resize + sync
+  // FIX 1: RAF loop — drains stroke queue every animation frame.
+  // This runs entirely outside React's render cycle so no batching
+  // can drop strokes, even at 60fps drawing speed.
   useEffect(() => {
-    if (!open) return;
-    const canvas = canvasRef.current; if (!canvas) return;
+    if (!open || isHost) return; // host draws locally; viewer needs the loop
 
-    const observer = new ResizeObserver((entries) => {
-      const entry = entries[0];
-      if (!entry) return;
-      const { width, height } = entry.contentRect;
-      if (width > 0 && height > 0) {
-        canvas.width  = width;
-        canvas.height = height;
-        clearCanvas();
-        if (!isHost) {
-          setTimeout(() => syncStrokes?.(), 100); // Small delay for stability
-          setTimeout(() => syncStrokes?.(), 500); // Redundant sync
+    const loop = () => {
+      const c = canvasRef.current;
+      if (c) {
+        // Apply any pending clears first
+        if (clearTriggerRef && clearTriggerRef.current > lastSeen.current) {
+          clearCanvas();
+          lastSeen.current = clearTriggerRef.current;
         }
-        observer.disconnect();
-      }
-    });
-
-    observer.observe(canvas);
-    const fallback = setTimeout(initCanvas, 400);
-
-    return () => {
-      observer.disconnect();
-      clearTimeout(fallback);
-    };
-  }, [open, isHost, clearCanvas, syncStrokes, initCanvas]);
-
-  // Receiver stroke with buffering for smoothness
-  useEffect(() => {
-    if (!remoteStroke) return;
-    const canvas = canvasRef.current; if (!canvas) return;
-
-    strokeBuffer.current.push(remoteStroke);
-    
-    // Process buffer with RAF for smoother rendering
-    requestAnimationFrame(() => {
-      while (strokeBuffer.current.length > 0) {
-        const stroke = strokeBuffer.current.shift();
-        const from = fromNorm(stroke.from.nx, stroke.from.ny, canvas);
-        const to   = fromNorm(stroke.to.nx,   stroke.to.ny,   canvas);
-        strokeOnCanvas(from, to, stroke.color, stroke.thickness);
-      }
-    });
-  }, [remoteStroke, strokeOnCanvas]);
-
-  useEffect(() => { if (remoteClear) clearCanvas(); }, [remoteClear, clearCanvas]);
-
-  // RAF drain loop for incoming strokes
-  useEffect(() => {
-    let rafId;
-    const drain = () => {
-      if (strokeBuffer.current.length > 0) {
-        const canvas = canvasRef.current;
-        if (canvas) {
-          while (strokeBuffer.current.length) {
-            const stroke = strokeBuffer.current.shift();
-            const from = fromNorm(stroke.from.nx, stroke.from.ny, canvas);
-            const to = fromNorm(stroke.to.nx, stroke.to.ny, canvas);
+        // Drain ALL queued strokes in one pass
+        if (strokeQueueRef && strokeQueueRef.current.length > 0) {
+          const pending = strokeQueueRef.current.splice(0); // atomic drain
+          for (const stroke of pending) {
+            const from = fromNorm(stroke.from.nx, stroke.from.ny, c);
+            const to   = fromNorm(stroke.to.nx,   stroke.to.ny,   c);
             strokeOnCanvas(from, to, stroke.color, stroke.thickness);
           }
         }
       }
-      rafId = requestAnimationFrame(drain);
+      rafRef.current = requestAnimationFrame(loop);
     };
-    if (open) rafId = requestAnimationFrame(drain);
-    return () => cancelAnimationFrame(rafId);
-  }, [open, strokeOnCanvas]);
+    rafRef.current = requestAnimationFrame(loop);
+    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
+  }, [open, isHost, strokeQueueRef, clearTriggerRef, strokeOnCanvas, clearCanvas]);
+
+  // Canvas init — use ResizeObserver for stable sizing after Drawer transition
+  useEffect(() => {
+    if (!open) return;
+    const canvas = canvasRef.current; if (!canvas) return;
+
+    const init = () => {
+      const w = canvas.offsetWidth || canvas.clientWidth || 700;
+      const h = canvas.offsetHeight || canvas.clientHeight || 500;
+      if (w > 0 && h > 0) {
+        canvas.width  = w;
+        canvas.height = h;
+        clearCanvas();
+        if (!isHost) syncStrokes?.();
+      }
+    };
+
+    const ro = new ResizeObserver(() => { init(); ro.disconnect(); });
+    ro.observe(canvas);
+    const fb = setTimeout(init, 300);
+    return () => { ro.disconnect(); clearTimeout(fb); };
+  }, [open, isHost, clearCanvas, syncStrokes]);
+
+  const startDraw = useCallback((e) => {
+    if (!isHost) return; e.preventDefault();
+    const c = canvasRef.current; if (!c) return;
+    isDrawing.current = true; lastPos.current = getPos(e, c);
+  }, [isHost]);
+
+  const draw = useCallback((e) => {
+    if (!isHost || !isDrawing.current) return; e.preventDefault();
+    const c   = canvasRef.current; if (!c) return;
+    const pos = getPos(e, c);
+    const sc  = tool === "eraser" ? "#ffffff" : color;
+    const sw  = tool === "eraser" ? thickness * 5 : thickness;
+    strokeOnCanvas(lastPos.current, pos, sc, sw);
+    onLocalStroke?.({ from: toNorm(lastPos.current, c), to: toNorm(pos, c), color: sc, thickness: sw });
+    lastPos.current = pos;
+  }, [isHost, tool, color, thickness, strokeOnCanvas, onLocalStroke]);
+
+  const stopDraw = useCallback(() => { isDrawing.current = false; }, []);
 
   return (
     <Drawer anchor="right" open={open} onClose={isHost ? onClose : undefined}
       PaperProps={{ sx: { width: { xs: "100vw", md: 700 }, bgcolor: "#f8fafc", display: "flex", flexDirection: "column" } }}>
       <Box sx={{ p: 1.5, bgcolor: DARK, display: "flex", alignItems: "center", gap: 1.5, flexWrap: "wrap" }}>
         <Typography sx={{ color: TEXT, fontWeight: 800, fontSize: 15, mr: 1 }}>Whiteboard</Typography>
-
         {!isHost && (
           <Chip icon={<Visibility sx={{ fontSize: 13 }} />} label="View only" size="small"
-            sx={{ bgcolor: "rgba(255,255,255,0.1)", color: MUTED_D, fontWeight: 700, fontSize: 11,
-                  "& .MuiChip-icon": { color: MUTED_D } }} />
+            sx={{ bgcolor: "rgba(255,255,255,0.1)", color: MUTED_D, fontWeight: 700, fontSize: 11, "& .MuiChip-icon": { color: MUTED_D } }} />
         )}
-
         {isHost && (
           <>
-            <Tooltip title="Pen">
-              <IconButton onClick={() => setTool("pen")} sx={{ color: tool === "pen" ? GOLD : MUTED_D }}>
-                <Draw />
-              </IconButton>
-            </Tooltip>
-            <Tooltip title="Eraser">
-              <IconButton onClick={() => setTool("eraser")} sx={{ color: tool === "eraser" ? GOLD : MUTED_D, fontSize: 18 }}>⬜</IconButton>
-            </Tooltip>
+            <Tooltip title="Pen"><IconButton onClick={() => setTool("pen")} sx={{ color: tool === "pen" ? GOLD : MUTED_D }}><Draw /></IconButton></Tooltip>
+            <Tooltip title="Eraser"><IconButton onClick={() => setTool("eraser")} sx={{ color: tool === "eraser" ? GOLD : MUTED_D, fontSize: 18 }}>⬜</IconButton></Tooltip>
             <Box sx={{ display: "flex", gap: 0.5 }}>
-              {COLORS.map((c) => (
+              {COLORS.map(c => (
                 <Box key={c} onClick={() => { setColor(c); setTool("pen"); }}
                   sx={{ width: 22, height: 22, borderRadius: "50%", bgcolor: c, cursor: "pointer",
                         border: color === c ? "2px solid #fff" : "2px solid transparent",
@@ -432,19 +406,15 @@ const WhiteboardDrawer = ({
               ))}
             </Box>
             <Box sx={{ width: 80 }}>
-              <Slider size="small" min={1} max={20} value={thickness}
-                onChange={(_, v) => setThickness(v)} sx={{ color: GOLD }} />
+              <Slider size="small" min={1} max={20} value={thickness} onChange={(_, v) => setThickness(v)} sx={{ color: GOLD }} />
             </Box>
             <Tooltip title="Clear">
-              <IconButton onClick={handleClearClick} sx={{ color: "#ef4444" }}><DeleteSweep /></IconButton>
+              <IconButton onClick={() => { clearCanvas(); onLocalClear?.(); }} sx={{ color: "#ef4444" }}><DeleteSweep /></IconButton>
             </Tooltip>
           </>
         )}
-
         <Box flex={1} />
-        {isHost && (
-          <IconButton onClick={onClose} sx={{ color: MUTED_D }}><Close /></IconButton>
-        )}
+        {isHost && <IconButton onClick={onClose} sx={{ color: MUTED_D }}><Close /></IconButton>}
       </Box>
       <Box sx={{ flex: 1, overflow: "hidden", cursor: isHost ? (tool === "eraser" ? "cell" : "crosshair") : "default" }}>
         <canvas ref={canvasRef}
@@ -599,25 +569,32 @@ const ControlBar = ({
   const toggleCam = async () => { await localParticipant?.setCameraEnabled(!camOn); setCamOn(!camOn); };
 
   // FIX 4: Screen share — surface real error, guard non-HTTPS
-const toggleScreen = async () => {
-  try {
+  const toggleScreen = async () => {
     setScreenShareError("");
-    await localParticipant?.setScreenShareEnabled(!screenSharing);
-    setScreenSharing(!screenSharing);
-  } catch (err) {
-    console.error("Screen share error:", err);
-    if (err?.name === "NotAllowedError" || err?.message?.includes("Permission denied")) {
-      setScreenShareError("Screen share permission denied by browser.");
-    } else if (err?.name === "NotFoundError" || err?.message?.includes("Requested device not found")) {
-      setScreenShareError("Screen sharing device/source not found. Try another tab or browser.");
-    } else if (err?.message?.includes("user cancelled") || err?.name === "AbortError") {
-      setScreenShareError("");
-    } else {
-      setScreenShareError(err?.message || "Screen share failed. Check LiveKit server config.");
+    if (!screenSharing && !window.isSecureContext) {
+      setScreenShareError("Screen share requires HTTPS. Please use a secure connection.");
+      return;
     }
-    setScreenSharing(false);
-  }
-};
+    try {
+      await localParticipant?.setScreenShareEnabled(!screenSharing);
+      setScreenSharing(!screenSharing);
+    } catch (err) {
+      setScreenSharing(false);
+      const name = err?.name || "";
+      if (name === "AbortError" || err?.message?.toLowerCase().includes("user cancelled")) {
+        // User dismissed the dialog — not an error worth showing
+        return;
+      }
+      if (name === "NotAllowedError") {
+        setScreenShareError("Browser blocked screen capture. Check site permissions.");
+      } else if (name === "NotFoundError") {
+        setScreenShareError("No screen capture source found. Try a different browser.");
+      } else {
+        setScreenShareError(err?.message || "Screen share failed.");
+        console.error("Screen share error:", err);
+      }
+    }
+  };
 
   const toggleRecording = async () => {
     try { recording ? await stopRecording(sessionId) : await startRecording(sessionId); setRecording(!recording); }
@@ -1100,15 +1077,14 @@ export default function LiveClassroom() {
       audio={phase === "live"}
       video={phase === "live"}
       options={{
-    publishDefaults: {
-      screenShareEncoding: {
-        maxBitrate: 2_000_000,
-        maxFramerate: 15,
-      },
-      videoEncoding: { maxBitrate: 1_500_000 },
-    },
-    audioCaptureDefaults: { echoCancellation: true },
-  }}
+        // FIX 4: correct screen share encoding options so LiveKit
+        // doesn't fall back to getUserMedia for screen capture
+        publishDefaults: {
+          screenShareEncoding: { maxBitrate: 1_500_000, maxFramerate: 15 },
+          stopMicTrackOnMute: false,
+        },
+        videoCaptureDefaults: { resolution: { width: 1280, height: 720, frameRate: 30 } },
+      }}
       onDisconnected={() => navigate(leaveDestination(isHostRole ? "host" : role))}
     >
       <RoomInner
