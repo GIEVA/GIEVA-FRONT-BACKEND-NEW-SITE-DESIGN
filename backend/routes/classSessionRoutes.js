@@ -30,7 +30,8 @@ import {
   guestCheckAdmissionStatus,
   guestGetParticipantToken,
   admitParticipantGuestAware,   // ← replaces admitParticipant in route wiring below
-  denyParticipantGuestAware, 
+  denyParticipantGuestAware,
+  rescheduleSession, 
 } from "../controllers/classSessionController.js";
 
 import { authenticate, authorizeRoles } from "../middleware/auth.js";
@@ -176,5 +177,9 @@ router.post("/:id/raise-hand", authenticate, raiseHand);
 router.post("/:id/reaction", authenticate, sendReaction);
 router.post("/:id/recording/start", authenticate, startRecording);
 router.post("/:id/recording/stop", authenticate, stopRecording);
+
+ router.patch("/:sessionId/reschedule", authenticate, rescheduleSession);
+
+
 
 export default router;

@@ -110,6 +110,7 @@ import Notifications from "./pages/admin/Notifications";
 import AdminLiveSessions from "./pages/adminLiveSessionPage";
 import AdminSessionDetail from "./pages/AdminSessionDetail";
 import PublicMeetings from "./pages/PublicMeetings";
+import PublicMeetingRedirect from "./pages/PublicMeetingRedirect";
 // (Optional later)
 // import Dashboard from "./pages/Dashboard";
 // import ProtectedRoute from "./components/ProtectedRoute";
@@ -128,6 +129,7 @@ function App() {
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password/:token" element={<ResetPassword />} />
           <Route path="/verify/:token" element={<VerifyEmail />} />
+          <Route path="/public-meet/:roomName" element={<PublicMeetingRedirect />} />
 
 
           <Route

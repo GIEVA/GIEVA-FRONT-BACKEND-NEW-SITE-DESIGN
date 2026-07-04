@@ -1,6 +1,7 @@
 import API from "./api";
 
 
+const BASE = "/api/session";
 
 // ======================================================
 // STUDENT SESSIONS
@@ -325,9 +326,10 @@ export const getParticipantToken = async (sessionId) => {
   return res.data;
 };
 
-// ── All existing exports stay unchanged ─────────────────────────
-// joinClassSession, joinTutorSession, getTutorSessions,
-// getStudentSessions, scheduleClassSession, getSessionById,
-// getSessionAttendance, getSessionRecording, endSession,
-// cancelSession, markAttendance, leaveAttendance, getParticipants,
-// sendSessionReaction, raiseHand, startRecording, stopRecording
+
+export const rescheduleSession = (sessionId, body) =>
+  API.patch(`${BASE}/${sessionId}/reschedule`, body).then((r) => r.data);
+
+export const getSessionDetail = (sessionId) =>
+  API.get(`${BASE}/${sessionId}`).then((r) => r.data);
+ 
