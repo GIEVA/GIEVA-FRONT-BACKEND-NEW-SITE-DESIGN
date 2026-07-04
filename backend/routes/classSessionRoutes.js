@@ -180,6 +180,6 @@ router.post("/:id/recording/stop", authenticate, stopRecording);
 
  router.patch("/:sessionId/reschedule", authenticate, rescheduleSession);
 
-
+router.get("/public-meetings/resolve/:roomName", resolvePublicMeetingLink);
 
 export default router;

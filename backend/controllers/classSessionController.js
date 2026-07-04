@@ -2736,3 +2736,70 @@ export const denyParticipantGuestAware = async (req, res) => {
     res.status(500).json({ message: "Failed to deny participant" });
   }
 };
+
+export const rescheduleSession = async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    const { scheduledAt, durationMinutes, reason } = req.body;
+
+    if (!scheduledAt && !durationMinutes) {
+      return res.status(400).json({ message: "Provide scheduledAt or durationMinutes to reschedule" });
+    }
+
+    const session = await ClassSession.findByPk(sessionId);
+    if (!session) return res.status(404).json({ message: "Session not found" });
+
+    const allowed = await isSessionHostOrAdmin(session, req.user);
+    if (!allowed) return res.status(403).json({ message: "Unauthorized" });
+
+    if (session.status === "live") {
+      return res.status(400).json({ message: "Cannot reschedule a session that is currently live" });
+    }
+    if (session.status === "ended" || session.status === "cancelled") {
+      return res.status(400).json({ message: `Cannot reschedule a ${session.status} session` });
+    }
+
+    const start    = scheduledAt      ? new Date(scheduledAt)       : session.startTime;
+    const duration = durationMinutes  ? Number(durationMinutes)      : session.durationMinutes;
+    const end      = new Date(start.getTime() + duration * 60000);
+    const expiry   = new Date(end);
+    expiry.setHours(expiry.getHours() + 2);
+
+    session.scheduledAt      = start;
+    session.startTime        = start;
+    session.endTime          = end;
+    session.durationMinutes  = duration;
+    session.linkExpiresAt    = expiry;
+    if (reason) session.rescheduleReason = reason;
+    await session.save();
+
+    // Notify all enrolled/assigned students
+    const attendance = await SessionAttendance.findAll({
+      where: { classSessionId: sessionId },
+      include: [{ model: User, attributes: ["id", "fullName", "email"] }],
+    });
+
+    for (const record of attendance) {
+      if (!record.User) continue;
+      await Notification.create({
+        userId:     record.User.id,
+        title:      "Class Rescheduled",
+        message:    `"${session.title}" has been rescheduled to ${start.toLocaleString()}`,
+        type:       "live_class",
+        entityId:   session.id,
+        entityType: "class_session",
+      });
+    }
+
+    await ActivityLog.create({
+      userId: req.user.id,
+      action: "SESSION_RESCHEDULED",
+      meta:   { sessionId, newScheduledAt: start, durationMinutes: duration, reason },
+    });
+
+    res.json({ message: "Session rescheduled successfully", session });
+  } catch (err) {
+    console.error("rescheduleSession error:", err);
+    res.status(500).json({ message: "Failed to reschedule session" });
+  }
+};
