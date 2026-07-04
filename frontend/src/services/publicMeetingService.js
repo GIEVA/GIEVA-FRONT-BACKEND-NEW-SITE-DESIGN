@@ -1,43 +1,30 @@
 // services/publicMeetingService.js
-//
-// FIX: resolvePublicMeetingLink and listPublicMeetings now use a plain
-// unauthenticated axios instance instead of the main `API` instance.
-//
-// WHY: The main API instance attaches "Authorization: Bearer <token>"
-// from localStorage. A guest in a fresh browser has no token, so
-// the request arrives at the server with no Bearer header, the
-// authenticate() middleware fires and returns 401, and then the
-// response interceptor redirects to /login — the guest never
-// reaches the meeting. Using a separate plain axios instance for
-// these two public endpoints sidesteps all of that.
 
 import API from "./api";
 import axios from "axios";
 
-// Plain unauthenticated instance — no interceptors, no token.
-// Used only for the two publicly accessible discovery endpoints.
+// ── PUBLIC_API: same baseURL as the main API instance, but with
+//    NO request/response interceptors so unauthenticated guests
+//    can call public endpoints without triggering the "session
+//    expired → redirect to /login" interceptor.
+//
+//    We derive the baseURL directly from the API instance so there
+//    is ONE place to update the backend URL (api.js), and both
+//    instances always stay in sync automatically.
 const PUBLIC_API = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || "http://localhost:5000",
+  baseURL: API.defaults.baseURL,          // ← mirrors api.js exactly
   headers: { "Content-Type": "application/json" },
+  withCredentials: true,
 });
 
 const BASE = "/api/session";
 
-// ── Public endpoints (no auth required) ───────────────────────
+// ── Public endpoints (no auth, no token needed) ────────────────
 
-/**
- * Resolve a shared join link's roomName → sessionId.
- * Used by PublicMeetingRedirect when someone pastes a shared link.
- * Uses PUBLIC_API — guests have no token.
- */
 export const resolvePublicMeetingLink = (roomName) =>
   PUBLIC_API.get(`${BASE}/public-meetings/resolve/${roomName}`)
     .then((r) => r.data);
 
-/**
- * Browse open public meetings (no login needed — public listings).
- * Uses PUBLIC_API — guests have no token.
- */
 export const listPublicMeetings = (status) =>
   PUBLIC_API.get(`${BASE}/public-meetings`, {
     params: status ? { status } : {},
