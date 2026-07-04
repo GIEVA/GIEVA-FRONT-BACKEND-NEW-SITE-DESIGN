@@ -39,7 +39,7 @@ const MUTED = "#94a3b8";
 // Use a plain axios instance — guests have no token, and we don't
 // want the authenticated API instance's interceptors redirecting
 // them to /login just because there's no Bearer token.
-const PLAIN = axios.create({ baseURL: "https://gieva-backend-4tgy.onrender.com" });
+const PLAIN = axios.create({ baseURL: "https://gieva-front-backend-new-site-design-production.up.railway.app" });
 
 export default function PublicMeetingRedirect() {
   const { roomName } = useParams();
