@@ -1,50 +1,52 @@
 // services/publicMeetingService.js
 //
-// Student/attendee-facing service for PUBLIC meetings.
-// These hit the same /api/session base as classSessionService.js
-// (NOT the /admin/live-session base used by adminSessionService.js).
+// FIX: resolvePublicMeetingLink and listPublicMeetings now use a plain
+// unauthenticated axios instance instead of the main `API` instance.
 //
-// Scheduling a public meeting is an ADMIN action — see
-// adminSessionService.js → use `scheduleAdminPublicMeeting` there.
-// This file is for everyone else: browsing, requesting to join,
-// and polling admission status.
+// WHY: The main API instance attaches "Authorization: Bearer <token>"
+// from localStorage. A guest in a fresh browser has no token, so
+// the request arrives at the server with no Bearer header, the
+// authenticate() middleware fires and returns 401, and then the
+// response interceptor redirects to /login — the guest never
+// reaches the meeting. Using a separate plain axios instance for
+// these two public endpoints sidesteps all of that.
 
 import API from "./api";
+import axios from "axios";
+
+// Plain unauthenticated instance — no interceptors, no token.
+// Used only for the two publicly accessible discovery endpoints.
+const PUBLIC_API = axios.create({
+  baseURL: process.env.REACT_APP_API_URL || "http://localhost:5000",
+  headers: { "Content-Type": "application/json" },
+});
 
 const BASE = "/api/session";
 
-// ── Discovery ──────────────────────────────────────────────────
+// ── Public endpoints (no auth required) ───────────────────────
 
 /**
- * Browse open public meetings (no enrollment needed).
- * @param {"scheduled"|"live"|"ended"|undefined} status
- */
-export const listPublicMeetings = (status) =>
-  API.get(`${BASE}/public-meetings`, { params: status ? { status } : {} }).then((r) => r.data);
-
-/**
- * Resolve a shared join link's roomName back to a sessionId,
- * for "paste a meeting link" flows.
+ * Resolve a shared join link's roomName → sessionId.
+ * Used by PublicMeetingRedirect when someone pastes a shared link.
+ * Uses PUBLIC_API — guests have no token.
  */
 export const resolvePublicMeetingLink = (roomName) =>
-  API.get(`${BASE}/public-meetings/resolve/${roomName}`).then((r) => r.data);
-
-// ── Joining ─────────────────────────────────────────────────────
-
-/**
- * Request to join a public meeting (or course session) as an attendee.
- * Returns a LOBBY token — the attendee waits until admitted.
- */
-export const joinClassSession = (sessionId) =>
-  API.get(`${BASE}/join/${sessionId}`).then((r) => r.data);
+  PUBLIC_API.get(`${BASE}/public-meetings/resolve/${roomName}`)
+    .then((r) => r.data);
 
 /**
- * Organizer / admin claims the host token for a public meeting.
+ * Browse open public meetings (no login needed — public listings).
+ * Uses PUBLIC_API — guests have no token.
  */
+export const listPublicMeetings = (status) =>
+  PUBLIC_API.get(`${BASE}/public-meetings`, {
+    params: status ? { status } : {},
+  }).then((r) => r.data);
+
+// ── Authenticated endpoints (require login) ────────────────────
+
 export const joinPublicMeetingAsHost = (sessionId) =>
   API.get(`${BASE}/public-meetings/${sessionId}/join-host`).then((r) => r.data);
-
-// ── Waiting room (shared with course sessions) ──────────────────
 
 export const getWaitingRoom = (sessionId) =>
   API.get(`${BASE}/${sessionId}/waiting-room`).then((r) => r.data);
@@ -57,19 +59,6 @@ export const denyParticipant = (sessionId, userId, reason = "") =>
 
 export const getParticipantToken = (sessionId) =>
   API.post(`${BASE}/${sessionId}/participant-token`).then((r) => r.data);
-
-// ── Status polling (lobby screen) ────────────────────────────────
-
-/**
- * Cheap poll — does NOT mint a token, just checks the waiting-room
- * row's current status. Use this in the lobby screen; once it
- * returns "admitted", call getParticipantToken() once to get the
- * real LiveKit token and reconnect.
- */
-export const checkAdmissionStatus = (sessionId) =>
-  API.get(`${BASE}/${sessionId}/admission-status`).then((r) => r.data);
-
-// ── Session actions shared with course sessions ──────────────────
 
 export const leaveAttendance = (sessionId) =>
   API.patch(`${BASE}/${sessionId}/leave`).then((r) => r.data);

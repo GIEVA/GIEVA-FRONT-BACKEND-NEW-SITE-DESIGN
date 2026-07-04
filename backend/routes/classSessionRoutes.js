@@ -62,10 +62,10 @@ router.post(
 );
 
 // Anyone authenticated can browse open public meetings
-router.get("/public-meetings", authenticate, listPublicMeetings);
+router.get("/public-meetings", listPublicMeetings);
 
 // Resolve a shared join link (roomName) → session info, for "paste a link" flows
-router.get("/public-meetings/resolve/:roomName", authenticate, resolvePublicMeetingLink);
+router.get("/public-meetings/resolve/:roomName", resolvePublicMeetingLink);
 
 // The meeting organizer (or any admin) claims the host token
 router.get("/public-meetings/:sessionId/join-host", authenticate, joinAsHost);
@@ -180,6 +180,6 @@ router.post("/:id/recording/stop", authenticate, stopRecording);
 
  router.patch("/:sessionId/reschedule", authenticate, rescheduleSession);
 
-router.get("/public-meetings/resolve/:roomName", resolvePublicMeetingLink);
+//router.get("/public-meetings/resolve/:roomName", resolvePublicMeetingLink);
 
 export default router;
