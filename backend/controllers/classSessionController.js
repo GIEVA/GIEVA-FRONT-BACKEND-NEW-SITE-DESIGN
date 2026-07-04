@@ -720,6 +720,14 @@ export const getWaitingRoom = async (req, res) => {
 // ======================================================
 // ADMIT PARTICIPANT  — now works for public meetings
 // ======================================================
+
+ 
+const isGuestId = (value) =>
+  typeof value === "string" && value.startsWith("guest-");
+ 
+// ======================================================
+// ADMIT PARTICIPANT  (works for both registered users and guests)
+// ======================================================
  
 export const admitParticipant = async (req, res) => {
   try {
@@ -733,44 +741,62 @@ export const admitParticipant = async (req, res) => {
     const allowed = await isSessionHostOrAdmin(session, req.user);
     if (!allowed) return res.status(403).json({ message: "Unauthorized" });
  
-    const entry = await SessionWaitingRoom.findOne({
-      where: { classSessionId: sessionId, userId },
-    });
+    // Branch on guest vs. registered user
+    const where = isGuestId(userId)
+      ? { classSessionId: sessionId, guestId: userId }
+      : { classSessionId: sessionId, userId: Number(userId) };
+ 
+    const entry = await SessionWaitingRoom.findOne({ where });
     if (!entry) return res.status(404).json({ message: "User not in waiting room" });
  
     entry.status     = "admitted";
     entry.admittedAt = new Date();
     await entry.save();
  
+    // Determine the LiveKit identity to target with the push
+    const targetIdentity = entry.isGuest
+      ? entry.guestId
+      : `user-${entry.userId}`;
+ 
     await pushData(session.roomName, {
       type:     "ADMITTED",
-      userId:   Number(userId),
-      identity: `user-${userId}`,
+      userId:   entry.isGuest ? null : Number(entry.userId),
+      guestId:  entry.isGuest ? entry.guestId : null,
+      identity: targetIdentity,
     });
  
-    await Notification.create({
-      userId:     Number(userId),
-      title:      "You've Been Admitted",
-      message:    `You have been admitted to "${session.title}"`,
-      type:       "live_class",
-      entityId:   session.id,
-      entityType: "class_session",
-    });
+    // Only notify registered users (guests have no account)
+    if (!entry.isGuest) {
+      await Notification.create({
+        userId:     Number(entry.userId),
+        title:      "You've Been Admitted",
+        message:    `You have been admitted to "${session.title}"`,
+        type:       "live_class",
+        entityId:   session.id,
+        entityType: "class_session",
+      });
+    }
  
     await ActivityLog.create({
-      userId: req.user.id, action: "PARTICIPANT_ADMITTED", meta: { sessionId, admittedUserId: userId },
+      userId: req.user.id,
+      action: "PARTICIPANT_ADMITTED",
+      meta:   {
+        sessionId,
+        admittedIdentity: targetIdentity,
+        isGuest: entry.isGuest || false,
+      },
     });
  
-    res.json({ message: "Participant admitted", userId: Number(userId) });
+    res.json({ message: "Participant admitted", identity: targetIdentity });
   } catch (err) {
-    console.error(err);
+    console.error("admitParticipant error:", err);
     res.status(500).json({ message: "Failed to admit participant" });
   }
 };
  
  
 // ======================================================
-// DENY PARTICIPANT  — now works for public meetings
+// DENY PARTICIPANT  (works for both registered users and guests)
 // ======================================================
  
 export const denyParticipant = async (req, res) => {
@@ -786,9 +812,11 @@ export const denyParticipant = async (req, res) => {
     const allowed = await isSessionHostOrAdmin(session, req.user);
     if (!allowed) return res.status(403).json({ message: "Unauthorized" });
  
-    const entry = await SessionWaitingRoom.findOne({
-      where: { classSessionId: sessionId, userId },
-    });
+    const where = isGuestId(userId)
+      ? { classSessionId: sessionId, guestId: userId }
+      : { classSessionId: sessionId, userId: Number(userId) };
+ 
+    const entry = await SessionWaitingRoom.findOne({ where });
     if (!entry) return res.status(404).json({ message: "User not in waiting room" });
  
     entry.status   = "denied";
@@ -796,29 +824,145 @@ export const denyParticipant = async (req, res) => {
     entry.reason   = reason;
     await entry.save();
  
+    const targetIdentity = entry.isGuest
+      ? entry.guestId
+      : `user-${entry.userId}`;
+ 
     await pushData(session.roomName, {
-      type: "DENIED", userId: Number(userId), identity: `user-${userId}`, reason,
+      type:     "DENIED",
+      userId:   entry.isGuest ? null : Number(entry.userId),
+      guestId:  entry.isGuest ? entry.guestId : null,
+      identity: targetIdentity,
+      reason,
     });
  
-    await Notification.create({
-      userId:     Number(userId),
-      title:      "Join Request Declined",
-      message:    `Your request to join "${session.title}" was declined.${reason ? ` Reason: ${reason}` : ""}`,
-      type:       "live_class",
-      entityId:   session.id,
-      entityType: "class_session",
-    });
+    if (!entry.isGuest) {
+      await Notification.create({
+        userId:     Number(entry.userId),
+        title:      "Join Request Declined",
+        message:    `Your request to join "${session.title}" was declined.${reason ? ` Reason: ${reason}` : ""}`,
+        type:       "live_class",
+        entityId:   session.id,
+        entityType: "class_session",
+      });
+    }
  
     await ActivityLog.create({
-      userId: req.user.id, action: "PARTICIPANT_DENIED", meta: { sessionId, deniedUserId: userId, reason },
+      userId: req.user.id,
+      action: "PARTICIPANT_DENIED",
+      meta:   {
+        sessionId,
+        deniedIdentity: targetIdentity,
+        reason,
+        isGuest: entry.isGuest || false,
+      },
     });
  
-    res.json({ message: "Participant denied", userId: Number(userId) });
+    res.json({ message: "Participant denied", identity: targetIdentity });
   } catch (err) {
-    console.error(err);
+    console.error("denyParticipant error:", err);
     res.status(500).json({ message: "Failed to deny participant" });
   }
 };
+ 
+// export const admitParticipant = async (req, res) => {
+//   try {
+//     if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+ 
+//     const { sessionId, userId } = req.params;
+ 
+//     const session = await ClassSession.findByPk(sessionId);
+//     if (!session) return res.status(404).json({ message: "Session not found" });
+ 
+//     const allowed = await isSessionHostOrAdmin(session, req.user);
+//     if (!allowed) return res.status(403).json({ message: "Unauthorized" });
+ 
+//     const entry = await SessionWaitingRoom.findOne({
+//       where: { classSessionId: sessionId, userId },
+//     });
+//     if (!entry) return res.status(404).json({ message: "User not in waiting room" });
+ 
+//     entry.status     = "admitted";
+//     entry.admittedAt = new Date();
+//     await entry.save();
+ 
+//     await pushData(session.roomName, {
+//       type:     "ADMITTED",
+//       userId:   Number(userId),
+//       identity: `user-${userId}`,
+//     });
+ 
+//     await Notification.create({
+//       userId:     Number(userId),
+//       title:      "You've Been Admitted",
+//       message:    `You have been admitted to "${session.title}"`,
+//       type:       "live_class",
+//       entityId:   session.id,
+//       entityType: "class_session",
+//     });
+ 
+//     await ActivityLog.create({
+//       userId: req.user.id, action: "PARTICIPANT_ADMITTED", meta: { sessionId, admittedUserId: userId },
+//     });
+ 
+//     res.json({ message: "Participant admitted", userId: Number(userId) });
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).json({ message: "Failed to admit participant" });
+//   }
+// };
+ 
+ 
+// // ======================================================
+// // DENY PARTICIPANT  — now works for public meetings
+// // ======================================================
+ 
+// export const denyParticipant = async (req, res) => {
+//   try {
+//     if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+ 
+//     const { sessionId, userId } = req.params;
+//     const { reason = "" }       = req.body;
+ 
+//     const session = await ClassSession.findByPk(sessionId);
+//     if (!session) return res.status(404).json({ message: "Session not found" });
+ 
+//     const allowed = await isSessionHostOrAdmin(session, req.user);
+//     if (!allowed) return res.status(403).json({ message: "Unauthorized" });
+ 
+//     const entry = await SessionWaitingRoom.findOne({
+//       where: { classSessionId: sessionId, userId },
+//     });
+//     if (!entry) return res.status(404).json({ message: "User not in waiting room" });
+ 
+//     entry.status   = "denied";
+//     entry.deniedAt = new Date();
+//     entry.reason   = reason;
+//     await entry.save();
+ 
+//     await pushData(session.roomName, {
+//       type: "DENIED", userId: Number(userId), identity: `user-${userId}`, reason,
+//     });
+ 
+//     await Notification.create({
+//       userId:     Number(userId),
+//       title:      "Join Request Declined",
+//       message:    `Your request to join "${session.title}" was declined.${reason ? ` Reason: ${reason}` : ""}`,
+//       type:       "live_class",
+//       entityId:   session.id,
+//       entityType: "class_session",
+//     });
+ 
+//     await ActivityLog.create({
+//       userId: req.user.id, action: "PARTICIPANT_DENIED", meta: { sessionId, deniedUserId: userId, reason },
+//     });
+ 
+//     res.json({ message: "Participant denied", userId: Number(userId) });
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).json({ message: "Failed to deny participant" });
+//   }
+// };
  
  
 // ======================================================
