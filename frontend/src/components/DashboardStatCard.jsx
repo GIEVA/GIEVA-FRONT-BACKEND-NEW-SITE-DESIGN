@@ -1,93 +1,80 @@
-import {
-  Paper,
-  Typography,
-  Stack,
-  Avatar,
-} from "@mui/material";
+// components/DashboardStatCard.jsx
+//
+// Fixed: no fixed height, no absolute-positioned icon,
+// clean flex-column layout that never overlaps at any viewport.
 
+import { Box, Paper, Typography } from "@mui/material";
 
+const NAVY  = "#0B1F3A";
+const GREEN = "#1E7F4F";
 
-const DashboardStatCard =
-({
-
+const DashboardStatCard = ({
   title,
   value,
   icon,
-  color = "#1976d2",
-
-}) => {
-
-  return (
-
-    <Paper
-
+  color = NAVY,
+}) => (
+  <Paper
+    elevation={0}
+    sx={{
+      border:      "1px solid #E6E9F0",
+      borderRadius: 3,
+      p:           { xs: 2.5, md: 3 },
+      bgcolor:     "#FFFFFF",
+      display:     "flex",
+      flexDirection: "column",
+      gap:         1.5,
+      transition:  "box-shadow 0.2s, border-color 0.2s",
+      "&:hover": {
+        borderColor: color,
+        boxShadow:   `0 4px 16px ${color}22`,
+      },
+    }}
+  >
+    {/* Icon badge */}
+    <Box
       sx={{
-
-        p: 3,
-
-        borderRadius: 5,
-
-        height: "100%",
-
-        boxShadow:
-          "0 8px 30px rgba(0,0,0,0.05)",
+        width:          44,
+        height:         44,
+        borderRadius:   2.5,
+        bgcolor:        `${color}18`,
+        display:        "flex",
+        alignItems:     "center",
+        justifyContent: "center",
+        color,
+        flexShrink:     0,
+        "& svg": { fontSize: 22 },
       }}
     >
+      {icon}
+    </Box>
 
-      <Stack
-        direction="row"
-        justifyContent="space-between"
-      >
+    {/* Label */}
+    <Typography
+      sx={{
+        fontSize:      12,
+        fontWeight:    600,
+        color:         "#64748B",
+        textTransform: "uppercase",
+        letterSpacing: 0.8,
+        lineHeight:    1.3,
+      }}
+    >
+      {title}
+    </Typography>
 
-        <div>
+    {/* Value */}
+    <Typography
+      sx={{
+        fontSize:   { xs: 24, md: 28 },
+        fontWeight: 800,
+        color:      "#0F172A",
+        lineHeight: 1,
+      }}
+    >
+      {value}
+    </Typography>
+  </Paper>
+);
 
-          <Typography
-            color="text.secondary"
-            mb={1}
-          >
-
-            {title}
-
-          </Typography>
-
-
-
-          <Typography
-
-            variant="h4"
-
-            fontWeight="bold"
-          >
-
-            {value}
-
-          </Typography>
-
-        </div>
-
-
-
-        <Avatar
-
-          sx={{
-
-            bgcolor: color,
-
-            width: 56,
-
-            height: 56,
-          }}
-        >
-
-          {icon}
-
-        </Avatar>
-
-      </Stack>
-
-    </Paper>
-  );
-};
-
-export default
-DashboardStatCard;
+export default DashboardStatCard;

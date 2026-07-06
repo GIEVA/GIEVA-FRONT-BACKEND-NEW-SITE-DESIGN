@@ -73,6 +73,7 @@ import adminExamRegistrationRoutes
 from "./routes/adminExamRegistration.routes.js";
 
 import adminClassSessionRoutes from "./routes/adminClassSessionRoutes.js"
+import adminExamTypeRoutes from "./routes/adminExamTypeRoutes.js"
 import corsConfig from "./middleware/corsConfig.js";
 
 dotenv.config({
@@ -188,6 +189,11 @@ examRegistrationRoutes
 
 app.use(
 "/api/exam-payments",
+examPaymentRoutes
+);
+
+app.use(
+"/api/exam-types",
 examPaymentRoutes
 );
 

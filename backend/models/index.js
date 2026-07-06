@@ -34,6 +34,7 @@ import ExamPaymentModel from './ExamRegistrationPaymentModel.js'
 import ExamRegistrationModel from './ExamRegistrationModel.js'
 import ExamRegistrationCommentModel from './ExamRegistrationComment.js'
 import SessionWaitingRoomModel from './SessionWaitingRoom.js'
+import ExamTypeModel from './ExamType.js';
 
 
 // Init models
@@ -71,7 +72,7 @@ const ExamPayment = ExamPaymentModel(sequelize)
 const ExamRegistration = ExamRegistrationModel(sequelize)
 const ExamRegistrationComment = ExamRegistrationCommentModel(sequelize)
 const SessionWaitingRoom = SessionWaitingRoomModel(sequelize)
-
+const ExamType = ExamTypeModel(sequelize)
 // Collect models
 export const models = {
   User,
@@ -108,6 +109,7 @@ export const models = {
   ExamPayment,
   ExamRegistration,
   ExamRegistrationComment,
+  ExamType,
   SessionWaitingRoom,
 };
 
