@@ -31,7 +31,8 @@ import {
   guestGetParticipantToken,
   admitParticipantGuestAware,   // ← replaces admitParticipant in route wiring below
   denyParticipantGuestAware,
-  rescheduleSession, 
+  rescheduleSession,
+  muteParticipant, 
 } from "../controllers/classSessionController.js";
 
 import { authenticate, authorizeRoles } from "../middleware/auth.js";
@@ -70,7 +71,7 @@ router.get("/public-meetings/resolve/:roomName", resolvePublicMeetingLink);
 // The meeting organizer (or any admin) claims the host token
 router.get("/public-meetings/:sessionId/join-host", authenticate, joinAsHost);
 
-
+router.post("/:sessionId/mute/:identity", authenticate, muteParticipant);
 // ======================================================
 // JOIN AS STUDENT / ATTENDEE  (works for BOTH course sessions
 // and public meetings — controller branches on sessionType)

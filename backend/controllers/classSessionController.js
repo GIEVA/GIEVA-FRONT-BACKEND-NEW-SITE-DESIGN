@@ -2947,3 +2947,91 @@ export const rescheduleSession = async (req, res) => {
     res.status(500).json({ message: "Failed to reschedule session" });
   }
 };
+
+
+// ======================================================
+// MUTE / UNMUTE PARTICIPANT  (host / admin only)
+// POST /api/session/:sessionId/mute/:identity
+// Body: { muted: true|false }
+//
+// :identity is the LiveKit participant identity string,
+// e.g. "user-42" or "guest-abc123". The frontend reads
+// this from participant.identity in the LiveKit room context.
+// ======================================================
+ 
+export const muteParticipant = async (req, res) => {
+  try {
+    if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+ 
+    const { sessionId, identity } = req.params;
+    const { muted = true }        = req.body; // default to muting
+ 
+    const session = await ClassSession.findByPk(sessionId);
+    if (!session) return res.status(404).json({ message: "Session not found" });
+ 
+    // Only the session host or an admin can mute participants
+    const allowed = await isSessionHostOrAdmin(session, req.user);
+    if (!allowed) return res.status(403).json({ message: "Only the host can mute participants" });
+ 
+    // Can't mute someone who isn't in the room
+    if (!session.isLive && session.status !== "live") {
+      return res.status(400).json({ message: "Session is not currently live" });
+    }
+ 
+    // Get the participant's current published tracks from LiveKit
+    // so we can find the audio track SID to mute.
+    let participants;
+    try {
+      participants = await roomService.listParticipants(session.roomName);
+    } catch (err) {
+      return res.status(502).json({
+        message: "Could not reach LiveKit server to list participants",
+      });
+    }
+ 
+    const target = participants.find((p) => p.identity === identity);
+    if (!target) {
+      return res.status(404).json({
+        message: `Participant "${identity}" is not currently in the room`,
+      });
+    }
+ 
+    // Find all audio tracks for this participant and mute/unmute them
+    const audioTracks = (target.tracks || []).filter(
+      (t) => t.kind === "AUDIO" || t.type === "audio" || t.source === "microphone"
+    );
+ 
+    if (audioTracks.length === 0) {
+      return res.status(404).json({
+        message: `Participant "${identity}" has no active microphone track`,
+      });
+    }
+ 
+    // Mute each audio track (usually just one, but handle multiple)
+    for (const track of audioTracks) {
+      await roomService.mutePublishedTrack(
+        session.roomName,
+        identity,
+        track.sid,
+        muted        // true = mute, false = unmute (restore)
+      );
+    }
+ 
+    await ActivityLog.create({
+      userId: req.user.id,
+      action: muted ? "PARTICIPANT_MUTED" : "PARTICIPANT_UNMUTED",
+      meta:   { sessionId, targetIdentity: identity },
+    });
+ 
+    res.json({
+      message: muted
+        ? `${identity} has been muted`
+        : `${identity} has been unmuted`,
+      identity,
+      muted,
+    });
+  } catch (err) {
+    console.error("muteParticipant error:", err);
+    res.status(500).json({ message: "Failed to mute participant" });
+  }
+};

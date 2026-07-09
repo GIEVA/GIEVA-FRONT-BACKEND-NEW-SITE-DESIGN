@@ -1,30 +1,40 @@
 // services/examTypeService.js
-//
-// Public-facing service — no auth required.
-// Maps to:  app.use("/api/exam-types", examTypeRoutes)
-//
-//   GET /api/exam-types          → listPublishedExams
-//   GET /api/exam-types/:examType → getExamType
 
 import API from "./api";
+import axios from "axios";
+
+// Public reads use a no-auth instance so the catalog is visible
+// to unauthenticated visitors browsing from the landing page.
+const PUBLIC_API = axios.create({
+  baseURL: API.defaults.baseURL,
+  headers: { "Content-Type": "application/json" },
+});
 
 const BASE = "/api/exam-types";
 
-/**
- * Fetch all published exams for the student catalog page.
- * Used by: ExamCatalog.jsx
- *
- * Returns: { exams: ExamType[] }
- */
-export const listPublishedExams = () =>
-  API.get(BASE).then((r) => r.data);
+// ── Public (no auth) ──────────────────────────────────────────
 
-/**
- * Fetch a single exam by its slug (e.g. "SAT", "IELTS").
- * Returns the full fieldSchema needed to render the dynamic form.
- * Used by: DynamicExamRegistrationForm.jsx
- *
- * Returns: { exam: ExamType }
- */
+/** Student catalog — returns published exams only */
+export const listPublishedExams = () =>
+  PUBLIC_API.get(BASE).then((r) => r.data);
+
+/** Single exam with full fieldSchema — used by the dynamic form */
 export const getExamType = (examType) =>
-  API.get(`${BASE}/${examType}`).then((r) => r.data);
+  PUBLIC_API.get(`${BASE}/${examType}`).then((r) => r.data);
+
+// ── Admin ─────────────────────────────────────────────────────
+
+export const adminListExams = () =>
+  API.get(`${BASE}/admin/all`).then((r) => r.data);
+
+export const adminCreateExam = (body) =>
+  API.post(`${BASE}/admin`, body).then((r) => r.data);
+
+export const adminUpdateExam = (id, body) =>
+  API.put(`${BASE}/admin/${id}`, body).then((r) => r.data);
+
+export const adminSetExamStatus = (id, status) =>
+  API.patch(`${BASE}/admin/${id}/status`, { status }).then((r) => r.data);
+
+export const adminDeleteExam = (id) =>
+  API.delete(`${BASE}/admin/${id}`).then((r) => r.data);

@@ -333,3 +333,6 @@ export const rescheduleSession = (sessionId, body) =>
 export const getSessionDetail = (sessionId) =>
   API.get(`${BASE}/${sessionId}`).then((r) => r.data);
  
+export const muteParticipant = (sessionId, identity, muted = true) =>
+  API.post(`/api/session/${sessionId}/mute/${identity}`, { muted })
+    .then((r) => r.data);

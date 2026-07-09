@@ -111,6 +111,9 @@ import AdminLiveSessions from "./pages/adminLiveSessionPage";
 import AdminSessionDetail from "./pages/AdminSessionDetail";
 import PublicMeetings from "./pages/PublicMeetings";
 import PublicMeetingRedirect from "./pages/PublicMeetingRedirect";
+//import ExamCatalog                from "./pages/exams/ExamCatalog";
+//import DynamicExamRegistrationForm from "./pages/exams/DynamicExamRegistrationForm";
+import AdminExamTypes              from "./pages/exams/AdminExamTypes";
 // (Optional later)
 // import Dashboard from "./pages/Dashboard";
 // import ProtectedRoute from "./components/ProtectedRoute";
@@ -509,6 +512,11 @@ function App() {
             path="/admin/exams"
             element={<AdminLayout><ExamDashboard /></AdminLayout>}
           />
+          <Route path="/admin/exam-types" element={
+            <AdminLayout>
+              <AdminExamTypes />
+            </AdminLayout>
+          } />
           <Route
             path="/admin/exams/registrations"
             element={<AdminLayout><ExamRegistrations /></AdminLayout>}

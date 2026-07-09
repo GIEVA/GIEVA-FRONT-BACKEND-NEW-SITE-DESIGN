@@ -71,6 +71,7 @@ import examPaymentRoutes
 from "./routes/examPayment.routes.js";
 import adminExamRegistrationRoutes
 from "./routes/adminExamRegistration.routes.js";
+import adminPaymentROutes from './routes/adminPaymentRoutes.js'
 
 import adminClassSessionRoutes from "./routes/adminClassSessionRoutes.js"
 import adminExamTypeRoutes from "./routes/adminExamTypeRoutes.js"
@@ -201,8 +202,12 @@ app.use(
   "/admin",
   adminExamRegistrationRoutes
 );
-
+app.use(
+  "/api/exam-types",
+  adminExamTypeRoutes
+);
 app.use("/admin/live-session",  adminClassSessionRoutes)
+app.use("/admin/get-payments",  adminPaymentROutes)
 
 
 
