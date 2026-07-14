@@ -30,7 +30,7 @@ import {
   replyToContact,
   addInternalNote,
   deleteContactMessage,
-} from "../../services/adminContactService";
+} from "../services/adminContactService";
 
 // ─── Design tokens ────────────────────────────────────────────
 const NAVY   = "#0B1F3A";
