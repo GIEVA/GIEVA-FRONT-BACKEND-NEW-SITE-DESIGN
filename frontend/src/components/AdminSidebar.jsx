@@ -41,6 +41,7 @@ import {
   AccessTime,
   Public,
   Category,
+  ContactMail,
 } from "@mui/icons-material";
 
 import { useState } from "react";
@@ -89,6 +90,12 @@ export default function AdminSidebar() {
     { label: "HEALS Dashboard",   icon: <Dashboard />,    path: "/admin/heals/dashboard"   },
     { label: "HEALS Applications",icon: <School />,       path: "/admin/heals/applications"},
     { label: "CMS Articles",      icon: <Article />,      path: "/admin/cms/articles"      },
+    {
+    label: "Contact Messages",
+    icon: <ContactMail />,
+    path: "/admin/contact-message",
+  },
+
   ];
 
   return (

@@ -136,6 +136,7 @@ function App() {
           <Route path="/verify/:token" element={<VerifyEmail />} />
           <Route path="/public-meet/:roomName" element={<PublicMeetingRedirect />} />
           <Route path="/contact" element={<ContactUs />} />
+          
 
 
           <Route
@@ -571,6 +572,13 @@ function App() {
             </AdminLayout>
           }
         />
+        <Route  
+        path="/admin/contact-message"
+          element={
+            <AdminLayout>
+              <AdminContactMessages />
+            </AdminLayout>
+          }/>
         </Routes>
       </BrowserRouter>
     </AuthProvider>
