@@ -114,6 +114,8 @@ import PublicMeetingRedirect from "./pages/PublicMeetingRedirect";
 //import ExamCatalog                from "./pages/exams/ExamCatalog";
 //import DynamicExamRegistrationForm from "./pages/exams/DynamicExamRegistrationForm";
 import AdminExamTypes              from "./pages/exams/AdminExamTypes";
+import ContactUs from "./pages/ContactUs";
+import AdminContactMessages from "./pages/AdminContactMessages";
 // (Optional later)
 // import Dashboard from "./pages/Dashboard";
 // import ProtectedRoute from "./components/ProtectedRoute";
@@ -133,6 +135,7 @@ function App() {
           <Route path="/reset-password/:token" element={<ResetPassword />} />
           <Route path="/verify/:token" element={<VerifyEmail />} />
           <Route path="/public-meet/:roomName" element={<PublicMeetingRedirect />} />
+          <Route path="/Contact" element={<ContactUs />} />
 
 
           <Route

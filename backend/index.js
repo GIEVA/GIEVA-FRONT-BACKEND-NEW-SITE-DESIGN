@@ -76,6 +76,9 @@ import adminPaymentROutes from './routes/adminPaymentRoutes.js'
 import adminClassSessionRoutes from "./routes/adminClassSessionRoutes.js"
 import adminExamTypeRoutes from "./routes/adminExamTypeRoutes.js"
 import corsConfig from "./middleware/corsConfig.js";
+import contactRoutes from "./routes/contactRoutes.js";
+import adminContactMessageRoutes from "./routes/adminContactMessageRoutes.js";
+
 
 dotenv.config({
   path: "./.env",
@@ -210,9 +213,12 @@ app.use("/admin/live-session",  adminClassSessionRoutes)
 app.use("/admin/get-payments",  adminPaymentROutes)
 
 
+app.use("/api/contact", contactRoutes);
+app.use("/api/admin/contact", adminContactMessageRoutes);
+
 
     // Sync models AFTER models are loaded
-    await sequelize.sync();
+    await sequelize.sync({alter:true});
     console.log("🚀 Sequelize models synced");
 
     app.listen(PORT , () => {

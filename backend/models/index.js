@@ -35,6 +35,7 @@ import ExamRegistrationModel from './ExamRegistrationModel.js'
 import ExamRegistrationCommentModel from './ExamRegistrationComment.js'
 import SessionWaitingRoomModel from './SessionWaitingRoom.js'
 import ExamTypeModel from './ExamType.js';
+import ContactMessageModel from './ContactMessage.js';
 
 
 // Init models
@@ -73,6 +74,9 @@ const ExamRegistration = ExamRegistrationModel(sequelize)
 const ExamRegistrationComment = ExamRegistrationCommentModel(sequelize)
 const SessionWaitingRoom = SessionWaitingRoomModel(sequelize)
 const ExamType = ExamTypeModel(sequelize)
+const ContactMessage = ContactMessageModel(sequelize)
+
+
 // Collect models
 export const models = {
   User,
@@ -111,6 +115,7 @@ export const models = {
   ExamRegistrationComment,
   ExamType,
   SessionWaitingRoom,
+  ContactMessage,
 };
 
 // Run associations
