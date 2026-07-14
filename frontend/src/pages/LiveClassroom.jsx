@@ -347,46 +347,111 @@ const WhiteboardDrawer = ({
   onLocalStroke, onLocalClear,
   remoteStroke, remoteClear, syncStrokes,
 }) => {
-  const canvasRef  = useRef(null);
-  const isDrawing  = useRef(false);
-  const lastPos    = useRef({ x: 0, y: 0 });
-  const [tool, setTool]           = useState("pen");
-  const [color, setColor]         = useState("#000000");
+  // const canvasRef  = useRef(null);
+  // const isDrawing  = useRef(false);
+  // const lastPos    = useRef({ x: 0, y: 0 });
+  // const [tool, setTool]           = useState("pen");
+  // const [color, setColor]         = useState("#000000");
+  // const [thickness, setThickness] = useState(3);
+
+  // const COLORS = ["#000000","#ffffff","#ef4444","#f97316","#eab308","#22c55e","#3b82f6","#8b5cf6"];
+
+  // const getPos = (e, canvas) => {
+  //   const rect    = canvas.getBoundingClientRect();
+  //   const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+  //   const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+  //   return {
+  //     x: (clientX - rect.left) * (canvas.width  / rect.width),
+  //     y: (clientY - rect.top)  * (canvas.height / rect.height),
+  //   };
+  // };
+
+  // const toNorm   = (pos, canvas) => ({ nx: pos.x / canvas.width,  ny: pos.y / canvas.height });
+  // const fromNorm = (nx, ny, canvas) => ({ x: nx * canvas.width, y: ny * canvas.height });
+
+  // const strokeOnCanvas = useCallback((from, to, strokeColor, strokeWidth) => {
+  //   const canvas = canvasRef.current; if (!canvas) return;
+  //   const ctx = canvas.getContext("2d");
+  //   ctx.beginPath();
+  //   ctx.moveTo(from.x, from.y);
+  //   ctx.lineTo(to.x, to.y);
+  //   ctx.strokeStyle = strokeColor;
+  //   ctx.lineWidth   = strokeWidth;
+  //   ctx.lineCap     = "round"; ctx.lineJoin = "round";
+  //   ctx.stroke();
+  // }, []);
+
+  // const clearCanvas = useCallback(() => {
+  //   const canvas = canvasRef.current; if (!canvas) return;
+  //   canvas.getContext("2d").fillStyle = "#ffffff";
+  //   canvas.getContext("2d").fillRect(0, 0, canvas.width, canvas.height);
+  // }, []);
+
+  const canvasRef = useRef(null);
+  const isDrawing = useRef(false);
+  const lastPos = useRef({ x: 0, y: 0 });
+  const currentPathRef = useRef(null); // ← NEW: continuous path
+  const lastStrokeTime = useRef(0);
+
+  const [tool, setTool] = useState("pen");
+  const [color, setColor] = useState("#000000");
   const [thickness, setThickness] = useState(3);
 
   const COLORS = ["#000000","#ffffff","#ef4444","#f97316","#eab308","#22c55e","#3b82f6","#8b5cf6"];
 
-  const getPos = (e, canvas) => {
-    const rect    = canvas.getBoundingClientRect();
-    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-    return {
-      x: (clientX - rect.left) * (canvas.width  / rect.width),
-      y: (clientY - rect.top)  * (canvas.height / rect.height),
-    };
-  };
+  const getPos = (e, canvas) => { /* same as before */ };
 
-  const toNorm   = (pos, canvas) => ({ nx: pos.x / canvas.width,  ny: pos.y / canvas.height });
+  const toNorm = (pos, canvas) => ({ nx: pos.x / canvas.width, ny: pos.y / canvas.height });
   const fromNorm = (nx, ny, canvas) => ({ x: nx * canvas.width, y: ny * canvas.height });
 
-  const strokeOnCanvas = useCallback((from, to, strokeColor, strokeWidth) => {
-    const canvas = canvasRef.current; if (!canvas) return;
+  // NEW: Draw on continuous path (receiver)
+  const continueStroke = useCallback((from, to, strokeColor, strokeWidth) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
     const ctx = canvas.getContext("2d");
-    ctx.beginPath();
-    ctx.moveTo(from.x, from.y);
+
+    if (!currentPathRef.current) {
+      currentPathRef.current = { color: strokeColor, width: strokeWidth };
+      ctx.beginPath();
+      ctx.moveTo(from.x, from.y);
+      ctx.strokeStyle = strokeColor;
+      ctx.lineWidth = strokeWidth;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+    }
+
     ctx.lineTo(to.x, to.y);
-    ctx.strokeStyle = strokeColor;
-    ctx.lineWidth   = strokeWidth;
-    ctx.lineCap     = "round"; ctx.lineJoin = "round";
-    ctx.stroke();
+    ctx.stroke(); // Draw incrementally but keep path open
   }, []);
+
+  // NEW: Finalize path (called on pause or clear)
+  const finalizePath = useCallback(() => {
+    currentPathRef.current = null;
+  }, []);
+
+  const strokeOnCanvas = useCallback((from, to, strokeColor, strokeWidth) => {
+    continueStroke(from, to, strokeColor, strokeWidth);
+    lastStrokeTime.current = Date.now();
+  }, [continueStroke]);
 
   const clearCanvas = useCallback(() => {
     const canvas = canvasRef.current; if (!canvas) return;
-    canvas.getContext("2d").fillStyle = "#ffffff";
-    canvas.getContext("2d").fillRect(0, 0, canvas.width, canvas.height);
-  }, []);
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    finalizePath();
+  }, [finalizePath]);
 
+  // Auto-finalize path after short pause (smooth continuous feel)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (currentPathRef.current && Date.now() - lastStrokeTime.current > 80) {
+        finalizePath();
+      }
+    }, 50);
+    return () => clearInterval(interval);
+  }, [finalizePath]);
+  
   const initCanvas = useCallback(() => {
     const canvas = canvasRef.current; if (!canvas) return;
     canvas.width  = canvas.offsetWidth  || canvas.clientWidth  || 700;
@@ -456,16 +521,27 @@ const WhiteboardDrawer = ({
     };
   }, [open, isHost, clearCanvas, syncStrokes, initCanvas]);
 
+  // useEffect(() => {
+  //   if (!remoteStroke) return;
+  //   const canvas = canvasRef.current; if (!canvas) return;
+  //   const from = fromNorm(remoteStroke.from.nx, remoteStroke.from.ny, canvas);
+  //   const to   = fromNorm(remoteStroke.to.nx,   remoteStroke.to.ny,   canvas);
+  //   strokeOnCanvas(from, to, remoteStroke.color, remoteStroke.thickness);
+  // }, [remoteStroke, strokeOnCanvas]);
+
+  // useEffect(() => { if (remoteClear) clearCanvas(); }, [remoteClear, clearCanvas]);
+
+  // Apply remote stroke (continuous)
   useEffect(() => {
     if (!remoteStroke) return;
     const canvas = canvasRef.current; if (!canvas) return;
     const from = fromNorm(remoteStroke.from.nx, remoteStroke.from.ny, canvas);
-    const to   = fromNorm(remoteStroke.to.nx,   remoteStroke.to.ny,   canvas);
+    const to = fromNorm(remoteStroke.to.nx, remoteStroke.to.ny, canvas);
     strokeOnCanvas(from, to, remoteStroke.color, remoteStroke.thickness);
   }, [remoteStroke, strokeOnCanvas]);
 
   useEffect(() => { if (remoteClear) clearCanvas(); }, [remoteClear, clearCanvas]);
-
+  
   return (
     <Drawer anchor="right" open={open} onClose={isHost ? onClose : undefined}
       PaperProps={{ sx: { width: { xs: "100vw", md: 700 }, bgcolor: "#f8fafc", display: "flex", flexDirection: "column" } }}>
