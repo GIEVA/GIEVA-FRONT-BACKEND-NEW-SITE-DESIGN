@@ -116,6 +116,7 @@ import PublicMeetingRedirect from "./pages/PublicMeetingRedirect";
 import AdminExamTypes              from "./pages/exams/AdminExamTypes";
 import ContactUs from "./pages/ContactUs";
 import AdminContactMessages from "./pages/AdminContactMessages";
+import HomePage from "./pages/HomePage";
 // (Optional later)
 // import Dashboard from "./pages/Dashboard";
 // import ProtectedRoute from "./components/ProtectedRoute";
@@ -129,6 +130,7 @@ function App() {
 
         <Routes>
           {/* Public routes */}
+          <Route path="/" element={<HomePage />} />
           <Route path="/register" element={<Register />} />
           <Route path="/login" element={<Login />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
