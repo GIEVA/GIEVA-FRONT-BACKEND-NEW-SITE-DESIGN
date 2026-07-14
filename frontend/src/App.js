@@ -135,7 +135,7 @@ function App() {
           <Route path="/reset-password/:token" element={<ResetPassword />} />
           <Route path="/verify/:token" element={<VerifyEmail />} />
           <Route path="/public-meet/:roomName" element={<PublicMeetingRedirect />} />
-          <Route path="/Contact" element={<ContactUs />} />
+          <Route path="/contact" element={<ContactUs />} />
 
 
           <Route
