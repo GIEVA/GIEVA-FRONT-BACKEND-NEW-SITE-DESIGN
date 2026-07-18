@@ -1,0 +1,30 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+.astro/
+
+# Test / tooling artifacts
+test-results/
+playwright-report/
+blob-report/
+.lighthouseci/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# OS / editor
+.DS_Store
+*.log
+
+# Never commit the RAW multi-client Figma export — it contains other clients' tokens.
+# (the plugin's whole-workspace dump, e.g. *designtokens*.tokens*.json)
+*designtokens*.json
+/*.tokens.json
+raw-tokens/
+
+# ...but DO commit our curated, GIEVA-only source of truth:
+!design/tokens/gieva.source.tokens.json

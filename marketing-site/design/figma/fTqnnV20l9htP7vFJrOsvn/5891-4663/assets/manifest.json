@@ -1,0 +1,238 @@
+{
+  "vectors": [
+    {
+      "id": "12023:32449",
+      "name": "Microsoft_Logo_1 1 [Vectorized]",
+      "kind": "icon",
+      "file": "icon-12023-32449.svg"
+    },
+    {
+      "id": "12023:32464",
+      "name": "WAEC-Logo2 1 [Vectorized]",
+      "kind": "icon",
+      "file": "icon-12023-32464.svg"
+    },
+    {
+      "id": "12023:32980",
+      "name": "US-Embassy-logo 1 [Vectorized]",
+      "kind": "icon",
+      "file": "icon-12023-32980.svg"
+    },
+    {
+      "id": "12023:33562",
+      "name": "British_Council_Logo_2 1 [Vectorized]",
+      "kind": "icon",
+      "file": "icon-12023-33562.svg"
+    },
+    {
+      "id": "12023:33582",
+      "name": "idXdWonEmY_logos 2 [Vectorized]",
+      "kind": "icon",
+      "file": "icon-12023-33582.svg"
+    },
+    {
+      "id": "12042:34986",
+      "name": "ujweb_official_logo_0 1 [Vectorized]",
+      "kind": "icon",
+      "file": "icon-12042-34986.svg"
+    },
+    {
+      "id": "12042:35135",
+      "name": "united-nations-economic-and-social-council-logo-organization-united-nations-headquarters-brand-png-favpng-sCHsb2xfuCwjR0116DeyAYmHG 1 [Vectorized]",
+      "kind": "icon",
+      "file": "icon-12042-35135.svg"
+    },
+    {
+      "id": "5891:4667",
+      "name": "logo image",
+      "kind": "icon",
+      "file": "icon-5891-4667.svg"
+    },
+    {
+      "id": "8159:7478",
+      "name": "TOP MENU",
+      "kind": "icon",
+      "file": "icon-8159-7478.svg"
+    },
+    {
+      "id": "I5986:3612;4589:22818",
+      "name": "Plus",
+      "kind": "icon",
+      "file": "icon-I5986-3612;4589-22818.svg"
+    },
+    {
+      "id": "I8210:7883;8210:7763",
+      "name": "LOGO",
+      "kind": "icon",
+      "file": "icon-I8210-7883;8210-7763.svg"
+    },
+    {
+      "id": "I8210:7883;8210:7804;4547:22453",
+      "name": "ng-icon",
+      "kind": "icon",
+      "file": "icon-I8210-7883;8210-7804;4547-22453.svg"
+    },
+    {
+      "id": "I8210:7883;8210:7812",
+      "name": "mail-01",
+      "kind": "icon",
+      "file": "icon-I8210-7883;8210-7812.svg"
+    },
+    {
+      "id": "I8210:7883;8210:7826",
+      "name": "oo-social-links → List",
+      "kind": "icon",
+      "file": "icon-I8210-7883;8210-7826.svg"
+    }
+  ],
+  "fills": [
+    {
+      "imageRef": "0e1dec95fb36f51b4f3d12b65e38c191df6a9339",
+      "sourceNode": "12023:32433",
+      "name": "US-Embassy-logo 1",
+      "file": "fill-0e1dec95fb36f51b4f3d12b65e38c191df6a9339.png",
+      "webp": "fill-0e1dec95fb36f51b4f3d12b65e38c191df6a9339.webp"
+    },
+    {
+      "imageRef": "12c4da2f5308263825a629304615ab85ebfe5dff",
+      "sourceNode": "12023:32421",
+      "name": "R 1",
+      "file": "fill-12c4da2f5308263825a629304615ab85ebfe5dff.png",
+      "webp": "fill-12c4da2f5308263825a629304615ab85ebfe5dff.webp"
+    },
+    {
+      "imageRef": "1e53c6d5393cd93dce3db2e0b1ebbf917ff21a35",
+      "sourceNode": "8127:7237",
+      "name": "His excellency",
+      "file": "fill-1e53c6d5393cd93dce3db2e0b1ebbf917ff21a35.jpg",
+      "webp": "fill-1e53c6d5393cd93dce3db2e0b1ebbf917ff21a35.webp"
+    },
+    {
+      "imageRef": "2f364a222b92f2d146192314dded388bcdc79963",
+      "sourceNode": "12023:32429",
+      "name": "ecosoc-798-2 1",
+      "file": "fill-2f364a222b92f2d146192314dded388bcdc79963.png",
+      "webp": "fill-2f364a222b92f2d146192314dded388bcdc79963.webp"
+    },
+    {
+      "imageRef": "3172f31ce44b7c8cfb0a897f5d748407dc9e6cbc",
+      "sourceNode": "I8210:7883;8210:7763;5857:4414",
+      "name": "Gemini_Generated_Image_uvhg9uuvhg9uuvhg 1",
+      "file": "fill-3172f31ce44b7c8cfb0a897f5d748407dc9e6cbc.png",
+      "webp": "fill-3172f31ce44b7c8cfb0a897f5d748407dc9e6cbc.webp"
+    },
+    {
+      "imageRef": "55fffb0d206b64f043184380f13f723b24c692a3",
+      "sourceNode": "7152:5182",
+      "name": "Photo",
+      "file": "fill-55fffb0d206b64f043184380f13f723b24c692a3.jpg",
+      "webp": "fill-55fffb0d206b64f043184380f13f723b24c692a3.webp"
+    },
+    {
+      "imageRef": "5d875c0260bc8b356b6af43bb19af98848ea54b2",
+      "sourceNode": "12023:32427",
+      "name": "ETS_Ink 1",
+      "file": "fill-5d875c0260bc8b356b6af43bb19af98848ea54b2.png",
+      "webp": "fill-5d875c0260bc8b356b6af43bb19af98848ea54b2.webp"
+    },
+    {
+      "imageRef": "637fd9beadb26596cdb6b09d7371784ee1c9ada4",
+      "sourceNode": "12023:32425",
+      "name": "The_College_Board_ida-vihlkb_1 1",
+      "file": "fill-637fd9beadb26596cdb6b09d7371784ee1c9ada4.png",
+      "webp": "fill-637fd9beadb26596cdb6b09d7371784ee1c9ada4.webp"
+    },
+    {
+      "imageRef": "7d228f685f028790ef33de04690c158be8c061fd",
+      "sourceNode": "8119:7165",
+      "name": "His excellency",
+      "file": "fill-7d228f685f028790ef33de04690c158be8c061fd.jpg",
+      "webp": "fill-7d228f685f028790ef33de04690c158be8c061fd.webp"
+    },
+    {
+      "imageRef": "8108addc2bb6ce97610dae38d4f1280c1e0332e7",
+      "sourceNode": "I8090:7151;6021:4618",
+      "name": "His excellency",
+      "file": "fill-8108addc2bb6ce97610dae38d4f1280c1e0332e7.jpg",
+      "webp": "fill-8108addc2bb6ce97610dae38d4f1280c1e0332e7.webp"
+    },
+    {
+      "imageRef": "a3154f923951ee8034cbab2c21c555871fb836fc",
+      "sourceNode": "12023:31209",
+      "name": "Gemini_Generated_Image_uvhg9uuvhg9uuvhg 4",
+      "file": "fill-a3154f923951ee8034cbab2c21c555871fb836fc.png",
+      "webp": "fill-a3154f923951ee8034cbab2c21c555871fb836fc.webp"
+    },
+    {
+      "imageRef": "ab81d8166a30573bfb5a198cd4d926d42d4313ae",
+      "sourceNode": "12023:32437",
+      "name": "British_Council_Logo_2 1",
+      "file": "fill-ab81d8166a30573bfb5a198cd4d926d42d4313ae.png",
+      "webp": "fill-ab81d8166a30573bfb5a198cd4d926d42d4313ae.webp"
+    },
+    {
+      "imageRef": "b17cafa11730bad7e8ed4f89a31f4c9c07000b71",
+      "sourceNode": "12023:32423",
+      "name": "Drake_University_idrnvTSo_o_0 1",
+      "file": "fill-b17cafa11730bad7e8ed4f89a31f4c9c07000b71.png",
+      "webp": "fill-b17cafa11730bad7e8ed4f89a31f4c9c07000b71.webp"
+    },
+    {
+      "imageRef": "d07bdd3d45347cdc0acfc2853309656f48f2a808",
+      "sourceNode": "12023:31209",
+      "name": "Gemini_Generated_Image_uvhg9uuvhg9uuvhg 4",
+      "file": "fill-d07bdd3d45347cdc0acfc2853309656f48f2a808.png",
+      "webp": "fill-d07bdd3d45347cdc0acfc2853309656f48f2a808.webp"
+    },
+    {
+      "imageRef": "db2390dfcc417a3eb8a056a2fd358b1d4c02db82",
+      "sourceNode": "12023:31209",
+      "name": "Gemini_Generated_Image_uvhg9uuvhg9uuvhg 4",
+      "file": "fill-db2390dfcc417a3eb8a056a2fd358b1d4c02db82.png",
+      "webp": "fill-db2390dfcc417a3eb8a056a2fd358b1d4c02db82.webp"
+    },
+    {
+      "imageRef": "dda29c92913d42d22b1e9f7cc298472945e33e94",
+      "sourceNode": "12023:32419",
+      "name": "WAEC-Logo2 1",
+      "file": "fill-dda29c92913d42d22b1e9f7cc298472945e33e94.png",
+      "webp": "fill-dda29c92913d42d22b1e9f7cc298472945e33e94.webp"
+    },
+    {
+      "imageRef": "e8a6c8991e2327d95ce10132058cf03b0c8f5278",
+      "sourceNode": "12023:32431",
+      "name": "ujweb_official_logo_0 1",
+      "file": "fill-e8a6c8991e2327d95ce10132058cf03b0c8f5278.png",
+      "webp": "fill-e8a6c8991e2327d95ce10132058cf03b0c8f5278.webp"
+    },
+    {
+      "imageRef": "ea4198e3dd0d9a8e2cc3a95e52a6ab1207c2d86e",
+      "sourceNode": "12023:32417",
+      "name": "Microsoft_Logo_1 1",
+      "file": "fill-ea4198e3dd0d9a8e2cc3a95e52a6ab1207c2d86e.png",
+      "webp": "fill-ea4198e3dd0d9a8e2cc3a95e52a6ab1207c2d86e.webp"
+    },
+    {
+      "imageRef": "f23cb426aa23db1eb506ae030c2917e2c20c25d0",
+      "sourceNode": "8119:7155",
+      "name": "His excellency",
+      "file": "fill-f23cb426aa23db1eb506ae030c2917e2c20c25d0.jpg",
+      "webp": "fill-f23cb426aa23db1eb506ae030c2917e2c20c25d0.webp"
+    },
+    {
+      "imageRef": "f9a0bcb2bfe389c4dd9e419b4fdd2918fb168f31",
+      "sourceNode": "12023:32439",
+      "name": "idXdWonEmY_logos 2",
+      "file": "fill-f9a0bcb2bfe389c4dd9e419b4fdd2918fb168f31.png",
+      "webp": "fill-f9a0bcb2bfe389c4dd9e419b4fdd2918fb168f31.webp"
+    },
+    {
+      "imageRef": "fe4cbfbb4ee6d26b4abc0419c6588f00228dbd55",
+      "sourceNode": "12023:32435",
+      "name": "College_Board 1",
+      "file": "fill-fe4cbfbb4ee6d26b4abc0419c6588f00228dbd55.png",
+      "webp": "fill-fe4cbfbb4ee6d26b4abc0419c6588f00228dbd55.webp"
+    }
+  ],
+  "notes": []
+}

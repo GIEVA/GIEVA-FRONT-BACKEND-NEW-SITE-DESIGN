@@ -1,0 +1,75 @@
+name: CI
+
+on:
+  push:
+    branches: ['main', 'claude/**']
+  pull_request:
+
+# Cancel superseded runs on the same ref.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Fast, browserless gates: types, lint, formatting, and a production build.
+  quality:
+    name: Types · Lint · Format · Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Typecheck (astro check)
+        run: npm run check
+      - name: Lint (ESLint, strict a11y)
+        run: npm run lint
+      - name: Format check (Prettier)
+        run: npm run format:check
+      - name: Build
+        run: npm run build
+
+  # Accessibility + visual-regression gates, in the pinned Playwright container so the
+  # browser (and thus rendering) is reproducible run-to-run. Baselines must be generated
+  # in this same environment — see README "Visual regression".
+  e2e:
+    name: A11y · Visual regression
+    runs-on: ubuntu-latest
+    needs: quality
+    container:
+      image: mcr.microsoft.com/playwright:v1.61.1-noble
+    steps:
+      - uses: actions/checkout@v4
+      - run: npm ci
+      - name: Run a11y + visual tests
+        run: npm run test:a11y
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+
+  # Performance / accessibility budgets against the built site.
+  lighthouse:
+    name: Lighthouse budgets
+    runs-on: ubuntu-latest
+    needs: quality
+    container:
+      image: mcr.microsoft.com/playwright:v1.61.1-noble
+    steps:
+      - uses: actions/checkout@v4
+      - run: npm ci
+      - name: Build
+        run: npm run build
+      - name: Run Lighthouse CI
+        env:
+          # Point LHCI at the container's bundled Chromium.
+          CHROME_PATH_CMD: "require('playwright-core').chromium.executablePath()"
+        run: |
+          export CHROME_PATH="$(node -e "console.log($CHROME_PATH_CMD)")"
+          echo "Using CHROME_PATH=$CHROME_PATH"
+          npx lhci autorun

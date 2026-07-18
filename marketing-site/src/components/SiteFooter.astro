@@ -1,0 +1,368 @@
+---
+/**
+ * SiteFooter — the shared site footer: brand + newsletter signup, Consultancy/NGO link
+ * columns, contact details, and a bottom bar (legal links + social icons). Matches Home's
+ * "oo-footer → Footer" instance (I8210:7883 in node.json) — inverse surface, so the token
+ * text-role swap (tokens.css §3) is exercised across the shell.
+ *
+ * The newsletter is a real <form> (progressively enhanceable later) rather than a JS-only
+ * widget — it degrades honestly instead of pretending to work; there's no subscription
+ * endpoint yet (Phase 1 scope), so the form has no `action` and won't be wired until one
+ * exists.
+ */
+import { footerColumns } from '@lib/nav';
+import { Image } from 'astro:assets';
+import { logoMark } from '@lib/home-images';
+import SocialIcon from '@components/SocialIcon.astro';
+
+const year = new Date().getFullYear();
+
+const contact = {
+  address:
+    'Lagos State House, 3rd Floor, Suite 329, Plot 78 Ralph Shodeinde Street, CBD, Abuja, Nigeria',
+  phone: '+2347035250399',
+  site: 'www.gieva.org',
+};
+
+const social: {
+  name: 'Instagram' | 'Facebook' | 'X (Twitter)' | 'LinkedIn' | 'YouTube';
+  href: string;
+}[] = [
+  { name: 'Instagram', href: 'https://instagram.com/gieva.org' },
+  { name: 'Facebook', href: 'https://facebook.com/gieva.org' },
+  { name: 'X (Twitter)', href: 'https://x.com/gieva_org' },
+  { name: 'LinkedIn', href: 'https://linkedin.com/company/gieva-org' },
+  { name: 'YouTube', href: 'https://youtube.com/@gieva-org' },
+];
+---
+
+<div class="site-footer surface-inverse" data-surface="inverse">
+  <div class="container site-footer__inner">
+    <div class="site-footer__top">
+      <a class="site-footer__brand" href="/">
+        <Image src={logoMark} alt="" width={40} height={40} class="site-footer__logo" />
+        <span class="site-footer__wordmark"
+          >GIEVA<span class="site-footer__tld">.org</span></span
+        >
+        <span class="visually-hidden"> — go to home page</span>
+      </a>
+
+      <div class="site-footer__columns">
+        <div class="site-footer__col">
+          <p class="u-body-tight site-footer__heading">Newsletter</p>
+          <p class="u-body-lg">Sign Up to our Newsletter to get the latest news and offers.</p>
+          <form class="site-footer__newsletter">
+            <label class="visually-hidden" for="newsletter-email">Email address</label>
+            <input
+              id="newsletter-email"
+              class="site-footer__newsletter-input"
+              type="email"
+              name="email"
+              placeholder="Enter Email Address"
+              required
+            />
+            <button class="site-footer__newsletter-submit" type="submit">
+              <span class="visually-hidden">Subscribe</span>
+              <svg
+                width="15"
+                height="13"
+                viewBox="0 0 15 13"
+                fill="none"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <path
+                  d="M8.5 1L14 6.5M14 6.5L8.5 12M14 6.5H1"
+                  stroke="currentColor"
+                  stroke-width="1.6"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"></path>
+              </svg>
+            </button>
+          </form>
+        </div>
+
+        {
+          footerColumns.map((col) => (
+            <nav class="site-footer__col" aria-label={col.heading}>
+              <p class="u-body-tight site-footer__heading">{col.heading}</p>
+              <ul role="list" class="site-footer__list">
+                {col.items.map((item) => (
+                  <li>
+                    <a class="site-footer__link" href={item.href}>
+                      {item.label}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+          ))
+        }
+
+        <div class="site-footer__col">
+          <p class="u-body-tight site-footer__heading">Contact</p>
+          <ul role="list" class="site-footer__contact">
+            <li>
+              <svg
+                class="site-footer__contact-icon"
+                width="16"
+                height="20"
+                viewBox="0 0 16 20"
+                fill="none"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <path
+                  d="M8 19s7-6.6 7-11.5S12.4 1 8 1 1 3.4 1 7.5 8 19 8 19Z"
+                  stroke="currentColor"
+                  stroke-width="1.5"
+                  stroke-linejoin="round"></path>
+                <circle cx="8" cy="7.5" r="2.5" stroke="currentColor" stroke-width="1.5"
+                ></circle>
+              </svg>
+              <span class="u-body-lg">{contact.address}</span>
+            </li>
+            <li>
+              <svg
+                class="site-footer__contact-icon"
+                width="16"
+                height="16"
+                viewBox="0 0 16 16"
+                fill="none"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <path
+                  d="M2 3c0-.6.4-1 1-1h2.2c.5 0 .9.3 1 .8l.7 3a1 1 0 0 1-.3 1L5 8.4a9 9 0 0 0 4 4l1.6-1.6a1 1 0 0 1 1-.3l3 .7c.5.1.8.5.8 1V14c0 .6-.4 1-1 1h-1C6.4 15 2 10.6 2 5V3Z"
+                  stroke="currentColor"
+                  stroke-width="1.4"
+                  stroke-linejoin="round"></path>
+              </svg>
+              <a class="u-body-lg site-footer__contact-link" href={`tel:${contact.phone}`}
+                >{contact.phone}</a
+              >
+            </li>
+            <li>
+              <svg
+                class="site-footer__contact-icon"
+                width="16"
+                height="16"
+                viewBox="0 0 16 16"
+                fill="none"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <path
+                  d="M1.33203 4L5.94071 6.61131C7.63976 7.574 8.35763 7.574 10.0567 6.61131L14.6654 4"
+                  stroke="currentColor"
+                  stroke-linejoin="round"></path>
+                <path
+                  d="M1.34254 8.9839C1.38612 11.0276 1.40792 12.0494 2.162 12.8064C2.91608 13.5634 3.96558 13.5897 6.06458 13.6424C7.35823 13.675 8.63916 13.675 9.93283 13.6424C12.0318 13.5897 13.0813 13.5634 13.8354 12.8064C14.5895 12.0494 14.6113 11.0276 14.6548 8.9839C14.6689 8.32676 14.6689 7.67356 14.6548 7.01643C14.6113 4.97274 14.5895 3.95089 13.8354 3.19394C13.0813 2.43698 12.0318 2.41062 9.93283 2.35788C8.63916 2.32537 7.35823 2.32537 6.06458 2.35787C3.96558 2.4106 2.91608 2.43697 2.162 3.19393C1.40791 3.95088 1.38612 4.97273 1.34254 7.01643C1.32852 7.67356 1.32853 8.32676 1.34254 8.9839Z"
+                  stroke="currentColor"
+                  stroke-linejoin="round"></path>
+              </svg>
+              <a class="u-body-lg site-footer__contact-link" href={`https://${contact.site}`}
+                >{contact.site}</a
+              >
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="site-footer__bottom">
+      <ul role="list" class="site-footer__legal-list">
+        <li><a class="site-footer__legal-link" href="/terms">Terms</a></li>
+        <li><a class="site-footer__legal-link" href="/privacy">Privacy</a></li>
+      </ul>
+      <p class="u-caption site-footer__copyright">© {year} GIEVA. All rights reserved.</p>
+      <ul role="list" class="site-footer__social">
+        {
+          social.map((s) => (
+            <li>
+              <a class="site-footer__social-link" href={s.href}>
+                <span class="visually-hidden">{s.name}</span>
+                <SocialIcon name={s.name} />
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+  </div>
+</div>
+
+<style>
+  .site-footer {
+    padding-block: var(--space-4xl) var(--space-lg);
+  }
+  .site-footer__inner {
+    display: grid;
+    gap: var(--space-3xl);
+  }
+  .site-footer__top {
+    display: grid;
+    gap: var(--space-2xl);
+  }
+  .site-footer__brand {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-3xs);
+    text-decoration: none;
+    width: fit-content;
+  }
+  .site-footer__logo {
+    border-radius: 50%;
+  }
+  .site-footer__wordmark {
+    font-weight: var(--font-weight-bold);
+    font-size: 2rem;
+    line-height: 1;
+    color: var(--color-text-inverse);
+  }
+  .site-footer__tld {
+    color: var(--color-feedback-success);
+    font-weight: var(--font-weight-regular);
+  }
+
+  .site-footer__columns {
+    display: grid;
+    grid-template-columns: 1.6fr repeat(3, 1fr);
+    gap: var(--space-2xl);
+  }
+  .site-footer__col {
+    display: grid;
+    gap: var(--space-sm);
+    align-content: start;
+  }
+  .site-footer__heading {
+    color: var(--color-text-on-inverse-muted);
+    text-transform: uppercase;
+  }
+
+  .site-footer__newsletter {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: var(--space-3xs);
+    padding-inline-start: var(--space-sm);
+    border-radius: var(--radius-md);
+    background: var(--color-white);
+    max-width: 28rem;
+  }
+  .site-footer__newsletter-input {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    font: inherit;
+    font-size: var(--type-body-lg-size);
+    color: var(--color-mine-shaft);
+  }
+  .site-footer__newsletter-input:focus-visible {
+    outline: 3px solid var(--color-electric-violet);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+  }
+  .site-footer__newsletter-submit {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: 2.625rem;
+    block-size: 2.625rem;
+    border-radius: var(--radius-sm);
+    border: 0;
+    background: var(--color-accent-warm);
+    color: var(--color-text-inverse);
+    cursor: pointer;
+  }
+
+  .site-footer__list {
+    display: grid;
+    gap: var(--space-xs);
+  }
+  .site-footer__link {
+    color: var(--color-text-inverse);
+    text-decoration: none;
+    font-size: var(--type-body-lg-size);
+  }
+  .site-footer__link:hover {
+    text-decoration: underline;
+  }
+
+  .site-footer__contact {
+    display: grid;
+    gap: var(--space-md);
+  }
+  .site-footer__contact li {
+    display: flex;
+    align-items: start;
+    gap: var(--space-xs);
+  }
+  .site-footer__contact-icon {
+    flex: none;
+    margin-top: 0.15em;
+    color: var(--color-text-inverse);
+  }
+  .site-footer__contact-link {
+    color: var(--color-text-inverse);
+    text-decoration: none;
+  }
+  .site-footer__contact-link:hover {
+    text-decoration: underline;
+  }
+
+  .site-footer__bottom {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-md);
+    padding-top: var(--space-lg);
+    border-top: 1px solid var(--color-border-on-inverse);
+  }
+  .site-footer__legal-list {
+    display: flex;
+    gap: var(--space-md);
+  }
+  .site-footer__legal-link {
+    color: var(--color-text-on-inverse-muted);
+    font-size: var(--type-caption-size);
+    text-decoration: none;
+  }
+  .site-footer__legal-link:hover {
+    text-decoration: underline;
+  }
+  .site-footer__copyright {
+    color: var(--color-text-on-inverse-muted);
+  }
+  .site-footer__social {
+    display: flex;
+    gap: var(--space-sm);
+  }
+  .site-footer__social-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: 2rem;
+    block-size: 2rem;
+    border-radius: 50%;
+    border: 1px solid var(--color-border-on-inverse);
+    color: var(--color-text-inverse);
+  }
+
+  @media (max-width: 900px) {
+    .site-footer__columns {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+  @media (max-width: 560px) {
+    .site-footer__columns {
+      grid-template-columns: 1fr;
+    }
+    .site-footer__bottom {
+      justify-content: center;
+      text-align: center;
+    }
+  }
+</style>

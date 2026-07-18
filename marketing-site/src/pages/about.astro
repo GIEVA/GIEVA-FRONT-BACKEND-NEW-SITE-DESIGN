@@ -1,0 +1,379 @@
+---
+/**
+ * About (/about) — Consultancy. Built against the committed Figma node 8181:8314
+ * (design/figma/fTqnnV20l9htP7vFJrOsvn/8181-8314/), see docs/consultancy-build-plan.md.
+ *
+ * Typography confirmed against node.json (not guessed):
+ *   - Hero "Who We Are": 64/56/700/-0.26 (`--font-size-hero` + `--line-height-h2`/
+ *     `--letter-spacing-h2`) — the exact same one-off composition Services' "Study Abroad"
+ *     hero title uses, not the hero role's own 72px/-3.3. Same white-on-photo, 25%-black-scrim
+ *     treatment as Services' hero too — reused verbatim (see `.about-hero` below).
+ *   - Section headings ("Our Story", "Vision", "Mision" [sic, see below], "Core Values") and
+ *     the stat numbers: 48/56/700/-0.26 — exactly `--type-h2` (`u-h2`), colour
+ *     `--color-text-default` (NOT violet). This is a genuine difference from Home/Services,
+ *     where the equivalent recurring section headline uses `--type-section-title` (same
+ *     48/56/700 metrics, but the display -3.3 tracking) coloured violet — confirmed per this
+ *     page's own node.json, not assumed from precedent. `u-h2` was previously only exercised
+ *     by Home's stat-card numbers; this is its first use as a heading role.
+ *   - Core Values titles: 24/32/700/-1.2 — exactly `--type-lead` (`u-lead`), colour
+ *     `--color-text-default`.
+ *   - Body copy (story paragraphs, vision/mission body, core-value body, stat labels'
+ *     paragraph siblings): 18/24/400/-0.16 — exactly `--type-body-lg` (`u-body-lg`).
+ *   - Stat labels ("Lives Changed", "Global Partners", …): 18px, bold weight, zero tracking —
+ *     matches no named role (`u-body-lg` is 400 weight/-0.16 tracking,
+ *     `u-eyebrow` is 14px). A one-off combination composed directly from existing primitives
+ *     in this file's `<style>` (`--font-size-underline`/`--line-height-underline`/
+ *     `--font-weight-bold`/`--letter-spacing-none`), same precedent as Services' hero title —
+ *     not worth a new named role for one use.
+ *   - Spacing: every gap/padding this page uses (80px within the story block, 40px column/row
+ *     gaps, 24px within a core-value block, 32px stat-row padding, 120px page rhythm) already
+ *     exists in the snapped scale — no new spacing tokens needed.
+ *
+ * Content notes (confirmed via node.json, not guessed):
+ *   - The bold lead run "Global Integrated Education Volunteers Association (GIEVA)" opening
+ *     the first Our Story paragraph is confirmed via `characterStyleOverrides` (node 8183:8839,
+ *     override index 1 covering exactly those 58 characters) — bold, not italic/accent-warm
+ *     (unlike Services/Home's bold-italic accent-warm "hook sentence" pattern; this one is
+ *     plain bold on the default text colour).
+ *   - "Mision" (Our Story's mission heading, node 8183:8886) is a genuine spelling error in the
+ *     source design, not a transcription slip here — reproduced verbatim per the
+ *     exact-replica-first non-negotiable, same precedent as Home/Services keeping their own
+ *     not-yet-personalised placeholder content as-is.
+ *   - Every section carries a hidden, unedited placeholder body paragraph behind its real
+ *     heading ("GIEVA handles your entire registration process…", the same boilerplate seen
+ *     hidden elsewhere) — `visible: false` on the immediate parent container in node.json
+ *     (8183:8877/8887/8897), omitted here, same pattern as Home's hidden headings.
+ *   - Core Values has 5 items in a 2-column grid, leaving the 6th cell empty in the source —
+ *     reproduced by simply rendering 5 items into a 2-col CSS grid (auto-placement leaves the
+ *     last cell empty on its own), rather than the explicit-empty-div technique Services used
+ *     for its cost-row's blank second column.
+ *   - The CTA banner (eyebrow/heading/body/buttons) is identical content and shape to Home's
+ *     and Services' CTA, including the same "Book Free ConsultationView All Services"
+ *     copy/paste artifact trailing the paragraph (trimmed here the same way) and both buttons'
+ *     `ArrowRight` instances `visible: false` (arrow={false}) — confirmed per-instance.
+ *   - The hero photo (imageRef `55fffb0d206b64f043184380f13f723b24c692a3`) is the same stock
+ *     lecture-hall image Home's "who we are" section and Services' hero already use.
+ *
+ * Component reuse considered and declined: `ServiceDetailSection` (the ★ template component)
+ * shapes a title+subtitle header followed by two/three about/covers/cost blocks — About's
+ * Vision/Mission and Core Values sections are a simpler single heading + single paragraph per
+ * item, not that shape, so this page writes its own markup rather than force-fitting the
+ * component.
+ */
+import BaseLayout from '@layouts/BaseLayout.astro';
+import Button from '@components/Button.astro';
+import { Image } from 'astro:assets';
+import { aboutHeroPhoto } from '@lib/about-images';
+
+const stats = [
+  { value: '10,000+', label: 'Lives Changed' },
+  { value: '30+', label: 'Global Partners' },
+  { value: '12+', label: 'Years Active' },
+  { value: '98%', label: 'Success Rate' },
+];
+
+const storyLeadBold = 'Global Integrated Education Volunteers Association (GIEVA)';
+const storyParagraph1Rest =
+  ' was registered in 2006 as a nonprofit organization to improve access to quality education and global learning opportunities among young Nigerians. Over the years, GIEVA has grown to serve over 1,000 young Nigerians annually, with a strong focus on inclusive education, digital empowerment, and youth development.';
+const storyParagraph2 =
+  'The concept for the Global Integrated Education Volunteers Association emerged in 2005, and the organization was born in January 2007. The Birth of the organization was a result of the critical need to empower the present and future generation of global youth for sustainable development.';
+
+const visionMission = [
+  {
+    heading: 'Vision',
+    body: 'To inspire youths to lead, innovate, and create equitable opportunities for all.',
+  },
+  {
+    // Source spelling — see file header note.
+    heading: 'Mision',
+    body: 'Our mission is to nurture bold young leaders through transformative education, mentorship, and digital innovation, enabling them to create solutions and expand opportunities for a more equitable world.',
+  },
+];
+
+const coreValues = [
+  {
+    title: 'Integrity',
+    body: 'We uphold the highest standards of honesty, transparency, and accountability in everything we do. Our commitment to ethical practices builds trust with the students, families, partners, and communities we serve.',
+  },
+  {
+    title: 'Inclusivity',
+    body: 'We foster an environment where everyone is welcomed, respected, and given equal access to opportunities regardless of their background, gender, ability, or circumstance.',
+  },
+  {
+    title: 'Innovation',
+    body: 'We embrace creativity, technology, and forward-thinking solutions to address educational and social challenges, ensuring our programs remain relevant in an ever-changing world.',
+  },
+  {
+    title: 'Service',
+    body: 'Service is at the heart of who we are. We are dedicated to creating positive social impact by supporting communities, promoting volunteerism, and responding to the evolving needs of society.',
+  },
+  {
+    title: 'Empowerment',
+    body: 'We believe every individual deserves the opportunity to learn, lead, and succeed. Through education, mentorship, and skills development, we equip young people with the confidence and tools to shape their own futures.',
+  },
+];
+---
+
+<BaseLayout
+  title="About — GIEVA Consultancy"
+  description="Who GIEVA is, our story since 2006, and the vision, mission, and core values that guide every consultancy engagement."
+  brand="consultancy"
+>
+  <!-- ── Hero ─────────────────────────────────────────────────────────────────── -->
+  <section class="about-hero">
+    <div class="about-hero__media">
+      <Image src={aboutHeroPhoto} alt="" width={1440} height={670} class="about-hero__photo" />
+      <div class="about-hero__scrim" aria-hidden="true"></div>
+    </div>
+    <div class="container about-hero__content">
+      <h1 class="about-hero__heading">Who We Are</h1>
+    </div>
+  </section>
+
+  <!-- ── Our Story ────────────────────────────────────────────────────────────── -->
+  <section class="section about-story">
+    <div class="container about-story__inner">
+      <h2 class="u-h2">Our Story</h2>
+
+      <div class="about-story__paragraphs">
+        <p class="u-body-lg">
+          <strong>{storyLeadBold}</strong>
+          {storyParagraph1Rest}
+        </p>
+        <p class="u-body-lg">{storyParagraph2}</p>
+      </div>
+
+      <ul role="list" class="about-story__stats">
+        {
+          stats.map((stat, i) => (
+            <li class="about-story__stat" data-first={i === 0 ? '' : undefined}>
+              <p class="u-h2 about-story__stat-value">{stat.value}</p>
+              <p class="about-story__stat-label">{stat.label}</p>
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+  </section>
+
+  <!-- ── Vision, Mission, Core Values ─────────────────────────────────────────── -->
+  <section class="section about-values">
+    <div class="container about-values__inner">
+      <div class="about-values__vm-grid">
+        {
+          visionMission.map((item) => (
+            <div class="about-values__vm">
+              <h2 class="u-h2">{item.heading}</h2>
+              <p class="u-body-lg">{item.body}</p>
+            </div>
+          ))
+        }
+      </div>
+
+      <div class="about-values__core">
+        <h2 class="u-h2">Core Values</h2>
+        <div class="about-values__core-grid">
+          {
+            coreValues.map((value) => (
+              <div class="about-values__core-item">
+                <h3 class="u-lead">{value.title}</h3>
+                <p class="u-body-lg">{value.body}</p>
+              </div>
+            ))
+          }
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── CTA ──────────────────────────────────────────────────────────────────── -->
+  <section class="section cta">
+    <div class="container">
+      <div class="cta__card surface-inverse" data-surface="inverse">
+        <div class="cta__text">
+          <p class="u-eyebrow">Get in Touch</p>
+          <h2 class="u-section-title">
+            Ready to Take Your <em class="u-accent-em">First Step?</em>
+          </h2>
+          <p class="u-body-lg">
+            Book a free consultation with a GIEVA counselor today. No commitment, no pressure —
+            just clarity on your path forward.
+          </p>
+        </div>
+        <div class="cta__actions">
+          <Button variant="primary" href="/book-consultancy" arrow={false}>
+            Book Consultancy
+          </Button>
+          <Button variant="secondary" href="/services" arrow={false}>View all Services</Button>
+        </div>
+      </div>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  /* ── Shared section rhythm (matches Home/Services) ──────────────────────── */
+  .section {
+    padding-block: var(--space-6xl);
+  }
+
+  /* ── Hero ───────────────────────────────────────────────────────────────── */
+  .about-hero {
+    position: relative;
+  }
+  .about-hero__media {
+    position: relative;
+  }
+  .about-hero__photo {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+  .about-hero__scrim {
+    position: absolute;
+    inset: 0;
+    background: rgb(0 0 0 / 0.25);
+  }
+  .about-hero__content {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding-bottom: var(--space-6xl);
+  }
+  .about-hero__heading {
+    margin: 0;
+    color: var(--color-white);
+    font-family: var(--font-family-base);
+    font-size: var(--font-size-hero);
+    line-height: var(--line-height-h2);
+    letter-spacing: var(--letter-spacing-h2);
+    font-weight: var(--font-weight-bold);
+    text-align: center;
+    overflow-wrap: anywhere;
+  }
+
+  /* ── Our Story ──────────────────────────────────────────────────────────── */
+  .about-story__inner {
+    display: grid;
+    gap: var(--space-4xl);
+  }
+  .about-story__paragraphs {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-xl);
+  }
+  .about-story__stats {
+    display: flex;
+    padding: var(--space-lg);
+    gap: var(--space-xl);
+  }
+  .about-story__stat {
+    flex: 1;
+    display: grid;
+    gap: var(--space-md);
+    justify-items: center;
+    text-align: center;
+    padding-block: var(--space-lg);
+  }
+  .about-story__stat:not([data-first]) {
+    border-inline-start: 1px solid var(--color-text-default);
+  }
+  .about-story__stat-value {
+    margin: 0;
+  }
+  .about-story__stat-label {
+    margin: 0;
+    font-family: var(--font-family-base);
+    font-size: var(--font-size-underline);
+    line-height: var(--line-height-underline);
+    font-weight: var(--font-weight-bold);
+    letter-spacing: var(--letter-spacing-none);
+  }
+
+  /* ── Vision, Mission, Core Values ───────────────────────────────────────── */
+  .about-values__inner {
+    display: grid;
+    gap: var(--space-4xl);
+  }
+  .about-values__vm-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-xl);
+  }
+  .about-values__vm {
+    display: grid;
+    gap: var(--space-xl);
+    align-content: start;
+  }
+  .about-values__core {
+    display: grid;
+    gap: var(--space-xl);
+  }
+  .about-values__core-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-xl);
+  }
+  .about-values__core-item {
+    display: grid;
+    gap: var(--space-md);
+    align-content: start;
+  }
+
+  /* ── CTA (same content/shape as Home's/Services') ──────────────────────── */
+  .cta__card {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2xl);
+    padding: var(--space-3xl);
+    border-radius: var(--radius-md);
+  }
+  .cta__text {
+    display: grid;
+    gap: var(--space-sm);
+    max-width: 34rem;
+  }
+  .cta__actions {
+    display: flex;
+    gap: var(--space-md);
+    flex-wrap: wrap;
+  }
+
+  /* ── Responsive ─────────────────────────────────────────────────────────── */
+  @media (max-width: 1024px) {
+    .about-story__paragraphs,
+    .about-values__vm-grid,
+    .about-values__core-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+  @media (max-width: 640px) {
+    .about-hero__heading {
+      font-size: var(--font-size-h3);
+    }
+    .about-story__stats {
+      flex-wrap: wrap;
+      padding: var(--space-md);
+    }
+    .about-story__stat {
+      flex: 1 1 40%;
+    }
+    .about-story__stat:not([data-first]) {
+      border-inline-start: none;
+    }
+    .cta__card {
+      justify-content: center;
+      text-align: center;
+    }
+    .cta__text {
+      max-width: none;
+    }
+    .cta__actions {
+      justify-content: center;
+    }
+  }
+</style>

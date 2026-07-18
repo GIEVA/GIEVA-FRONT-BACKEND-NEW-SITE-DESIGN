@@ -1,0 +1,115 @@
+---
+/**
+ * ServiceDetailSection — the repeating "title + about/covers + cost" block that makes up
+ * the Consultancy Services page (node 8119:7174). Services is the ★ reusable template page
+ * (docs/consultancy-build-plan.md), so this is extracted as its own component rather than
+ * inlined 5×: any future sub-page riffing off the same shape reuses it directly.
+ *
+ * Typography confirmed identical across all 5 sections in node.json (title 40/700, subtitle
+ * `--type-body-lg`, sub-headings `--type-lead`, body/list `--type-body-lg`) — see
+ * services.astro's header comment for the full audit.
+ */
+import type { ServiceDetail } from '@lib/services-content';
+
+type Props = ServiceDetail;
+
+const {
+  title,
+  subtitle,
+  aboutHeading,
+  aboutLead,
+  aboutBody,
+  coversHeading,
+  coversItems,
+  costHeading,
+  costHighlight,
+  costBody,
+} = Astro.props;
+---
+
+<div class="service-detail">
+  <div class="service-detail__header">
+    <h2 class="u-h3">{title}</h2>
+    <p class="u-body-lg">{subtitle}</p>
+  </div>
+
+  <div class="service-detail__row">
+    <div class="service-detail__block">
+      <h3 class="u-lead service-detail__heading">{aboutHeading}</h3>
+      <p class="u-body-lg">
+        {
+          aboutLead ? (
+            <Fragment>
+              <em class="service-detail__lead">{aboutLead}</em> {aboutBody}
+            </Fragment>
+          ) : (
+            aboutBody
+          )
+        }
+      </p>
+    </div>
+    <div class="service-detail__block">
+      <h3 class="u-lead service-detail__heading">{coversHeading}</h3>
+      <ul role="list" class="u-body-lg service-detail__list">
+        {coversItems.map((item) => <li>{item}</li>)}
+      </ul>
+    </div>
+  </div>
+
+  <div class="service-detail__row">
+    <div class="service-detail__block">
+      <h3 class="u-lead service-detail__heading">{costHeading}</h3>
+      <p class="u-body-lg">
+        {
+          costHighlight ? (
+            <Fragment>
+              <em class="service-detail__cost-highlight">{costHighlight}</em> {costBody}
+            </Fragment>
+          ) : (
+            costBody
+          )
+        }
+      </p>
+    </div>
+  </div>
+</div>
+
+<style>
+  .service-detail {
+    display: grid;
+    gap: var(--space-4xl);
+  }
+  .service-detail__header {
+    display: grid;
+    gap: var(--space-sm);
+    color: var(--color-violet);
+  }
+  .service-detail__row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-xl);
+  }
+  .service-detail__block {
+    display: grid;
+    gap: var(--space-md);
+    align-content: start;
+  }
+  .service-detail__heading {
+    color: var(--color-text-default);
+  }
+  .service-detail__list {
+    color: var(--color-text-default);
+  }
+  .service-detail__lead,
+  .service-detail__cost-highlight {
+    font-style: italic;
+    font-weight: var(--font-weight-bold);
+    color: var(--color-accent-warm);
+  }
+
+  @media (max-width: 1024px) {
+    .service-detail__row {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

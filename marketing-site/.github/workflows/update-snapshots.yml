@@ -1,0 +1,42 @@
+name: Update visual baselines
+
+# Manually-triggered: regenerates the committed Playwright screenshots (tests/__screenshots__)
+# inside the exact pinned Playwright container CI's e2e job uses, then commits the result
+# straight to the branch that was run against. Visual baselines are Chromium-build-specific
+# (README "Visual regression") — this is the canonical environment to generate them in, unlike
+# an arbitrary local/sandbox machine which may substitute different system fonts and render a
+# few pixels off. Run this from the Actions tab whenever baselines need a real refresh (e.g.
+# after a visual-regression job fails on a font/rendering mismatch, not a real content change).
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  update-snapshots:
+    name: Regenerate + commit visual baselines
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.61.1-noble
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - run: npm ci
+      - name: Build (so /styleguide etc. are current before screenshotting)
+        run: npm run build
+      - name: Regenerate baselines
+        run: npm run test:update-snapshots
+      - name: Commit + push if anything changed
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tests/__screenshots__
+          if git diff --cached --quiet; then
+            echo "No baseline changes."
+            exit 0
+          fi
+          git commit -m "test: regenerate visual baselines in the canonical Playwright container"
+          git push
