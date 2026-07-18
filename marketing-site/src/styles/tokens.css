@@ -1,0 +1,250 @@
+/**
+ * GIEVA design tokens — the design language expressed as CSS custom properties.
+ *
+ * Three layers, in strict order (WORKFLOW.md §3, TOKENS.md §6):
+ *   1. Primitives   raw values, named by hue/measure. Never consumed by components directly.
+ *   2. Semantic     role-based aliases (`--color-action-primary`, `--type-display`).
+ *                   THIS is what components use, and where brand theming lives.
+ *   3. Brand theme  each brand supplies a value-set for the semantic layer, switched by the
+ *                   root `[data-brand]` attribute. Only the value-sets differ between brands.
+ *
+ * Provenance:
+ *   - Colour primitives + typography: exact, from the committed Design Tokens plugin export
+ *     (`design/tokens/gieva.source.tokens.json`), audited in TOKENS.md §1/§4.
+ *   - Spacing, radii, breakpoints, motion: NOT published as Figma variables (TOKENS.md §5).
+ *     Authored here as a coherent scale and flagged `provisional` — confirm per-screen
+ *     against ingested node.json during page builds.
+ *
+ * Home build (node 5891:4663) confirmations — TOKENS.md §7 items resolved against real data:
+ *   - Spacing/radii scale below is now SNAPPED to the discrete values actually used across
+ *     every visible node in Home's node.json (padding/gap/cornerRadius audit), replacing the
+ *     placeholder 4px scale. See §1a/§1b.
+ *   - `--color-accent-warm`: Home's every button/CTA/emphasis-span fill is `#E65320`
+ *     (primitive `--color-orange`, previously mapped only to `--color-feedback-warning`),
+ *     never `#FF5A3E` (`--color-outrageous-orange`). Repointed the value-set; the orange
+ *     primitive stays defined for both roles (a hue doing double semantic duty is normal).
+ *   - Two heading patterns exist at 48/700/56 that TOKENS.md §4 hadn't distinguished: the
+ *     named "heading 2" style (tracking −0.26, used for the stat-card numbers) and a second,
+ *     far more common "section title" pattern sharing the display tracking (−3.3), used by
+ *     every recurring section headline. Added `--type-section-title` alongside the existing
+ *     `--type-h2` rather than overwrite it — both are real. Also added `--type-h1` (the hero
+ *     headline: 64/72/700/−3.3, not previously captured) and `--type-body-lg` (18/24/400,
+ *     the actual running-paragraph/button-label size — 14px `--type-body` turns out to be
+ *     reserved for micro-labels, not paragraphs).
+ */
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   1. PRIMITIVES — raw values, brand-agnostic. Named per Figma (TOKENS.md §1/§6).
+   ───────────────────────────────────────────────────────────────────────────── */
+:root {
+  /* Colour — opaque hex from the plugin export (8-digit RGBA collapsed to 6 where opaque). */
+  --color-electric-violet: #581cff; /* signature brand colour */
+  --color-violet: #120633; /* near-black deep violet — dark surfaces */
+  --color-mine-shaft: #292929; /* near-black neutral — body text */
+  --color-mid-gray: #636366; /* secondary / muted text */
+  --color-periwinkle: #cad3ff; /* light violet tint */
+  --color-outrageous-orange: #ff5a3e; /* warm accent */
+  --color-chartreuse-yellow: #e1ff01; /* bright accent — dark-surface only */
+  --color-aqua: #00f5f1; /* bright accent — dark-surface only */
+  --color-green: #007f0e; /* success — also the eyebrow/kicker colour throughout Home */
+  --color-orange: #e65320; /* warning — also the site's real action/accent colour (see header comment) */
+  --color-white: #ffffff;
+  --color-black: #000000;
+  /* Alpha overlays (kept as rgba so they composite over any surface). */
+  --color-white-10: rgb(255 255 255 / 0.1); /* hairline on dark */
+  --color-white-25: rgb(255 255 255 / 0.25); /* border on dark */
+  --color-black-08: rgb(0 0 0 / 0.08); /* hairline on light */
+  --color-orange-10: rgb(230 83 32 / 0.1); /* secondary-button fill/border (Home node.json) */
+
+  /* Typography primitives — Arial, a system font: zero web-font load, no FOUT (TOKENS.md §4). */
+  --font-family-base: Arial, Helvetica, sans-serif;
+
+  --font-size-hero: 64px; /* Home H1 (5898:5918) — not in the original TOKENS.md audit */
+  --font-size-display: 110px;
+  --font-size-h2: 48px;
+  --font-size-title: 48px;
+  --font-size-h3: 40px;
+  --font-size-lead: 24px;
+  --font-size-underline: 18px;
+  --font-size-body: 14px;
+
+  --line-height-hero: 72px;
+  --line-height-display: 120px;
+  --line-height-h2: 56px;
+  --line-height-title: 52px;
+  --line-height-h3: 48px;
+  --line-height-lead: 32px;
+  --line-height-underline: 24px;
+  --line-height-body: 20px;
+  --line-height-caption: 21px;
+
+  --font-weight-regular: 400;
+  --font-weight-bold: 700;
+
+  --letter-spacing-display: -3.3px;
+  --letter-spacing-h2: -0.26px;
+  --letter-spacing-title: -1.44px;
+  --letter-spacing-h3: 0;
+  --letter-spacing-lead: -1.2px;
+  --letter-spacing-tight: -0.16px; /* was -0.14; Home's 18px/14px-bold instances read -0.1599...px */
+  --letter-spacing-narrow: -0.14px; /* the true "narrow" style (TOKENS.md §4) — footer group labels */
+  --letter-spacing-none: 0;
+
+  /* Spacing — SNAPPED to Home's node.json (5891:4663): every distinct padding/gap value
+     used across the page's auto-layout frames, confirming/replacing the placeholder scale
+     (TOKENS.md §5). One-off layout hacks (space-between simulated via a fixed gap, a
+     negative gap for the CTA card's overlap trick) are excluded — they're not scale steps. */
+  --space-3xs: 4px;
+  --space-2xs: 8px;
+  --space-xs: 12px;
+  --space-sm: 16px;
+  --space-md: 24px;
+  --space-lg: 32px;
+  --space-xl: 40px;
+  --space-2xl: 48px;
+  --space-3xl: 64px;
+  --space-4xl: 80px;
+  --space-5xl: 96px;
+  --space-6xl: 120px;
+
+  /* Radii — SNAPPED to Home's node.json: only 8/12/16 appear anywhere on the page. */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-pill: 999px;
+
+  /* Layout — content max-width + gutter read off Home's section frames: every full-width
+     section pads 64px each side around a 1312px content column at the 1440px design width. */
+  --container-max: 1312px;
+  --container-gutter: var(--space-3xl);
+
+  /* Motion — reduced-motion aware defaults (real motion tokens land in Phase 4). */
+  --motion-fast: 120ms;
+  --motion-base: 200ms;
+  --easing-standard: cubic-bezier(0.2, 0, 0, 1);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   2. SEMANTIC LAYER — role-based aliases. Components consume ONLY these.
+   Defaults below are brand-neutral fallbacks; each brand overrides colours in §3.
+   ───────────────────────────────────────────────────────────────────────────── */
+:root {
+  /* Type roles — brand-shared (TOKENS.md §4, rationalised scale). Each role is a small set
+     of properties so a single utility class or component can apply it verbatim. */
+  --type-hero-size: var(--font-size-hero);
+  --type-hero-line: var(--line-height-hero);
+  --type-hero-weight: var(--font-weight-bold);
+  --type-hero-tracking: var(--letter-spacing-display);
+
+  --type-display-size: var(--font-size-display);
+  --type-display-line: var(--line-height-display);
+  --type-display-weight: var(--font-weight-regular);
+  --type-display-tracking: var(--letter-spacing-display);
+
+  /* Recurring section headline (— Who We Are / We don't just… / Intelligent Minds… etc.):
+     same 48/700/56 metrics as "heading 2" but tracking borrowed from the display style.
+     By far the most common heading on Home; kept distinct from --type-h2 below since both
+     patterns are genuinely used (h2's own −0.26 tracking shows up on the stat-card numbers). */
+  --type-section-title-size: var(--font-size-h2);
+  --type-section-title-line: var(--line-height-h2);
+  --type-section-title-weight: var(--font-weight-bold);
+  --type-section-title-tracking: var(--letter-spacing-display);
+
+  --type-h2-size: var(--font-size-h2);
+  --type-h2-line: var(--line-height-h2);
+  --type-h2-weight: var(--font-weight-bold);
+  --type-h2-tracking: var(--letter-spacing-h2);
+
+  --type-h3-size: var(--font-size-h3);
+  --type-h3-line: var(--line-height-h3);
+  --type-h3-weight: var(--font-weight-bold);
+  --type-h3-tracking: var(--letter-spacing-h3);
+
+  --type-title-size: var(--font-size-title);
+  --type-title-line: var(--line-height-title);
+  --type-title-weight: var(--font-weight-regular);
+  --type-title-tracking: var(--letter-spacing-title);
+
+  --type-lead-size: var(--font-size-lead);
+  --type-lead-line: var(--line-height-lead);
+  --type-lead-weight: var(--font-weight-bold);
+  --type-lead-tracking: var(--letter-spacing-lead);
+
+  --type-body-size: var(--font-size-body);
+  --type-body-line: var(--line-height-body);
+  --type-body-weight: var(--font-weight-regular);
+  --type-body-tracking: var(--letter-spacing-none);
+
+  --type-body-tight-tracking: var(--letter-spacing-narrow);
+
+  --type-caption-size: var(--font-size-body);
+  --type-caption-line: var(--line-height-caption);
+  --type-caption-weight: var(--font-weight-regular);
+  --type-caption-tracking: var(--letter-spacing-narrow);
+
+  /* The actual running-paragraph/button-label size on Home (hero subhead, section
+     descriptions, testimonial quotes, button text) — 18px, not the 14px --type-body, which
+     turns out to be reserved for micro-labels (footer group headers). */
+  --type-body-lg-size: var(--font-size-underline);
+  --type-body-lg-line: var(--line-height-underline);
+  --type-body-lg-weight: var(--font-weight-regular);
+  --type-body-lg-tracking: var(--letter-spacing-tight);
+
+  /* All-caps kicker/label above every section headline (WHO WE ARE, CORE TEAM, FAQ…). */
+  --type-eyebrow-size: var(--font-size-body);
+  --type-eyebrow-line: var(--line-height-underline);
+  --type-eyebrow-weight: var(--font-weight-bold);
+  --type-eyebrow-tracking: var(--letter-spacing-tight);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   3. BRAND THEME — Consultancy. Value-set for the semantic colour roles (TOKENS.md §2).
+   Scoped to [data-brand="consultancy"] so the NGO theme can coexist under one system.
+   Values are the audited consultancy palette; per-screen usage is confirmed during page
+   builds against ingested node.json.
+   ───────────────────────────────────────────────────────────────────────────── */
+[data-brand='consultancy'] {
+  --color-action-primary: var(--color-electric-violet);
+  --color-action-primary-contrast: var(--color-white); /* text/icon on the primary fill */
+  --color-action-hover: #4614cc; /* darkened electric violet — provisional, confirm */
+  --color-action-outline: var(--color-electric-violet); /* outline/secondary control ink */
+
+  --color-surface-default: var(--color-white);
+  --color-surface-muted: #f5f5fa; /* provisional tint for alternating sections */
+  --color-surface-inverse: var(--color-violet);
+
+  --color-text-default: var(--color-mine-shaft);
+  --color-text-muted: var(--color-mid-gray);
+  --color-text-inverse: var(--color-white);
+  --color-text-on-inverse-muted: var(--color-periwinkle);
+
+  --color-link: var(--color-electric-violet);
+  --color-link-hover: var(--color-action-hover);
+
+  /* Home's real action/accent colour is `--color-orange` (#E65320) — see file header note. */
+  --color-accent-warm: var(--color-orange);
+  --color-accent-bright: var(--color-chartreuse-yellow); /* dark-surface only (TOKENS.md §3) */
+  --color-accent-bright-alt: var(--color-aqua); /* dark-surface only */
+
+  --color-border-subtle: var(--color-periwinkle);
+  --color-border-on-inverse: var(--color-white-25);
+
+  --color-feedback-success: var(--color-green);
+  --color-feedback-warning: var(--color-orange);
+
+  --color-focus-ring: var(--color-electric-violet);
+}
+
+/* On dark surfaces, flip text roles so components nested inside an inverse section stay
+   readable without each component special-casing the background. */
+[data-brand='consultancy'] .surface-inverse,
+[data-brand='consultancy'] [data-surface='inverse'] {
+  --color-text-default: var(--color-text-inverse);
+  --color-text-muted: var(--color-text-on-inverse-muted);
+  --color-border-subtle: var(--color-border-on-inverse);
+  --color-link: var(--color-accent-bright);
+  --color-link-hover: var(--color-aqua);
+  --color-focus-ring: var(--color-accent-bright);
+  /* Outline controls flip to light ink so they stay legible on the dark surface. */
+  --color-action-outline: var(--color-text-inverse);
+}

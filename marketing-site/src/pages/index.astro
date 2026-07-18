@@ -1,0 +1,899 @@
+---
+/**
+ * Home (/) — Consultancy. Built against the committed Figma node 5891:4663
+ * (design/figma/fTqnnV20l9htP7vFJrOsvn/5891-4663/), see docs/consultancy-build-plan.md.
+ *
+ * Content notes (leftover/duplicate nodes in the source were excluded — confirmed via each
+ * node's `visible` flag, not guessed):
+ *   - Several sections carry a hidden, unedited placeholder heading ("— Every Major Test.
+ *     One Trusted Partner.") behind the real one — `visible: false` in node.json, omitted.
+ *   - The CTA paragraph's source text ends with a pasted "Book Free ConsultationView All
+ *     Services" fragment duplicating the two buttons below it — an evident copy/paste slip,
+ *     not real copy. Trimmed to the intended sentence.
+ *   - Core Team repeats one placeholder photo/name/role 4×, and the testimonial quote/name
+ *     repeats 3× — that's the design's real (not-yet-personalised) content, kept as-is.
+ */
+import BaseLayout from '@layouts/BaseLayout.astro';
+import Button from '@components/Button.astro';
+import { Image } from 'astro:assets';
+import {
+  heroRing,
+  whoWeArePhoto,
+  teamPhoto,
+  testimonial1,
+  testimonial2,
+  testimonial3,
+  partnerLogos,
+} from '@lib/home-images';
+
+const stats = [
+  { value: '10,000+', label: 'Lives Changed' },
+  { value: '30+', label: 'Global Partners' },
+  { value: '12+', label: 'Years Active' },
+  { value: '98%', label: 'Success Rate' },
+];
+
+const services = [
+  {
+    number: '01',
+    title: 'Test Registration',
+    description:
+      'Peacebuilders rely on research as an important tool to enable them to study and understand conflict. It is also important to coordinate the various stakeholders to ensure the creation and sustenance of strategic partnerships. By having research, coordination and partnership as an area of thematic focus, we aim to transition the state of negative to positive peace through sustained research, systematic documentation, robust coordination and strategic partnership.',
+  },
+  {
+    number: '02',
+    title: 'Study Abroad',
+    description:
+      'Peacebuilders rely on research as an important tool to enable them to study and understand conflict. It is also important to coordinate the various stakeholders to ensure the creation and sustenance of strategic partnerships. By having research, coordination and partnership as an area of thematic focus, we aim to transition the state of negative to positive peace through sustained research, systematic documentation, robust coordination and strategic partnership.',
+  },
+  {
+    number: '03',
+    title: 'Professional Development',
+    description:
+      'Peacebuilders rely on research as an important tool to enable them to study and understand conflict. It is also important to coordinate the various stakeholders to ensure the creation and sustenance of strategic partnerships. By having research, coordination and partnership as an area of thematic focus, we aim to transition the state of negative to positive peace through sustained research, systematic documentation, robust coordination and strategic partnership.',
+  },
+];
+
+const team = Array.from({ length: 4 }, () => ({
+  name: 'Julie Sande',
+  role: 'Director General',
+}));
+
+const testimonialQuote =
+  "The GIEVA team walked me through every step of my TOEFL registration. They even helped me pick test centres I didn't know existed. I got my scores in record time and reported them to my target schools the same week.";
+const testimonials = [
+  {
+    photo: testimonial1,
+    name: 'Tolulope Ogunwale',
+    role: 'TOEFL CLIENT Admitted to University of Michigan',
+  },
+  {
+    photo: testimonial2,
+    name: 'Tolulope Ogunwale',
+    role: 'TOEFL CLIENT Admitted to University of Michigan',
+  },
+  {
+    photo: testimonial3,
+    name: 'Tolulope Ogunwale',
+    role: 'TOEFL CLIENT Admitted to University of Michigan',
+  },
+];
+
+const faqs = [
+  {
+    question: 'How long does the registration process take?',
+    answer:
+      'Most registrations are completed within 24–48 hours of your initial consultation and payment. Urgent registrations can often be processed the same day if test slots are available.',
+  },
+  {
+    question: 'What documents do I need to bring?',
+    answer:
+      "You'll need a valid international passport (or national ID for some tests), your O-Level results, and proof of payment. Our counselors will confirm the exact requirements for your specific test.",
+  },
+  {
+    question: 'Do you offer test preparation alongside registration?',
+    answer:
+      'Yes! Our Premium and Elite packages include access to prep materials, mock tests, and one-on-one tutoring sessions. We also partner with certified tutors for more intensive preparation.',
+  },
+  {
+    question: 'Is my payment secure?',
+    answer:
+      "All payments are processed through Paystack, Nigeria's leading and most trusted payment gateway. Official receipts are issued for every transaction.",
+  },
+];
+---
+
+<BaseLayout
+  title="GIEVA — Your Gateway to Global Academic Excellence"
+  description="GIEVA's certified counselors guide every step of your international education journey — test registration, university admissions, and professional development."
+  brand="consultancy"
+>
+  <!-- ── Hero ─────────────────────────────────────────────────────────────────── -->
+  <section class="hero">
+    <div class="container hero__grid">
+      <div class="hero__content">
+        <span class="hero__badge">Educational Consultancy</span>
+        <h1 class="u-hero hero__heading">
+          Your Gateway to <em class="u-accent-em">Global</em> Academic <em class="u-accent-em"
+            >Excellence.</em
+          >
+        </h1>
+        <p class="u-body-lg hero__lead">
+          From standardized test registration to university admissions — GIEVA's certified
+          counselors guide every step of your international education journey.
+        </p>
+        <div class="hero__actions">
+          <Button variant="primary" href="/book-consultancy">Book Consultancy</Button>
+          <Button variant="secondary" href="/services">Take Test</Button>
+        </div>
+      </div>
+
+      <div class="hero__visual">
+        <Image src={heroRing} alt="" width={818} height={818} class="hero__ring" />
+        <a class="hero__ngo-link" href="/ngo">
+          Explore NGO
+          <svg
+            width="15"
+            height="13"
+            viewBox="0 0 15 13"
+            fill="none"
+            aria-hidden="true"
+            focusable="false"
+          >
+            <path
+              d="M8.5 1L14 6.5M14 6.5L8.5 12M14 6.5H1"
+              stroke="currentColor"
+              stroke-width="1.6"
+              stroke-linecap="round"
+              stroke-linejoin="round"></path>
+          </svg>
+        </a>
+      </div>
+    </div>
+
+    <div class="partners">
+      <div class="container partners__row">
+        <p class="u-eyebrow partners__label">Trusted Partners</p>
+        <div class="partners__viewport">
+          <ul role="list" class="partners__track">
+            {
+              [...partnerLogos, ...partnerLogos].map((logo, i) => {
+                const hidden = i >= partnerLogos.length;
+                const alt = hidden ? '' : logo.name;
+                const style = `--logo-h: ${logo.height}px`;
+                return (
+                  <li
+                    class="partners__item"
+                    style={style}
+                    aria-hidden={hidden ? 'true' : undefined}
+                  >
+                    {typeof logo.src === 'string' ? (
+                      <img src={logo.src} alt={alt} />
+                    ) : (
+                      <Image src={logo.src} alt={alt} height={logo.height} width={200} />
+                    )}
+                  </li>
+                );
+              })
+            }
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Who We Are ───────────────────────────────────────────────────────────── -->
+  <section class="section who">
+    <div class="container who__grid">
+      <div class="who__intro">
+        <p class="u-eyebrow">Who We Are</p>
+        <h2 class="u-section-title">
+          Global Integrated Education Volunteers Association (GIEVA)
+        </h2>
+      </div>
+      <div class="who__body">
+        <p class="u-body-lg">
+          Global Integrated Education Volunteers Association (GIEVA) was registered in 2006 as
+          a nonprofit organization to improve access to quality education and global learning
+          opportunities among young Nigerians. Over the years, GIEVA has grown to serve over
+          1,000 young Nigerians annually, with a strong focus on inclusive education, digital
+          empowerment, and youth development.
+        </p>
+        <Button variant="secondary" href="/about">Learn more about us</Button>
+      </div>
+    </div>
+
+    <div class="container">
+      <div class="who__photo-wrap">
+        <Image src={whoWeArePhoto} alt="" width={1312} height={670} class="who__photo" />
+        <ul role="list" class="who__stats">
+          {
+            stats.map((stat, i) => (
+              <li
+                class="who__stat"
+                style={
+                  i > 0 ? 'border-inline-start: 1px solid rgb(255 255 255 / 0.25)' : undefined
+                }
+              >
+                <p class="u-h2 who__stat-value">{stat.value}</p>
+                <p class="u-body-lg who__stat-label">{stat.label}</p>
+              </li>
+            ))
+          }
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Consultancy Services ─────────────────────────────────────────────────── -->
+  <section class="section services">
+    <div class="container">
+      <div class="services__intro">
+        <p class="u-eyebrow">Consultancy Services</p>
+        <h2 class="u-section-title">
+          We don't just register you. <br />We guide you <em class="u-accent-em"
+            >all the way to acceptance.</em
+          >
+        </h2>
+        <p class="u-body-lg">
+          GIEVA handles your entire registration process — from account setup to score
+          reporting — with certified guidance at every step.
+        </p>
+      </div>
+
+      <ul role="list" class="services__grid">
+        {
+          services.map((service) => (
+            <li class="services__card">
+              <span class="services__number">{service.number}</span>
+              <div class="services__card-body">
+                <h3 class="services__card-title">{service.title}</h3>
+                <p class="u-body-lg services__card-desc">{service.description}</p>
+              </div>
+              <Button variant="link" href="/services">
+                Learn more
+              </Button>
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+  </section>
+
+  <!-- ── Core Team ────────────────────────────────────────────────────────────── -->
+  <section class="section team">
+    <div class="container">
+      <div class="team__intro">
+        <p class="u-eyebrow">Core Team</p>
+        <h2 class="u-section-title">
+          Intelligent Minds <em class="u-accent-em">Leading the Way.</em>
+        </h2>
+        <p class="u-body-lg">
+          GIEVA handles your entire registration process — from account setup to score
+          reporting — with certified guidance at every step.
+        </p>
+      </div>
+
+      <ul role="list" class="team__grid">
+        {
+          team.map((member) => (
+            <li class="team__card">
+              <Image src={teamPhoto} alt="" width={310} height={380} class="team__photo" />
+              <div class="team__card-info">
+                <p class="team__name">{member.name}</p>
+                <p class="team__role">{member.role}</p>
+              </div>
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+  </section>
+
+  <!-- ── Testimonials ─────────────────────────────────────────────────────────── -->
+  <section class="section testimonials">
+    <div class="container">
+      <div class="testimonials__intro">
+        <div class="testimonials__intro-heading">
+          <p class="u-eyebrow">Testimonials</p>
+          <h2 class="u-section-title">
+            What our clients have to say <em class="u-accent-em">about us</em>
+          </h2>
+        </div>
+        <div class="testimonials__intro-body">
+          <p class="u-body-lg">
+            At GIEVA, we're committed to continuous growth and improvement. Whether you've
+            participated in one of our programs, partnered with us, or simply explored our
+            work—we want to hear from you!
+          </p>
+          <p class="u-body-lg">
+            Your insights help us shape better experiences, expand our impact, and serve young
+            people more effectively.
+          </p>
+          <Button variant="secondary" href="/feedback">Share your Feedback</Button>
+        </div>
+      </div>
+
+      <ul role="list" class="testimonials__grid">
+        {
+          testimonials.map((t) => (
+            <li class="testimonials__card">
+              <Image
+                src={t.photo}
+                alt=""
+                width={421}
+                height={520}
+                class="testimonials__photo"
+              />
+              <div class="testimonials__card-body">
+                <p class="testimonials__quote">“{testimonialQuote}”</p>
+                <p class="testimonials__name">{t.name}</p>
+                <p class="testimonials__role">{t.role}</p>
+              </div>
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+  </section>
+
+  <!-- ── FAQ ──────────────────────────────────────────────────────────────────── -->
+  <section class="section faq">
+    <div class="container faq__grid">
+      <div class="faq__intro">
+        <p class="u-eyebrow">FAQ</p>
+        <h2 class="u-section-title">
+          Common Questions, <em class="u-accent-em">Clear Answers.</em>
+        </h2>
+        <p class="u-body-lg">
+          Still have questions? Our counselors are available Monday–Friday, 9am–5pm via
+          WhatsApp, email, and in-person at our Abuja, Lagos, and Jos offices.
+        </p>
+        <Button variant="secondary" href="/contact">Chat with us</Button>
+      </div>
+
+      <div class="faq__list">
+        {
+          faqs.map((faq) => (
+            <details class="faq__item">
+              <summary class="faq__question">
+                {faq.question}
+                <span class="faq__toggle" aria-hidden="true" />
+              </summary>
+              <p class="u-body-lg faq__answer">{faq.answer}</p>
+            </details>
+          ))
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- ── CTA ──────────────────────────────────────────────────────────────────── -->
+  <section class="section cta">
+    <div class="container">
+      <div class="cta__card surface-inverse" data-surface="inverse">
+        <div class="cta__text">
+          <p class="u-eyebrow">Get in Touch</p>
+          <h2 class="u-section-title">
+            Ready to Take Your <em class="u-accent-em">First Step?</em>
+          </h2>
+          <p class="u-body-lg">
+            Book a free consultation with a GIEVA counselor today. No commitment, no pressure —
+            just clarity on your path forward.
+          </p>
+        </div>
+        <div class="cta__actions">
+          <Button variant="primary" href="/book-consultancy">Book Consultancy</Button>
+          <Button variant="secondary" href="/services">View all Services</Button>
+        </div>
+      </div>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  /* ── Shared section rhythm ──────────────────────────────────────────────── */
+  .section {
+    padding-block: var(--space-6xl);
+  }
+
+  /* ── Hero ───────────────────────────────────────────────────────────────── */
+  .hero {
+    position: relative;
+    background-image: repeating-linear-gradient(
+      to right,
+      rgb(0 0 0 / 0.02) 0,
+      rgb(0 0 0 / 0.02) 1px,
+      transparent 1px,
+      transparent 60px
+    );
+  }
+  .hero__grid {
+    display: grid;
+    grid-template-columns: minmax(0, 656px) 1fr;
+    align-items: center;
+    gap: var(--space-2xl);
+    padding-block: var(--space-6xl) var(--space-2xl);
+  }
+  .hero__content {
+    display: grid;
+    gap: var(--space-lg);
+  }
+  .hero__badge {
+    display: inline-block;
+    width: fit-content;
+    padding: var(--space-3xs) var(--space-md);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-sm);
+    font-size: var(--type-body-size);
+    color: var(--color-text-default);
+    text-transform: uppercase;
+    letter-spacing: var(--type-eyebrow-tracking);
+  }
+  .hero__heading {
+    color: var(--color-violet);
+    max-width: 16ch;
+  }
+  .hero__lead {
+    color: var(--color-violet);
+    max-width: 48ch;
+  }
+  .hero__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-md);
+  }
+
+  .hero__visual {
+    position: relative;
+  }
+  .hero__ring {
+    width: 100%;
+    height: auto;
+  }
+  .hero__ngo-link {
+    position: absolute;
+    right: 6%;
+    bottom: 12%;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2xs);
+    padding: var(--space-xs) var(--space-md);
+    border-radius: var(--radius-sm);
+    background: rgb(153 204 159 / 0.75);
+    border: 1px solid var(--color-green);
+    color: var(--color-green);
+    font-weight: var(--font-weight-bold);
+    font-size: var(--type-body-lg-size);
+    text-decoration: none;
+  }
+  .hero__ngo-link:hover {
+    background: var(--color-green);
+    color: var(--color-white);
+  }
+
+  /* ── Trusted partners marquee ──────────────────────────────────────────── */
+  .partners {
+    padding-block: var(--space-lg) var(--space-2xl);
+  }
+  .partners__row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-lg);
+  }
+  .partners__label {
+    flex: none;
+  }
+  .partners__viewport {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    mask-image: linear-gradient(
+      to right,
+      transparent,
+      black var(--space-lg),
+      black 95%,
+      transparent
+    );
+  }
+  .partners__track {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2xl);
+    width: max-content;
+    padding-inline-end: var(--space-2xl);
+    animation: partners-scroll 36s linear infinite;
+  }
+  .partners__item {
+    display: flex;
+    align-items: center;
+    flex: none;
+    block-size: var(--logo-h);
+  }
+  .partners__item :global(img) {
+    height: 100%;
+    width: auto;
+    object-fit: contain;
+    filter: grayscale(1);
+    opacity: 0.7;
+  }
+  @keyframes partners-scroll {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(-50%);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .partners__track {
+      animation: none;
+    }
+  }
+
+  /* ── Who We Are ─────────────────────────────────────────────────────────── */
+  .who__grid {
+    display: grid;
+    grid-template-columns: minmax(0, 616px) 1fr;
+    gap: var(--space-xl);
+    margin-bottom: var(--space-4xl);
+  }
+  .who__intro,
+  .who__body {
+    display: grid;
+    gap: var(--space-sm);
+    align-content: start;
+  }
+  .who__intro h2 {
+    color: var(--color-violet);
+  }
+  .who__body p {
+    color: var(--color-text-default);
+    margin-bottom: var(--space-sm);
+  }
+  .who__body :global(.btn) {
+    justify-self: start;
+  }
+
+  .who__photo-wrap {
+    position: relative;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+  }
+  .who__photo {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+  .who__stats {
+    position: absolute;
+    inset-inline: 0;
+    bottom: 0;
+    display: flex;
+    padding: var(--space-xl);
+    background: linear-gradient(to top, rgb(0 0 0 / 0.85), transparent);
+  }
+  .who__stat {
+    flex: 1;
+    text-align: center;
+    padding-inline: var(--space-md);
+  }
+  .who__stat-value,
+  .who__stat-label {
+    color: var(--color-white);
+  }
+
+  /* ── Consultancy Services ──────────────────────────────────────────────── */
+  .services__intro {
+    display: grid;
+    gap: var(--space-sm);
+    max-width: 52rem;
+    margin-bottom: var(--space-4xl);
+  }
+  .services__intro h2 {
+    color: var(--color-violet);
+  }
+  .services__intro p.u-body-lg {
+    color: var(--color-text-default);
+  }
+  .services__grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-md);
+  }
+  .services__card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4xl);
+    padding: var(--space-xl) var(--space-lg) var(--space-2xl);
+    border-radius: var(--radius-md);
+    background: #291e47;
+    color: var(--color-white);
+  }
+  .services__number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: 3.25rem;
+    block-size: 3.25rem;
+    border-radius: 50%;
+    background: var(--color-accent-warm);
+    font-weight: var(--font-weight-bold);
+    font-size: 2rem;
+  }
+  .services__card-body {
+    display: grid;
+    gap: var(--space-md);
+    flex: 1;
+  }
+  .services__card-title {
+    text-transform: uppercase;
+    font-weight: var(--font-weight-regular);
+    font-size: 1.875rem;
+    line-height: 1.2;
+    padding-bottom: var(--space-md);
+    border-bottom: 1px solid rgb(255 255 255 / 0.25);
+  }
+  .services__card-desc {
+    color: rgb(255 255 255 / 0.85);
+  }
+  .services__card :global(.btn--link) {
+    color: var(--color-accent-warm);
+  }
+
+  /* ── Core Team ──────────────────────────────────────────────────────────── */
+  .team__intro {
+    display: grid;
+    gap: var(--space-sm);
+    max-width: 42rem;
+    margin-inline: auto;
+    margin-bottom: var(--space-4xl);
+    text-align: center;
+  }
+  .team__intro h2 {
+    color: var(--color-violet);
+  }
+  .team__intro p.u-body-lg {
+    color: var(--color-text-default);
+  }
+  .team__grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--space-md);
+  }
+  .team__card {
+    position: relative;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+  }
+  .team__photo {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 310 / 380;
+    object-fit: cover;
+    display: block;
+  }
+  .team__card-info {
+    position: absolute;
+    inset-inline: 0;
+    bottom: 0;
+    padding: var(--space-md);
+    background: linear-gradient(to top, rgb(0 0 0 / 0.75), transparent);
+    color: var(--color-white);
+  }
+  .team__name {
+    font-weight: 600;
+    font-size: 1.5rem;
+  }
+  .team__role {
+    font-size: 1rem;
+  }
+
+  /* ── Testimonials ───────────────────────────────────────────────────────── */
+  .testimonials__intro {
+    display: grid;
+    grid-template-columns: minmax(0, 636px) 1fr;
+    gap: var(--space-xl);
+    margin-bottom: var(--space-4xl);
+  }
+  .testimonials__intro-heading h2 {
+    color: var(--color-violet);
+  }
+  .testimonials__intro-body {
+    display: grid;
+    gap: var(--space-md);
+  }
+  .testimonials__intro-body p {
+    color: var(--color-text-default);
+  }
+  .testimonials__intro-body :global(.btn) {
+    justify-self: start;
+  }
+  .testimonials__grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-md);
+  }
+  .testimonials__card {
+    position: relative;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+  }
+  .testimonials__photo {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 421 / 520;
+    object-fit: cover;
+    display: block;
+    filter: brightness(0.7);
+  }
+  .testimonials__card-body {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    gap: var(--space-2xs);
+    padding: var(--space-xl);
+    color: var(--color-white);
+  }
+  .testimonials__quote {
+    font-size: var(--type-body-lg-size);
+    line-height: var(--type-body-lg-line);
+    margin-bottom: var(--space-md);
+  }
+  .testimonials__name {
+    font-weight: var(--font-weight-bold);
+    font-size: 1.5rem;
+  }
+  .testimonials__role {
+    font-size: var(--type-body-lg-size);
+  }
+
+  /* ── FAQ ────────────────────────────────────────────────────────────────── */
+  .faq__grid {
+    display: grid;
+    grid-template-columns: minmax(0, 552px) 1fr;
+    gap: var(--space-3xl);
+  }
+  .faq__intro {
+    display: grid;
+    gap: var(--space-sm);
+    align-content: start;
+  }
+  .faq__intro h2 {
+    color: var(--color-violet);
+  }
+  .faq__intro p.u-body-lg {
+    color: var(--color-text-default);
+  }
+  .faq__intro :global(.btn) {
+    justify-self: start;
+    margin-top: var(--space-sm);
+  }
+  .faq__list {
+    display: grid;
+    align-content: start;
+  }
+  .faq__item {
+    padding-block: var(--space-lg);
+    border-bottom: 1px solid var(--color-border-subtle);
+  }
+  .faq__question {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-md);
+    list-style: none;
+    cursor: pointer;
+    font-weight: var(--font-weight-bold);
+    font-size: var(--type-body-lg-size);
+    color: var(--color-violet);
+  }
+  .faq__question::-webkit-details-marker {
+    display: none;
+  }
+  .faq__toggle {
+    flex: none;
+    position: relative;
+    inline-size: 1.25rem;
+    block-size: 1.25rem;
+  }
+  .faq__toggle::before,
+  .faq__toggle::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    margin: auto;
+    background: var(--color-accent-warm);
+    transition: transform var(--motion-base) var(--easing-standard);
+  }
+  .faq__toggle::before {
+    inline-size: 100%;
+    block-size: 2px;
+  }
+  .faq__toggle::after {
+    inline-size: 2px;
+    block-size: 100%;
+  }
+  .faq__item[open] .faq__toggle::after {
+    transform: rotate(90deg);
+  }
+  .faq__answer {
+    margin-top: var(--space-md);
+    color: var(--color-text-muted);
+  }
+
+  /* ── CTA ────────────────────────────────────────────────────────────────── */
+  .cta__card {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2xl);
+    padding: var(--space-3xl);
+    border-radius: var(--radius-md);
+  }
+  .cta__text {
+    display: grid;
+    gap: var(--space-sm);
+    max-width: 34rem;
+  }
+  .cta__actions {
+    display: flex;
+    gap: var(--space-md);
+    flex-wrap: wrap;
+  }
+
+  /* ── Responsive ─────────────────────────────────────────────────────────── */
+  @media (max-width: 1024px) {
+    .who__grid,
+    .testimonials__intro,
+    .faq__grid {
+      grid-template-columns: 1fr;
+    }
+    .services__grid,
+    .team__grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+  @media (max-width: 900px) {
+    .hero__grid {
+      grid-template-columns: 1fr;
+    }
+    .hero__heading,
+    .hero__lead {
+      max-width: none;
+    }
+    .hero__visual {
+      max-width: 24rem;
+      margin-inline: auto;
+    }
+  }
+  @media (max-width: 640px) {
+    .services__grid {
+      grid-template-columns: 1fr;
+    }
+    .team__grid,
+    .testimonials__grid {
+      grid-template-columns: 1fr;
+    }
+    .who__stats {
+      flex-wrap: wrap;
+      gap: var(--space-md);
+    }
+    .who__stat {
+      flex: 1 1 40%;
+    }
+    .cta__card {
+      justify-content: center;
+      text-align: center;
+    }
+    .cta__text {
+      max-width: none;
+    }
+    .cta__actions {
+      justify-content: center;
+    }
+  }
+</style>

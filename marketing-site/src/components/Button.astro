@@ -1,0 +1,116 @@
+---
+/**
+ * Button — token-driven action atom. Renders a real <a> when `href` is given (a link that
+ * looks like a button) and a real <button> otherwise (Native HTML first, WORKFLOW.md §4).
+ * Variants map to semantic colour roles only, so both brands theme it for free.
+ *
+ * Variants confirmed against Home's node.json (every `GIEVA Button` instance on the page):
+ *   - `primary`   solid accent-warm fill, white label (Book Consultancy, Subscribe…)
+ *   - `secondary` accent-warm at 10% fill/border, accent-warm label (Take Test, Log In,
+ *                 Learn more, Chat with us…) — used on both light and dark surfaces as-is,
+ *                 so it does NOT hook into the inverse-surface colour flip.
+ *   - `link`      no fill/border, just an underline-free accent-warm label + arrow (the
+ *                 "Learn more" links inside the dark service cards).
+ * An arrow icon is the norm (every button in the design carries one); pass `arrow={false}`
+ * to omit it for the rare label-only case.
+ */
+interface Props {
+  href?: string;
+  variant?: 'primary' | 'secondary' | 'link';
+  type?: 'button' | 'submit' | 'reset';
+  arrow?: boolean;
+  class?: string;
+}
+
+const {
+  href,
+  variant = 'primary',
+  type = 'button',
+  arrow = true,
+  class: className,
+} = Astro.props;
+const cls = ['btn', `btn--${variant}`, className].filter(Boolean).join(' ');
+const Tag = href ? 'a' : 'button';
+---
+
+<Tag class={cls} href={href} type={href ? undefined : type}>
+  <span class="btn__label"><slot /></span>
+  {
+    arrow && (
+      <svg
+        class="btn__arrow"
+        width="15"
+        height="13"
+        viewBox="0 0 15 13"
+        fill="none"
+        aria-hidden="true"
+        focusable="false"
+      >
+        <path
+          d="M8.5 1L14 6.5M14 6.5L8.5 12M14 6.5H1"
+          stroke="currentColor"
+          stroke-width="1.6"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </svg>
+    )
+  }
+</Tag>
+
+<style>
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2xs);
+    padding: var(--space-xs) var(--space-md);
+    border-radius: var(--radius-sm);
+    font-family: var(--font-family-base);
+    font-size: var(--type-body-lg-size);
+    line-height: var(--type-body-lg-line);
+    letter-spacing: var(--type-body-lg-tracking);
+    font-weight: var(--font-weight-regular);
+    text-decoration: none;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition:
+      background-color var(--motion-fast) var(--easing-standard),
+      color var(--motion-fast) var(--easing-standard),
+      border-color var(--motion-fast) var(--easing-standard);
+  }
+  .btn__arrow {
+    flex: none;
+  }
+  .btn--primary {
+    background: var(--color-accent-warm);
+    border-color: var(--color-accent-warm);
+    color: var(--color-text-inverse);
+  }
+  .btn--primary:hover {
+    background: var(--color-action-hover);
+    border-color: var(--color-action-hover);
+  }
+  .btn--secondary {
+    background: var(--color-orange-10);
+    border-color: var(--color-orange-10);
+    color: var(--color-accent-warm);
+  }
+  .btn--secondary:hover {
+    background: var(--color-accent-warm);
+    border-color: var(--color-accent-warm);
+    color: var(--color-text-inverse);
+  }
+  .btn--link {
+    padding: 0;
+    border-radius: 0;
+    color: var(--color-accent-warm);
+  }
+  .btn--link .btn__label {
+    text-decoration: underline;
+    text-underline-offset: 0.15em;
+  }
+  .btn--link:hover {
+    color: var(--color-action-hover);
+  }
+</style>

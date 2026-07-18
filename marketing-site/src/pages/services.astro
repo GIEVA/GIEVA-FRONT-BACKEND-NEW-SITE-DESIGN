@@ -1,0 +1,182 @@
+---
+/**
+ * Consultancy Services (/services) — the ★ reusable template page (docs/consultancy-build-plan.md).
+ * Built against the committed Figma node 8119:7174
+ * (design/figma/fTqnnV20l9htP7vFJrOsvn/8119-7174/). Content lives in `@lib/services-content`,
+ * kept separate from this file so future sub-page riffs can reuse the same shape.
+ *
+ * Typography confirmed against node.json (not guessed):
+ *   - Hero "Study Abroad": 64px/700 (`--font-size-hero`), but paired with the h3-style
+ *     56px line-height / -0.26 tracking (`--line-height-h2`/`--letter-spacing-h2`) rather than
+ *     the hero role's own 72px/-3.3 — a one-off combination on this short, single-line title,
+ *     composed from existing primitives rather than adding a new named role for one page.
+ *   - Section titles ("HEALS", "Scholarship Advising", …): 40/48/700/0 — exactly `--type-h3`,
+ *     unused by any page until now. Colour `--color-violet` (matches every other page's heading
+ *     colour), same for the subtitle line directly beneath it.
+ *   - Sub-headings ("What is HEALS about", "What HEALS covers", "What it costs"): 24/32/700/-1.2
+ *     — exactly `--type-lead`, colour `--color-text-default` (NOT violet — a real distinction
+ *     confirmed per-node, unlike the section title above it).
+ *   - Body copy, bullet list, subtitle: 18/24/400/-0.16 — exactly `--type-body-lg`.
+ *   - Spacing/radii: every gap/padding on this page (80px between section title and body, 40px
+ *     column gap, 24px within a block, 120px page rhythm) already exists in the snapped scale
+ *     from Home's build — no new spacing tokens needed.
+ *
+ * Content notes (confirmed via node.json, not guessed):
+ *   - "Admission Processing" and "Tuition & Acceptance Fee Payments" duplicate another
+ *     section's about/covers copy word-for-word in the source — the design's real
+ *     not-yet-personalised state (`@lib/services-content` header comment), kept as-is, same
+ *     precedent as Home's repeated team/testimonial placeholders.
+ *   - Only the HEALS-content "about" paragraphs carry a bold-italic accent-warm lead sentence
+ *     ("Studying abroad shouldn't come down to who you know.") — confirmed via
+ *     `characterStyleOverrides`; the Scholarship/Career/Tuition about paragraphs have none.
+ *   - The CTA banner (eyebrow/heading/body/buttons) is identical content to Home's CTA,
+ *     including the same "Book Free ConsultationView All Services" copy/paste artifact
+ *     trailing the paragraph — trimmed here the same way Home's build trimmed it. The CTA
+ *     buttons carry no arrow icon on this page (`ArrowRight` instance `visible: false` in
+ *     node.json), unlike Home's CTA buttons — confirmed per-instance, not a guess.
+ *   - Every cost row's second grid column is an empty container in the source (spacing/balance
+ *     only) — reproduced by leaving `.service-detail__row`'s second cell unpopulated rather
+ *     than adding a dummy element.
+ */
+import BaseLayout from '@layouts/BaseLayout.astro';
+import Button from '@components/Button.astro';
+import ServiceDetailSection from '@components/ServiceDetailSection.astro';
+import { Image } from 'astro:assets';
+import { servicesHeroPhoto } from '@lib/services-images';
+import { heroTitle, services } from '@lib/services-content';
+---
+
+<BaseLayout
+  title="Services — GIEVA Consultancy"
+  description="From test registration to study-abroad advising — explore every GIEVA consultancy service, what it covers, and what it costs."
+  brand="consultancy"
+>
+  <!-- ── Hero ─────────────────────────────────────────────────────────────────── -->
+  <section class="services-hero">
+    <div class="services-hero__media">
+      <Image
+        src={servicesHeroPhoto}
+        alt=""
+        width={1440}
+        height={670}
+        class="services-hero__photo"
+      />
+      <div class="services-hero__scrim" aria-hidden="true"></div>
+    </div>
+    <div class="container services-hero__content">
+      <h1 class="services-hero__heading">{heroTitle}</h1>
+    </div>
+  </section>
+
+  <!-- ── Service details + CTA ────────────────────────────────────────────────── -->
+  <section class="section services-body">
+    <div class="container services-body__list">
+      {services.map((service) => <ServiceDetailSection {...service} />)}
+
+      <div class="cta__card surface-inverse" data-surface="inverse">
+        <div class="cta__text">
+          <p class="u-eyebrow">Get in Touch</p>
+          <h2 class="u-section-title">
+            Ready to Take Your <em class="u-accent-em">First Step?</em>
+          </h2>
+          <p class="u-body-lg">
+            Book a free consultation with a GIEVA counselor today. No commitment, no pressure —
+            just clarity on your path forward.
+          </p>
+        </div>
+        <div class="cta__actions">
+          <Button variant="primary" href="/book-consultancy" arrow={false}>
+            Book Consultancy
+          </Button>
+          <Button variant="secondary" href="/services" arrow={false}>View all Services</Button>
+        </div>
+      </div>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  /* ── Hero ───────────────────────────────────────────────────────────────── */
+  .services-hero {
+    position: relative;
+  }
+  .services-hero__media {
+    position: relative;
+  }
+  .services-hero__photo {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+  .services-hero__scrim {
+    position: absolute;
+    inset: 0;
+    background: rgb(0 0 0 / 0.25);
+  }
+  .services-hero__content {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding-bottom: var(--space-6xl);
+  }
+  .services-hero__heading {
+    margin: 0;
+    color: var(--color-white);
+    font-family: var(--font-family-base);
+    font-size: var(--font-size-hero);
+    line-height: var(--line-height-h2);
+    letter-spacing: var(--letter-spacing-h2);
+    font-weight: var(--font-weight-bold);
+    text-align: center;
+    overflow-wrap: anywhere;
+  }
+
+  /* ── Service details + CTA ─────────────────────────────────────────────── */
+  .services-body {
+    padding-block: var(--space-6xl);
+  }
+  .services-body__list {
+    display: grid;
+    gap: var(--space-6xl);
+  }
+
+  /* ── CTA (same content/shape as Home's) ────────────────────────────────── */
+  .cta__card {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2xl);
+    padding: var(--space-3xl);
+    border-radius: var(--radius-md);
+  }
+  .cta__text {
+    display: grid;
+    gap: var(--space-sm);
+    max-width: 34rem;
+  }
+  .cta__actions {
+    display: flex;
+    gap: var(--space-md);
+    flex-wrap: wrap;
+  }
+
+  /* ── Responsive ─────────────────────────────────────────────────────────── */
+  @media (max-width: 640px) {
+    .services-hero__heading {
+      font-size: var(--font-size-h3);
+    }
+    .cta__card {
+      justify-content: center;
+      text-align: center;
+    }
+    .cta__text {
+      max-width: none;
+    }
+    .cta__actions {
+      justify-content: center;
+    }
+  }
+</style>

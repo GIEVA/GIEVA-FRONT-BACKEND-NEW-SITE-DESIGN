@@ -1,0 +1,264 @@
+---
+/**
+ * SiteHeader — the shared masthead: floating "glass" pill nav, confirmed against Home's
+ * node.json (5891:5463 → "TOP MENU", scrollBehavior: FIXED, backdrop blur radius 6).
+ *
+ * Zero-JS baseline (WORKFLOW.md §1.5): every link is a real, keyboard-reachable <a>. No
+ * mobile frame exists in the design, so the mobile collapse below is authored by us — a
+ * native <details>/<summary> disclosure, so the menu works with zero script. The nav +
+ * actions markup is intentionally duplicated (desktop copy / disclosure copy): only one is
+ * ever in the accessibility tree at a time (the other is `display:none` or, for the closed
+ * <details>, natively unrendered), so screen readers never see two "Book Consultancy" links.
+ *
+ * Active state uses aria-current="page" (native, announced by screen readers) rather than a
+ * visual-only cue.
+ */
+import { primaryNav, isActive } from '@lib/nav';
+import Button from '@components/Button.astro';
+import { Image } from 'astro:assets';
+import { logoMark } from '@lib/home-images';
+
+const current = Astro.url.pathname;
+---
+
+<header class="site-header">
+  <div class="site-header__pill">
+    <a class="site-header__brand" href="/">
+      <Image src={logoMark} alt="" width={40} height={40} class="site-header__logo" />
+      <span class="site-header__wordmark">GIEVA<span class="site-header__tld">.org</span></span
+      >
+      <span class="visually-hidden"> — go to home page</span>
+    </a>
+
+    <nav class="site-nav site-nav--desktop" aria-label="Primary">
+      <ul role="list" class="site-nav__list">
+        {
+          primaryNav.map((item) => (
+            <li>
+              <a
+                class="site-nav__link"
+                href={item.href}
+                aria-current={isActive(current, item.href) ? 'page' : undefined}
+              >
+                {item.label}
+                <svg
+                  class="site-nav__caret"
+                  width="12"
+                  height="7"
+                  viewBox="0 0 12 7"
+                  fill="none"
+                  aria-hidden="true"
+                  focusable="false"
+                >
+                  <path
+                    d="M1 1l5 5 5-5"
+                    stroke="currentColor"
+                    stroke-width="1.5"
+                    stroke-linecap="round"
+                  />
+                </svg>
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </nav>
+
+    <div class="site-header__actions site-header__actions--desktop">
+      <a class="site-header__icon-link" href="/search">
+        <span class="visually-hidden">Search the site</span>
+        <svg
+          width="20"
+          height="20"
+          viewBox="0 0 20 20"
+          fill="none"
+          aria-hidden="true"
+          focusable="false"
+        >
+          <circle cx="9" cy="9" r="7" stroke="currentColor" stroke-width="1.6"></circle>
+          <path
+            d="M14.5 14.5L19 19"
+            stroke="currentColor"
+            stroke-width="1.6"
+            stroke-linecap="round"></path>
+        </svg>
+      </a>
+      <Button variant="secondary" href="/login" arrow={false}>Log In</Button>
+      <Button variant="primary" href="/book-consultancy">Book Consultancy</Button>
+    </div>
+
+    <details class="site-header__menu">
+      <summary class="site-header__menu-toggle">
+        <span class="visually-hidden">Open menu</span>
+        <svg
+          width="20"
+          height="14"
+          viewBox="0 0 20 14"
+          fill="none"
+          aria-hidden="true"
+          focusable="false"
+        >
+          <path d="M0 1h20M0 7h20M0 13h20" stroke="currentColor" stroke-width="2"></path>
+        </svg>
+      </summary>
+
+      <div class="site-header__menu-panel">
+        <nav class="site-nav" aria-label="Primary">
+          <ul role="list" class="site-nav__list">
+            {
+              primaryNav.map((item) => (
+                <li>
+                  <a
+                    class="site-nav__link"
+                    href={item.href}
+                    aria-current={isActive(current, item.href) ? 'page' : undefined}
+                  >
+                    {item.label}
+                  </a>
+                </li>
+              ))
+            }
+          </ul>
+        </nav>
+        <div class="site-header__actions">
+          <Button variant="secondary" href="/login" arrow={false}>Log In</Button>
+          <Button variant="primary" href="/book-consultancy">Book Consultancy</Button>
+        </div>
+      </div>
+    </details>
+  </div>
+</header>
+
+<style>
+  .site-header {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    padding: var(--space-2xs) var(--space-lg) 0;
+  }
+  .site-header__pill {
+    position: relative;
+    max-width: var(--container-max);
+    margin-inline: auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-lg);
+    padding: var(--space-sm) var(--space-lg);
+    border-radius: var(--radius-lg);
+    background: rgb(255 255 255 / 0.85);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+  }
+  .site-header__brand {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-3xs);
+    text-decoration: none;
+    flex: none;
+  }
+  .site-header__logo {
+    border-radius: 50%;
+  }
+  .site-header__wordmark {
+    font-weight: var(--font-weight-bold);
+    font-size: 1.75rem;
+    line-height: 1;
+    color: var(--color-text-default);
+  }
+  .site-header__tld {
+    color: var(--color-feedback-success);
+    font-weight: var(--font-weight-regular);
+  }
+
+  .site-nav__list {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-md);
+  }
+  .site-nav__link {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2xs);
+    color: var(--color-mine-shaft);
+    text-decoration: none;
+    font-size: var(--type-body-lg-size);
+    font-weight: var(--font-weight-bold);
+    line-height: var(--type-body-lg-line);
+    padding-block: var(--space-3xs);
+  }
+  .site-nav__caret {
+    flex: none;
+  }
+  .site-nav__link:hover {
+    color: var(--color-accent-warm);
+  }
+  .site-nav__link[aria-current='page'] {
+    color: var(--color-accent-warm);
+  }
+
+  .site-header__actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    flex: none;
+  }
+  .site-header__icon-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: 2.5rem;
+    block-size: 2.5rem;
+    color: var(--color-text-default);
+  }
+
+  .site-header__menu {
+    display: none;
+  }
+  .site-header__menu-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: 2.5rem;
+    block-size: 2.5rem;
+    color: var(--color-text-default);
+    cursor: pointer;
+    list-style: none;
+  }
+  .site-header__menu-toggle::-webkit-details-marker {
+    display: none;
+  }
+  .site-header__menu[open] .site-header__menu-toggle {
+    color: var(--color-action-primary);
+  }
+  .site-header__menu-panel {
+    position: absolute;
+    inset-inline: 0;
+    top: calc(100% + var(--space-2xs));
+    display: grid;
+    gap: var(--space-md);
+    padding: var(--space-md);
+    border-radius: var(--radius-lg);
+    background: var(--color-surface-default);
+    box-shadow: 0 12px 32px rgb(0 0 0 / 0.12);
+  }
+  .site-header__menu-panel .site-nav__list {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .site-header__menu-panel .site-header__actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  @media (max-width: 900px) {
+    .site-nav--desktop,
+    .site-header__actions--desktop {
+      display: none;
+    }
+    .site-header__menu {
+      display: block;
+    }
+  }
+</style>

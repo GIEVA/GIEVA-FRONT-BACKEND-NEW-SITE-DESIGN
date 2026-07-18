@@ -1,0 +1,10 @@
+dist/
+.astro/
+node_modules/
+playwright-report/
+test-results/
+package-lock.json
+design/tokens/gieva.source.tokens.json
+# Materialised Figma ingestion — machine-generated node trees, rendered SVGs, and binaries.
+# Reformatting multi-MB node.json is pointless churn, and the SVGs are Figma's output, not ours.
+design/figma/

@@ -1,0 +1,508 @@
+---
+/**
+ * /styleguide (Consultancy) — the living proof of the design system. Renders every token,
+ * the type scale, colour contrast grades, and the shell components, so the foundation is
+ * shown coherent BEFORE any page is built (WORKFLOW.md §Phase 1, build plan Phase 0.5).
+ *
+ * Colour pairings display their measured WCAG ratio + grade — parity/a11y verified, not
+ * asserted (TOKENS.md §3).
+ */
+import BaseLayout from '@layouts/BaseLayout.astro';
+import Button from '@components/Button.astro';
+import { contrastRatio, wcagLevel } from '@lib/contrast';
+
+const primitives = [
+  { name: 'Electric violet', varName: '--color-electric-violet', hex: '#581CFF' },
+  { name: 'Violet', varName: '--color-violet', hex: '#120633' },
+  { name: 'Mine shaft', varName: '--color-mine-shaft', hex: '#292929' },
+  { name: 'Mid gray', varName: '--color-mid-gray', hex: '#636366' },
+  { name: 'Periwinkle', varName: '--color-periwinkle', hex: '#CAD3FF' },
+  { name: 'Outrageous orange', varName: '--color-outrageous-orange', hex: '#FF5A3E' },
+  { name: 'Chartreuse yellow', varName: '--color-chartreuse-yellow', hex: '#E1FF01' },
+  { name: 'Aqua', varName: '--color-aqua', hex: '#00F5F1' },
+  { name: 'Green', varName: '--color-green', hex: '#007F0E' },
+  { name: 'Orange', varName: '--color-orange', hex: '#E65320' },
+  { name: 'White', varName: '--color-white', hex: '#FFFFFF' },
+];
+
+const semanticRoles = [
+  {
+    token: '--color-action-primary',
+    value: 'Electric violet',
+    role: 'Primary buttons, links, focus',
+  },
+  { token: '--color-surface-default', value: 'White', role: 'Page background' },
+  { token: '--color-surface-inverse', value: 'Violet', role: 'Dark sections' },
+  { token: '--color-text-default', value: 'Mine shaft', role: 'Body text on light' },
+  { token: '--color-text-muted', value: 'Mid gray', role: 'Secondary text' },
+  { token: '--color-text-inverse', value: 'White', role: 'Text on dark' },
+  { token: '--color-accent-warm', value: 'Outrageous orange', role: 'Warm accents' },
+  {
+    token: '--color-accent-bright',
+    value: 'Chartreuse (dark only)',
+    role: 'Display accents on dark',
+  },
+  { token: '--color-border-subtle', value: 'Periwinkle', role: 'Hairlines' },
+  { token: '--color-feedback-success', value: 'Green', role: 'Success states' },
+  { token: '--color-feedback-warning', value: 'Orange', role: 'Warning states' },
+];
+
+// Foreground/background pairings graded against WCAG (TOKENS.md §3). `large` uses the
+// large-text thresholds (≥24px, or ≥18.66px bold).
+const pairings = [
+  {
+    label: 'Body text',
+    fg: '#292929',
+    fgName: 'Mine shaft',
+    bg: '#FFFFFF',
+    bgName: 'White',
+    large: false,
+  },
+  {
+    label: 'Muted text',
+    fg: '#636366',
+    fgName: 'Mid gray',
+    bg: '#FFFFFF',
+    bgName: 'White',
+    large: false,
+  },
+  {
+    label: 'Link / primary',
+    fg: '#581CFF',
+    fgName: 'Electric violet',
+    bg: '#FFFFFF',
+    bgName: 'White',
+    large: false,
+  },
+  {
+    label: 'Label on primary',
+    fg: '#FFFFFF',
+    fgName: 'White',
+    bg: '#581CFF',
+    bgName: 'Electric violet',
+    large: false,
+  },
+  {
+    label: 'Inverse body',
+    fg: '#FFFFFF',
+    fgName: 'White',
+    bg: '#120633',
+    bgName: 'Violet',
+    large: false,
+  },
+  {
+    label: 'Bright accent (dark)',
+    fg: '#E1FF01',
+    fgName: 'Chartreuse',
+    bg: '#120633',
+    bgName: 'Violet',
+    large: true,
+  },
+  {
+    label: 'Bright accent alt (dark)',
+    fg: '#00F5F1',
+    fgName: 'Aqua',
+    bg: '#120633',
+    bgName: 'Violet',
+    large: true,
+  },
+  {
+    label: 'Warm accent',
+    fg: '#FF5A3E',
+    fgName: 'Outrageous orange',
+    bg: '#FFFFFF',
+    bgName: 'White',
+    large: true,
+  },
+].map((p) => {
+  const ratio = contrastRatio(p.fg, p.bg);
+  return { ...p, ratio: ratio.toFixed(2), level: wcagLevel(ratio, p.large) };
+});
+
+const typeScale = [
+  {
+    name: 'Display',
+    cls: 'u-display',
+    spec: '110 / 120 · 400 · −3.3',
+    sample: 'Consultancy that moves',
+  },
+  {
+    name: 'Heading 2',
+    cls: 'u-h2',
+    spec: '48 / 56 · 700 · −0.26',
+    sample: 'Building capacity together',
+  },
+  { name: 'Heading 3', cls: 'u-h3', spec: '40 / 48 · 700 · 0', sample: 'What we do best' },
+  {
+    name: 'Title',
+    cls: 'u-title',
+    spec: '48 / 52 · 400 · −1.44',
+    sample: 'A lighter title voice',
+  },
+  {
+    name: 'Lead',
+    cls: 'u-lead',
+    spec: '24 / 32 · 700 · −1.2',
+    sample: 'A short, bold introduction that sets up the section.',
+  },
+  {
+    name: 'Body',
+    cls: 'u-body',
+    spec: '14 / 20 · 400 · 0',
+    sample: 'The workhorse paragraph style used across the site for readable running text.',
+  },
+  {
+    name: 'Body tight',
+    cls: 'u-body-tight',
+    spec: '14 / 20 · 400 · −0.14',
+    sample: 'A slightly tighter body variant for dense UI text.',
+  },
+  {
+    name: 'Caption',
+    cls: 'u-caption',
+    spec: '14 / 21 · 400 · −0.14',
+    sample: 'Captions, labels, and footnotes.',
+  },
+];
+
+const spacing = ['3xs', '2xs', 'xs', 'sm', 'md', 'lg', 'xl', '2xl', '3xl', '4xl', '5xl'];
+---
+
+<BaseLayout
+  title="Styleguide — GIEVA Consultancy"
+  description="The GIEVA Consultancy design system: tokens, type scale, colour contrast, and shell components."
+  brand="consultancy"
+>
+  <div class="container sg">
+    <header class="sg__intro">
+      <p class="u-caption">GIEVA · Consultancy</p>
+      <h1 class="u-title">Design system styleguide</h1>
+      <p class="u-body sg__lead">
+        The foundation, proven coherent before any page is built. Tokens flow primitives →
+        semantic roles → the consultancy brand theme (<code>[data-brand="consultancy"]</code>).
+        Colour pairings show their measured WCAG ratio and grade.
+      </p>
+    </header>
+
+    <!-- Colour primitives -->
+    <section class="sg__section" aria-labelledby="sg-primitives">
+      <h2 id="sg-primitives" class="u-h3">Colour primitives</h2>
+      <ul role="list" class="sg__swatches">
+        {
+          primitives.map((c) => (
+            <li class="sg__swatch">
+              <span
+                class="sg__chip"
+                style={`background: var(${c.varName});`}
+                aria-hidden="true"
+              />
+              <span class="sg__swatch-name u-body">{c.name}</span>
+              <code class="sg__swatch-code">{c.hex}</code>
+            </li>
+          ))
+        }
+      </ul>
+    </section>
+
+    <!-- Semantic roles -->
+    <section class="sg__section" aria-labelledby="sg-semantic">
+      <h2 id="sg-semantic" class="u-h3">Semantic colour roles</h2>
+      <p class="u-body sg__note">Components consume these, never primitives directly.</p>
+      <div class="sg__tablewrap">
+        <table class="sg__table">
+          <thead>
+            <tr>
+              <th scope="col">Token</th>
+              <th scope="col">Consultancy value</th>
+              <th scope="col">Role</th>
+            </tr>
+          </thead>
+          <tbody>
+            {
+              semanticRoles.map((r) => (
+                <tr>
+                  <td>
+                    <code>{r.token}</code>
+                  </td>
+                  <td>{r.value}</td>
+                  <td>{r.role}</td>
+                </tr>
+              ))
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Contrast -->
+    <section class="sg__section" aria-labelledby="sg-contrast">
+      <h2 id="sg-contrast" class="u-h3">Colour contrast (WCAG 2.2)</h2>
+      <div class="sg__tablewrap">
+        <table class="sg__table">
+          <thead>
+            <tr>
+              <th scope="col">Pairing</th>
+              <th scope="col">Sample</th>
+              <th scope="col">Ratio</th>
+              <th scope="col">Grade</th>
+            </tr>
+          </thead>
+          <tbody>
+            {
+              pairings.map((p) => (
+                <tr>
+                  <td>
+                    {p.label}
+                    <span class="u-caption sg__pair-detail">
+                      {p.fgName} on {p.bgName}
+                      {p.large ? ' · large' : ''}
+                    </span>
+                  </td>
+                  <td>
+                    <span
+                      class="sg__contrast-sample"
+                      style={`color: ${p.fg}; background: ${p.bg};`}
+                    >
+                      Aa
+                    </span>
+                  </td>
+                  <td>{p.ratio}:1</td>
+                  <td>
+                    <span
+                      class={`sg__grade sg__grade--${p.level === 'Fail' ? 'fail' : 'pass'}`}
+                    >
+                      {p.level}
+                    </span>
+                  </td>
+                </tr>
+              ))
+            }
+          </tbody>
+        </table>
+      </div>
+      <p class="u-caption sg__note">
+        Chartreuse and aqua are reserved for large display accents on the dark violet surface,
+        where they pass — they fail as small text on white by design (TOKENS.md §3).
+      </p>
+    </section>
+
+    <!-- Type scale -->
+    <section class="sg__section" aria-labelledby="sg-type">
+      <h2 id="sg-type" class="u-h3">Type scale</h2>
+      <p class="u-body sg__note">
+        Arial throughout — a system font: zero web-font load, no FOUT.
+      </p>
+      <ul role="list" class="sg__type">
+        {
+          typeScale.map((t) => (
+            <li class="sg__type-row">
+              <p class="u-caption sg__type-meta">
+                {t.name} · {t.spec}
+              </p>
+              <p class={t.cls}>{t.sample}</p>
+            </li>
+          ))
+        }
+      </ul>
+    </section>
+
+    <!-- Spacing -->
+    <section class="sg__section" aria-labelledby="sg-spacing">
+      <h2 id="sg-spacing" class="u-h3">Spacing scale</h2>
+      <p class="u-caption sg__note">
+        Provisional 4px-based scale — confirmed per screen during page builds.
+      </p>
+      <ul role="list" class="sg__spacing">
+        {
+          spacing.map((s) => (
+            <li class="sg__spacing-row">
+              <code class="sg__spacing-name">--space-{s}</code>
+              <span
+                class="sg__spacing-bar"
+                style={`inline-size: var(--space-${s});`}
+                aria-hidden="true"
+              />
+            </li>
+          ))
+        }
+      </ul>
+    </section>
+
+    <!-- Buttons -->
+    <section class="sg__section" aria-labelledby="sg-buttons">
+      <h2 id="sg-buttons" class="u-h3">Buttons</h2>
+      <div class="sg__buttons">
+        <Button variant="primary" href="#sg-buttons">Primary action</Button>
+        <Button variant="secondary" href="#sg-buttons">Secondary action</Button>
+        <Button variant="primary">Primary (button)</Button>
+      </div>
+      <div class="sg__buttons surface-inverse" data-surface="inverse">
+        <Button variant="primary" href="#sg-buttons">Primary on dark</Button>
+        <Button variant="secondary" href="#sg-buttons">Secondary on dark</Button>
+      </div>
+    </section>
+
+    <!-- Shell -->
+    <section class="sg__section" aria-labelledby="sg-shell">
+      <h2 id="sg-shell" class="u-h3">Shell components</h2>
+      <p class="u-body sg__note">
+        The <strong>site header</strong> (top) and <strong>footer</strong> (bottom) are the shared
+        shell, rendered by <code>BaseLayout</code> on every route. Both are token-driven and the
+        footer exercises the inverse-surface text-role swap.
+      </p>
+    </section>
+  </div>
+</BaseLayout>
+
+<style>
+  .sg {
+    padding-block: var(--space-3xl);
+    display: grid;
+    gap: var(--space-4xl);
+  }
+  .sg__intro {
+    display: grid;
+    gap: var(--space-sm);
+    max-width: 72ch;
+  }
+  .sg__lead {
+    color: var(--color-text-muted);
+  }
+  .sg__section {
+    display: grid;
+    gap: var(--space-lg);
+  }
+  .sg__note {
+    color: var(--color-text-muted);
+    max-width: 72ch;
+  }
+
+  /* Swatches */
+  .sg__swatches {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: var(--space-lg);
+  }
+  .sg__swatch {
+    display: grid;
+    gap: var(--space-2xs);
+  }
+  .sg__chip {
+    display: block;
+    block-size: 72px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-black-08);
+  }
+  .sg__swatch-name {
+    font-weight: var(--font-weight-bold);
+  }
+  .sg__swatch-code {
+    color: var(--color-text-muted);
+    font-size: var(--type-body-size);
+  }
+
+  /* Tables */
+  .sg__tablewrap {
+    overflow-x: auto;
+  }
+  .sg__table {
+    inline-size: 100%;
+    border-collapse: collapse;
+    text-align: start;
+  }
+  .sg__table th,
+  .sg__table td {
+    padding: var(--space-sm) var(--space-md);
+    border-bottom: 1px solid var(--color-border-subtle);
+    vertical-align: top;
+    text-align: start;
+    font-size: var(--type-body-size);
+    line-height: var(--type-body-line);
+  }
+  .sg__table th {
+    font-weight: var(--font-weight-bold);
+    white-space: nowrap;
+  }
+  .sg__pair-detail {
+    display: block;
+  }
+  .sg__contrast-sample {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: 3.25rem;
+    block-size: 2.5rem;
+    /* Rendered at large-text size (24px bold): each pairing in the table passes at its
+       intended usage size, so the demo sample itself stays accessible (large threshold 3:1). */
+    font-size: 1.5rem;
+    line-height: 1;
+    border-radius: var(--radius-sm);
+    font-weight: var(--font-weight-bold);
+    border: 1px solid var(--color-black-08);
+  }
+  .sg__grade {
+    display: inline-block;
+    padding: 2px var(--space-xs);
+    border-radius: var(--radius-pill);
+    font-weight: var(--font-weight-bold);
+    font-size: var(--type-body-size);
+  }
+  .sg__grade--pass {
+    background: var(--color-feedback-success);
+    color: var(--color-white);
+  }
+  .sg__grade--fail {
+    background: var(--color-accent-warm);
+    color: var(--color-white);
+  }
+
+  /* Type specimens */
+  .sg__type {
+    display: grid;
+    gap: var(--space-2xl);
+  }
+  .sg__type-row {
+    display: grid;
+    gap: var(--space-xs);
+    border-top: 1px solid var(--color-border-subtle);
+    padding-top: var(--space-md);
+  }
+  .sg__type-meta {
+    color: var(--color-text-muted);
+  }
+
+  /* Spacing */
+  .sg__spacing {
+    display: grid;
+    gap: var(--space-sm);
+  }
+  .sg__spacing-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-lg);
+  }
+  .sg__spacing-name {
+    inline-size: 10ch;
+    flex: none;
+    color: var(--color-text-muted);
+  }
+  .sg__spacing-bar {
+    display: block;
+    block-size: 16px;
+    background: var(--color-action-primary);
+    border-radius: var(--radius-sm);
+  }
+
+  /* Buttons */
+  .sg__buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-md);
+    align-items: center;
+    padding: var(--space-lg);
+    border-radius: var(--radius-lg);
+  }
+  .sg__buttons.surface-inverse {
+    border: 1px solid var(--color-border-subtle);
+  }
+</style>

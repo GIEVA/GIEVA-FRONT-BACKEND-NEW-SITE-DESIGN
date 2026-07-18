@@ -1,0 +1,244 @@
+/**
+ * Base layer — element defaults, accessibility primitives, layout helpers, and the type
+ * utility classes that apply the semantic type roles (tokens.css §2) verbatim.
+ *
+ * Everything here consumes SEMANTIC tokens only — no primitive or hard-coded value. This is
+ * the boundary where the token system meets real HTML.
+ */
+
+/* Reset — predictable box model, no surprise margins. */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+body,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p,
+figure,
+blockquote,
+dl,
+dd {
+  margin: 0;
+}
+ul[role='list'],
+ol[role='list'] {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+img,
+picture,
+svg {
+  max-width: 100%;
+  display: block;
+}
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-family-base);
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line);
+  color: var(--color-text-default);
+  background: var(--color-surface-default);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Links — visible affordance, brand colour, accessible focus handled globally below. */
+a {
+  color: var(--color-link);
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+a:hover {
+  color: var(--color-link-hover);
+}
+
+/* A clearly visible focus indicator everywhere (WORKFLOW.md §2). Uses the themed ring so it
+   stays visible on both light and inverse surfaces. */
+:focus-visible {
+  outline: 3px solid var(--color-focus-ring);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* ── Accessibility helpers ──────────────────────────────────────────────────── */
+
+/* Visible-on-focus skip link — keyboard users reach main content immediately. */
+.skip-link {
+  position: absolute;
+  left: var(--space-xs);
+  top: -4rem;
+  z-index: 100;
+  padding: var(--space-xs) var(--space-sm);
+  background: var(--color-action-primary);
+  color: var(--color-action-primary-contrast);
+  text-decoration: none;
+  border-radius: var(--radius-sm);
+  transition: top var(--motion-fast) var(--easing-standard);
+}
+.skip-link:focus {
+  top: var(--space-xs);
+}
+
+/* Screen-reader-only text that stays in the accessibility tree. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ── Layout primitives ──────────────────────────────────────────────────────── */
+
+.container {
+  width: 100%;
+  max-width: var(--container-max);
+  margin-inline: auto;
+  padding-inline: var(--container-gutter);
+}
+
+/* Inverse (dark) section: sets its own surface + swaps text roles via tokens.css §3. */
+.surface-inverse {
+  background: var(--color-surface-inverse);
+  color: var(--color-text-default);
+}
+
+/* ── Type utilities — apply a semantic type role. Specimens/components use these. ──
+   `overflow-wrap: anywhere` keeps large display type from forcing horizontal page scroll
+   on narrow viewports; true responsive scaling is authored per page during builds. */
+.u-hero,
+.u-display,
+.u-section-title,
+.u-h2,
+.u-h3,
+.u-title,
+.u-lead,
+.u-body,
+.u-body-lg,
+.u-body-tight,
+.u-eyebrow,
+.u-caption {
+  font-family: var(--font-family-base);
+  overflow-wrap: anywhere;
+}
+.u-hero {
+  font-size: var(--type-hero-size);
+  line-height: var(--type-hero-line);
+  font-weight: var(--type-hero-weight);
+  letter-spacing: var(--type-hero-tracking);
+}
+.u-display {
+  font-size: var(--type-display-size);
+  line-height: var(--type-display-line);
+  font-weight: var(--type-display-weight);
+  letter-spacing: var(--type-display-tracking);
+}
+.u-section-title {
+  font-size: var(--type-section-title-size);
+  line-height: var(--type-section-title-line);
+  font-weight: var(--type-section-title-weight);
+  letter-spacing: var(--type-section-title-tracking);
+}
+.u-h2 {
+  font-size: var(--type-h2-size);
+  line-height: var(--type-h2-line);
+  font-weight: var(--type-h2-weight);
+  letter-spacing: var(--type-h2-tracking);
+}
+.u-h3 {
+  font-size: var(--type-h3-size);
+  line-height: var(--type-h3-line);
+  font-weight: var(--type-h3-weight);
+  letter-spacing: var(--type-h3-tracking);
+}
+.u-title {
+  font-size: var(--type-title-size);
+  line-height: var(--type-title-line);
+  font-weight: var(--type-title-weight);
+  letter-spacing: var(--type-title-tracking);
+}
+.u-lead {
+  font-size: var(--type-lead-size);
+  line-height: var(--type-lead-line);
+  font-weight: var(--type-lead-weight);
+  letter-spacing: var(--type-lead-tracking);
+}
+.u-body {
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line);
+  font-weight: var(--type-body-weight);
+  letter-spacing: var(--type-body-tracking);
+}
+.u-body-lg {
+  font-size: var(--type-body-lg-size);
+  line-height: var(--type-body-lg-line);
+  font-weight: var(--type-body-lg-weight);
+  letter-spacing: var(--type-body-lg-tracking);
+}
+.u-body-tight {
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line);
+  font-weight: var(--type-body-weight);
+  letter-spacing: var(--type-body-tight-tracking);
+}
+.u-eyebrow {
+  font-size: var(--type-eyebrow-size);
+  line-height: var(--type-eyebrow-line);
+  font-weight: var(--type-eyebrow-weight);
+  letter-spacing: var(--type-eyebrow-tracking);
+  text-transform: uppercase;
+  color: var(--color-feedback-success);
+}
+.u-caption {
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
+  font-weight: var(--type-caption-weight);
+  letter-spacing: var(--type-caption-tracking);
+  color: var(--color-text-muted);
+}
+
+/* Underline modifier (TOKENS.md §4: underline variants are a modifier, not a scale step). */
+.u-underline {
+  text-decoration: underline;
+  text-underline-offset: 0.12em;
+}
+
+/* Bold-italic-orange emphasis span inside a heading (Home node.json: every recurring section
+   headline highlights its key phrase this way). A real <em> — it IS emphasis. */
+.u-accent-em {
+  font-style: italic;
+  color: var(--color-accent-warm);
+}
+
+/* ── Reduced motion — honour the user's OS preference globally (WORKFLOW.md §2). ── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -1,0 +1,58 @@
+{
+  "vectors": [
+    {
+      "id": "8187:9167",
+      "name": "TOP MENU",
+      "kind": "icon",
+      "file": "icon-8187-9167.svg"
+    },
+    {
+      "id": "I8210:8131;8210:7763",
+      "name": "LOGO",
+      "kind": "icon",
+      "file": "icon-I8210-8131;8210-7763.svg"
+    },
+    {
+      "id": "I8210:8131;8210:7804;4547:22453",
+      "name": "ng-icon",
+      "kind": "icon",
+      "file": "icon-I8210-8131;8210-7804;4547-22453.svg"
+    },
+    {
+      "id": "I8210:8131;8210:7812",
+      "name": "mail-01",
+      "kind": "icon",
+      "file": "icon-I8210-8131;8210-7812.svg"
+    },
+    {
+      "id": "I8210:8131;8210:7826",
+      "name": "oo-social-links → List",
+      "kind": "icon",
+      "file": "icon-I8210-8131;8210-7826.svg"
+    }
+  ],
+  "fills": [
+    {
+      "imageRef": "3172f31ce44b7c8cfb0a897f5d748407dc9e6cbc",
+      "sourceNode": "I8210:8131;8210:7763;5857:4414",
+      "name": "Gemini_Generated_Image_uvhg9uuvhg9uuvhg 1",
+      "file": "fill-3172f31ce44b7c8cfb0a897f5d748407dc9e6cbc.png",
+      "webp": "fill-3172f31ce44b7c8cfb0a897f5d748407dc9e6cbc.webp"
+    },
+    {
+      "imageRef": "55fffb0d206b64f043184380f13f723b24c692a3",
+      "sourceNode": "8187:8983",
+      "name": "Photo",
+      "file": "fill-55fffb0d206b64f043184380f13f723b24c692a3.jpg",
+      "webp": "fill-55fffb0d206b64f043184380f13f723b24c692a3.webp"
+    },
+    {
+      "imageRef": "8108addc2bb6ce97610dae38d4f1280c1e0332e7",
+      "sourceNode": "I8187:9250;6021:4618",
+      "name": "His excellency",
+      "file": "fill-8108addc2bb6ce97610dae38d4f1280c1e0332e7.jpg",
+      "webp": "fill-8108addc2bb6ce97610dae38d4f1280c1e0332e7.webp"
+    }
+  ],
+  "notes": []
+}

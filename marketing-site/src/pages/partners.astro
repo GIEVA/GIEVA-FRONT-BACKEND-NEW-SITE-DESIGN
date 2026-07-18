@@ -1,0 +1,369 @@
+---
+/**
+ * Partners (/partners) — Consultancy. Built against the committed Figma node 7385:5219
+ * (design/figma/fTqnnV20l9htP7vFJrOsvn/7385-5219/), see docs/consultancy-build-plan.md.
+ * Last of the 5 build-plan pages.
+ *
+ * Not linked from the shared header/footer nav (`src/lib/nav.ts`) — same finding as Team
+ * (Phase 4) and Home's original Phase 1 note: confirmed again against this page's own
+ * node.json (the shell nodes carry the identical nav, still no `/partners` entry). Built as a
+ * valid, tested, but intentionally unlinked route, per the build plan's instruction.
+ *
+ * Typography confirmed against node.json (not guessed):
+ *   - Hero "Strategic Partners": 64/56/700/-0.26 (`--font-size-hero` + `--line-height-h2`/
+ *     `--letter-spacing-h2`) — the same one-off composition every other page's hero title uses.
+ *     Same shared lecture-hall photo + 25% scrim, bottom-anchored/centred, reused verbatim.
+ *   - The lead sentence above the grid ("Together, GIEVA…") is 40/~46/700/0 — matches `.u-h3`
+ *     (40/48/700/0) closely enough that the ~2px line-height delta is Figma's intrinsic
+ *     auto-line-height, not a bound variable (no `boundVariables.lineHeight` on this node,
+ *     unlike every genuinely-token-bound text style elsewhere) — reusing `.u-h3` per the
+ *     established "line-height rounds to the nearest role" precedent. Its colour is
+ *     `--color-violet` (`#120633`) directly: a genuinely new usage of that primitive as
+ *     *text* on a *light* surface — previously only used as a dark-surface background. Not a
+ *     new token; the primitive already existed (TOKENS.md primitives are shared across roles).
+ *   - Each of the 24 partner-card names is 18/24/700/0 — bold, zero tracking, a combination no
+ *     existing named role captures (`.u-body-lg` is 400 weight/-0.16 tracking). Composed
+ *     directly from existing primitives (`--font-size-underline`, `--line-height-underline`,
+ *     `--letter-spacing-none`, `--font-weight-bold`) in this page's own `<style>` block — same
+ *     one-off-composition precedent as Services'/About's/Team's page-local combinations, no new
+ *     token added. Card descriptions match `.u-body-lg` (18/24/400/-0.16) exactly — reused as-is.
+ *   - "Become a Partner" is `.u-section-title` (48/56/700/-3.3) — confirmed as the *other* named
+ *     48px pattern (not `.u-h2`), matching Home's/Services' recurring-headline usage rather than
+ *     About's `.u-h2` finding. "Partner" is a bold-italic accent-warm run (confirmed via
+ *     `characterStyleOverrides`, override index 4) — the same hook-sentence pattern as every
+ *     other page, rendered with the existing `.u-accent-em` utility, no new class needed.
+ *   - Form field labels are `.u-body-lg` metrics but `--color-accent-warm`, not the inherited
+ *     inverse text colour — composed with an explicit colour override, same technique as the
+ *     CTA banner's `.u-eyebrow`/heading colour overrides elsewhere.
+ *
+ * Content notes confirmed via node.json (not guessed):
+ *   - The 24-card grid is Figma's `GRID` auto-layout mode with **manual** item positioning:
+ *     document order is NOT visual order (see `partners-content.ts`'s header comment —
+ *     "CoLab Innovation Hub" is the one card out of place). Built from a (row, col)-sorted
+ *     list so the DOM/reading order matches what's actually seen, not raw document order.
+ *   - `gridColumnGap`/`gridRowGap` are both exactly 84px — a genuine new spacing value (not in
+ *     the existing 4/8/12/16/24/32/40/48/64/80/96/120 scale) confirmed by (1312 - 3×84) / 4 =
+ *     265px matching every card's own bounding-box width exactly. Composed as a page-local
+ *     value rather than added to the global scale — see the note above `.partners-grid` below,
+ *     same "one-off values don't need a global token" precedent as every prior phase.
+ *   - Sterling Bank's card logo (node 8000:9930) has no raster fill AND no named-SVG vector —
+ *     every one of its ~40 paths is generically named "Vector", which the fetch helper's
+ *     dedup-by-name treats as noise (Phase 0 decision) and skips. Backfilled via a direct
+ *     one-node Figma images API render (see `partners-images.ts` + `assets/manifest.json`'s
+ *     `notes`) rather than guessing a substitute logo or re-running the whole page's ingestion.
+ *   - Datadotorg's description underlines "Data.Org" (confirmed via `characterStyleOverrides`,
+ *     `textDecoration: UNDERLINE`) — rendered with the existing `.u-underline` utility.
+ *   - Care4Water's description has literal authored line breaks (not organic wrap) — rendered
+ *     with `white-space: pre-line` so they're honoured exactly as authored.
+ *   - Genuine spelling errors in the source ("paartner", "pandenic", "interract" on the
+ *     EDIFACE card) reproduced verbatim per exact-replica-first, same precedent as About's
+ *     "Mision".
+ *   - No CTA banner on this page — unlike every other page (Home/Services/About/Team), which
+ *     all repeat the identical "Ready to Take Your First Step?" block, Partners' own node.json
+ *     has no such section: the "Become a Partner" interview form is the page's only closing
+ *     block. Confirmed by walking the tree, not assumed from precedent.
+ *   - The "Become a Partner" form (node 8000:10047) is a real 7-field `<form>` (name, company
+ *     name, company website, industry, phone, email, message) with an explicit `<label>` per
+ *     field in the source, right-aligned in a shared column ahead of the input — same
+ *     progressively-enhanceable, no-`action`-yet precedent as `SiteFooter`'s newsletter form
+ *     (there's no submission endpoint in scope for this build). Implemented as a single CSS
+ *     grid (`max-content 1fr` columns) rather than 7 independent flex rows so every label
+ *     shares one column width exactly like the source (all input columns start at the same x
+ *     regardless of their own label's length) — reproducing the effect without hand-tuning a
+ *     fixed pixel column width.
+ *
+ * Component reuse considered: `ServiceDetailSection` (the ★ template) shapes a
+ * title+subtitle/about-covers-cost block; Partners' content (a 24-item logo/name/description
+ * directory + a contact form) isn't that shape, so this page writes its own markup, same call
+ * as About's and Team's.
+ */
+import BaseLayout from '@layouts/BaseLayout.astro';
+import Button from '@components/Button.astro';
+import { Image } from 'astro:assets';
+import { partnersHeroPhoto } from '@lib/partners-images';
+import { partnerOrgs, partnerFormFields } from '@lib/partners-content';
+---
+
+<BaseLayout
+  title="Strategic Partners — GIEVA Consultancy"
+  description="The organisations, institutions, and companies GIEVA partners with to build a world of opportunities."
+  brand="consultancy"
+>
+  <!-- ── Hero ─────────────────────────────────────────────────────────────────── -->
+  <section class="partners-hero">
+    <div class="partners-hero__media">
+      <Image
+        src={partnersHeroPhoto}
+        alt=""
+        width={1440}
+        height={670}
+        class="partners-hero__photo"
+      />
+      <div class="partners-hero__scrim" aria-hidden="true"></div>
+    </div>
+    <div class="container partners-hero__content">
+      <h1 class="partners-hero__heading">Strategic Partners</h1>
+    </div>
+  </section>
+
+  <!-- ── Partner directory ────────────────────────────────────────────────────── -->
+  <section class="section partners-directory">
+    <div class="container">
+      <h2 class="u-h3 partners-lead">
+        Together, GIEVA and our partners help build a world of opportunities.
+      </h2>
+
+      <ul role="list" class="partners-grid">
+        {
+          partnerOrgs.map((org) => (
+            <li class="partner-card">
+              <div class="partner-card__logo">
+                <Image src={org.logo} alt="" class="partner-card__logo-img" />
+              </div>
+              <h3 class="partner-card__name">{org.name}</h3>
+              <p class="u-body-lg partner-card__desc">
+                {org.descriptionUnderline
+                  ? org.description.split(org.descriptionUnderline).map((chunk, i, arr) => (
+                      <>
+                        {chunk}
+                        {i < arr.length - 1 && (
+                          <span class="u-underline">{org.descriptionUnderline}</span>
+                        )}
+                      </>
+                    ))
+                  : org.description}
+              </p>
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+  </section>
+
+  <!-- ── Become a Partner ─────────────────────────────────────────────────────── -->
+  <section class="section partners-cta-section">
+    <div class="container">
+      <div class="partners-form surface-inverse" data-surface="inverse">
+        <div class="partners-form__header">
+          <h2 class="u-section-title">
+            Become a <em class="u-accent-em">Partner</em>
+          </h2>
+          <p class="u-body-lg">
+            Answer Interview questions to help us know how we can impact lives together
+          </p>
+        </div>
+
+        <form class="partners-form__fields">
+          {
+            partnerFormFields.map((field) => (
+              <>
+                <label class="partners-form__label u-body-lg" for={field.id}>
+                  {field.label}
+                </label>
+                <div class="partners-form__control">
+                  <input
+                    id={field.id}
+                    class="partners-form__input u-body-lg"
+                    type={field.type}
+                    name={field.id}
+                    placeholder="Your Answer"
+                    autocomplete={field.autocomplete}
+                    required
+                  />
+                </div>
+              </>
+            ))
+          }
+          <div class="partners-form__submit">
+            <Button variant="primary" type="submit">Send Message</Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  /* ── Shared section rhythm (matches Home/Services/About/Team) ────────────── */
+  .section {
+    padding-block: var(--space-6xl);
+  }
+
+  /* ── Hero ───────────────────────────────────────────────────────────────── */
+  .partners-hero {
+    position: relative;
+  }
+  .partners-hero__media {
+    position: relative;
+  }
+  .partners-hero__photo {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+  .partners-hero__scrim {
+    position: absolute;
+    inset: 0;
+    background: rgb(0 0 0 / 0.25);
+  }
+  .partners-hero__content {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding-bottom: var(--space-6xl);
+  }
+  .partners-hero__heading {
+    margin: 0;
+    color: var(--color-white);
+    font-family: var(--font-family-base);
+    font-size: var(--font-size-hero);
+    line-height: var(--line-height-h2);
+    letter-spacing: var(--letter-spacing-h2);
+    font-weight: var(--font-weight-bold);
+    text-align: center;
+    overflow-wrap: anywhere;
+  }
+
+  /* ── Partner directory ─────────────────────────────────────────────────────
+     `.partners-lead`'s colour is `--color-violet` directly — see header comment: a genuinely
+     new (light-surface text) usage of an existing dark-surface-background primitive. */
+  .partners-lead {
+    color: var(--color-violet);
+    text-align: center;
+    max-width: 50rem;
+    margin-inline: auto;
+  }
+
+  /* 84px column/row gap is confirmed from node.json's gridColumnGap/gridRowGap (both 84) and
+     isn't a step in the shared spacing scale — see header comment for the math. Composed here
+     rather than added as a new global token, same precedent as every prior page's one-offs. */
+  .partners-grid {
+    margin-top: var(--space-4xl);
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 84px;
+  }
+  /* Rows are a roughly uniform ~525-552px in the source regardless of content length (confirmed
+     against frame.png — even Care4Water's 7-line paragraph sits in the same row budget as
+     "College Board"'s 2-line one, with generous trailing whitespace below shorter cards) —
+     an intentional airy rhythm, not organic content-hugging. `min-height` reproduces that
+     rhythm while still letting a card whose real content needs more room grow past it, same
+     as the source's own row3 (552px) being slightly taller than the rest (525/470). */
+  .partner-card {
+    display: flex;
+    flex-direction: column;
+    min-height: 520px;
+  }
+  .partner-card__logo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 180px;
+  }
+  .partner-card__logo-img {
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+  }
+  /* The 5px accent-warm top border is a real divider between the logo and the name
+     (node.json: `individualStrokeWeights.top: 5` on the heading's own frame, paired with its
+     `paddingTop: 24` — border and gap live on the same element in the source). */
+  .partner-card__name {
+    margin: 0 0 var(--space-sm);
+    padding-top: var(--space-md);
+    border-top: 5px solid var(--color-accent-warm);
+    font-family: var(--font-family-base);
+    font-size: var(--font-size-underline);
+    line-height: var(--line-height-underline);
+    letter-spacing: var(--letter-spacing-none);
+    font-weight: var(--font-weight-bold);
+    color: var(--color-text-default);
+  }
+  .partner-card__desc {
+    margin: 0;
+    white-space: pre-line;
+  }
+
+  /* ── Become a Partner ───────────────────────────────────────────────────────
+     Flat dark panel (no corner radius in the source — confirmed, unlike the CTA banner cards
+     on every other page, which do use `--radius-md`). */
+  .partners-form {
+    padding: var(--space-3xl);
+    display: grid;
+    gap: var(--space-3xl);
+  }
+  .partners-form__header {
+    display: grid;
+    gap: var(--space-sm);
+    justify-items: center;
+    text-align: center;
+  }
+
+  /* 122px column gap confirmed from node.json's itemSpacing on every field row (8000:10056 and
+     siblings) — another one-off value outside the shared scale, same precedent as the grid's
+     84px above. */
+  .partners-form__fields {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    column-gap: 122px;
+    row-gap: var(--space-sm);
+    align-items: center;
+  }
+  .partners-form__label {
+    text-align: right;
+    color: var(--color-accent-warm);
+    white-space: nowrap;
+  }
+  .partners-form__control {
+    display: flex;
+  }
+  .partners-form__input {
+    width: 100%;
+    background: transparent;
+    border: 0;
+    border-bottom: 2px solid var(--color-white);
+    padding-block: var(--space-2xs);
+    color: var(--color-text-inverse);
+    font-family: var(--font-family-base);
+  }
+  .partners-form__input::placeholder {
+    color: var(--color-text-inverse);
+    opacity: 1;
+  }
+  .partners-form__input:focus-visible {
+    outline: 3px solid var(--color-accent-bright);
+    outline-offset: 4px;
+  }
+  .partners-form__submit {
+    grid-column: 2;
+  }
+
+  /* ── Responsive ─────────────────────────────────────────────────────────── */
+  @media (max-width: 1024px) {
+    .partners-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+  @media (max-width: 640px) {
+    .partners-hero__heading {
+      font-size: var(--font-size-h3);
+    }
+    .partners-grid {
+      grid-template-columns: 1fr;
+    }
+    .partners-form__fields {
+      grid-template-columns: 1fr;
+    }
+    .partners-form__label {
+      text-align: left;
+      white-space: normal;
+    }
+    .partners-form__submit {
+      grid-column: 1;
+    }
+  }
+</style>

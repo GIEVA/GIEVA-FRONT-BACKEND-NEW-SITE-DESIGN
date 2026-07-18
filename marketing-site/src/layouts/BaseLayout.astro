@@ -1,0 +1,46 @@
+---
+/**
+ * BaseLayout — the accessible, token-driven shell every page renders into.
+ *
+ * Provides the landmark skeleton (skip link → header/nav → main → footer) that gives
+ * screen-reader users a high-level map of the page (WORKFLOW.md §2), sets the document
+ * language, and exposes the per-brand theme hook via `data-brand` on <html>. The shared
+ * masthead and footer are rendered here so every page reuses one shell (build plan Phase 0.4).
+ *
+ * The visual system is the token layer in src/styles (Phase 1); this layout only wires it up.
+ */
+import '@styles/tokens.css';
+import '@styles/base.css';
+import SiteHeader from '@components/SiteHeader.astro';
+import SiteFooter from '@components/SiteFooter.astro';
+
+export interface Props {
+  title: string;
+  description?: string;
+  /** Which brand theme this route belongs to. See WORKFLOW.md §3a. */
+  brand?: 'consultancy' | 'ngo';
+}
+
+const { title, description, brand = 'consultancy' } = Astro.props;
+---
+
+<!doctype html>
+<html lang="en" data-brand={brand}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    {description && <meta name="description" content={description} />}
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">Skip to main content</a>
+    <SiteHeader />
+    <main id="main-content">
+      <slot />
+    </main>
+    <footer>
+      <SiteFooter />
+    </footer>
+  </body>
+</html>

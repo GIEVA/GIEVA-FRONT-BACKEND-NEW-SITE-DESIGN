@@ -1,0 +1,235 @@
+{
+  "vectors": [
+    {
+      "id": "I8000:10105;5963:3485",
+      "name": "ArrowRight",
+      "kind": "icon",
+      "file": "icon-I8000-10105;5963-3485.svg"
+    },
+    {
+      "id": "I8210:8255;8210:7763",
+      "name": "LOGO",
+      "kind": "icon",
+      "file": "icon-I8210-8255;8210-7763.svg"
+    },
+    {
+      "id": "I8210:8255;8210:7804;4547:22453",
+      "name": "ng-icon",
+      "kind": "icon",
+      "file": "icon-I8210-8255;8210-7804;4547-22453.svg"
+    },
+    {
+      "id": "I8210:8255;8210:7812",
+      "name": "mail-01",
+      "kind": "icon",
+      "file": "icon-I8210-8255;8210-7812.svg"
+    },
+    {
+      "id": "I8210:8255;8210:7826",
+      "name": "oo-social-links → List",
+      "kind": "icon",
+      "file": "icon-I8210-8255;8210-7826.svg"
+    }
+  ],
+  "fills": [
+    {
+      "imageRef": "0923c72942efa55880b7dcdec5a523c27ba18bc7",
+      "sourceNode": "8000:9882",
+      "name": "educational-testing-service-logo-png_seeklogo-378680 1",
+      "file": "fill-0923c72942efa55880b7dcdec5a523c27ba18bc7.png",
+      "webp": "fill-0923c72942efa55880b7dcdec5a523c27ba18bc7.webp"
+    },
+    {
+      "imageRef": "12c4da2f5308263825a629304615ab85ebfe5dff",
+      "sourceNode": "8000:10042",
+      "name": "R 1",
+      "file": "fill-12c4da2f5308263825a629304615ab85ebfe5dff.png",
+      "webp": "fill-12c4da2f5308263825a629304615ab85ebfe5dff.webp"
+    },
+    {
+      "imageRef": "166fa5bef0eafc2be90bbb3e857a63ff9112b1f6",
+      "sourceNode": "8000:9858",
+      "name": "new-water-aid 1",
+      "file": "fill-166fa5bef0eafc2be90bbb3e857a63ff9112b1f6.png",
+      "webp": "fill-166fa5bef0eafc2be90bbb3e857a63ff9112b1f6.webp"
+    },
+    {
+      "imageRef": "19f1b0c07c1d9d93d4a1dcf11110229d806742b8",
+      "sourceNode": "8000:9850",
+      "name": "US-Embassy-logo 1",
+      "file": "fill-19f1b0c07c1d9d93d4a1dcf11110229d806742b8.png",
+      "webp": "fill-19f1b0c07c1d9d93d4a1dcf11110229d806742b8.webp"
+    },
+    {
+      "imageRef": "3172f31ce44b7c8cfb0a897f5d748407dc9e6cbc",
+      "sourceNode": "I8210:8255;8210:7763;5857:4414",
+      "name": "Gemini_Generated_Image_uvhg9uuvhg9uuvhg 1",
+      "file": "fill-3172f31ce44b7c8cfb0a897f5d748407dc9e6cbc.png",
+      "webp": "fill-3172f31ce44b7c8cfb0a897f5d748407dc9e6cbc.webp"
+    },
+    {
+      "imageRef": "3d2633b5951e42cd24c6307e62fbae36bd32393f",
+      "sourceNode": "8000:9922",
+      "name": "idy_zJ6QiN_logos 1",
+      "file": "fill-3d2633b5951e42cd24c6307e62fbae36bd32393f.jpg",
+      "webp": "fill-3d2633b5951e42cd24c6307e62fbae36bd32393f.webp"
+    },
+    {
+      "imageRef": "55b4951ac4692c8bfb9cee3587b6db4cac825eae",
+      "sourceNode": "8000:9842",
+      "name": "ecosoc-798-2 1",
+      "file": "fill-55b4951ac4692c8bfb9cee3587b6db4cac825eae.png",
+      "webp": "fill-55b4951ac4692c8bfb9cee3587b6db4cac825eae.webp"
+    },
+    {
+      "imageRef": "55fffb0d206b64f043184380f13f723b24c692a3",
+      "sourceNode": "8204:7661",
+      "name": "Photo",
+      "file": "fill-55fffb0d206b64f043184380f13f723b24c692a3.jpg",
+      "webp": "fill-55fffb0d206b64f043184380f13f723b24c692a3.webp"
+    },
+    {
+      "imageRef": "5a219f0b69bea65ddfd0ad3dcabfc619dabe6253",
+      "sourceNode": "8000:9866",
+      "name": "iduOII0vQ3_1779718196393 1",
+      "file": "fill-5a219f0b69bea65ddfd0ad3dcabfc619dabe6253.png",
+      "webp": "fill-5a219f0b69bea65ddfd0ad3dcabfc619dabe6253.webp"
+    },
+    {
+      "imageRef": "5d875c0260bc8b356b6af43bb19af98848ea54b2",
+      "sourceNode": "8000:9834",
+      "name": "ETS_Ink 1",
+      "file": "fill-5d875c0260bc8b356b6af43bb19af98848ea54b2.png",
+      "webp": "fill-5d875c0260bc8b356b6af43bb19af98848ea54b2.webp"
+    },
+    {
+      "imageRef": "60ca5a87cabc2232ede8538df7707fb2bde55cf4",
+      "sourceNode": "8000:10001",
+      "name": "idXdWonEmY_logos 1",
+      "file": "fill-60ca5a87cabc2232ede8538df7707fb2bde55cf4.png",
+      "webp": "fill-60ca5a87cabc2232ede8538df7707fb2bde55cf4.webp"
+    },
+    {
+      "imageRef": "637fd9beadb26596cdb6b09d7371784ee1c9ada4",
+      "sourceNode": "8000:9826",
+      "name": "The_College_Board_ida-vihlkb_1 1",
+      "file": "fill-637fd9beadb26596cdb6b09d7371784ee1c9ada4.png",
+      "webp": "fill-637fd9beadb26596cdb6b09d7371784ee1c9ada4.webp"
+    },
+    {
+      "imageRef": "6a1d4433b278a9a07f3c19f2d6a77f3011cb9951",
+      "sourceNode": "8000:10025",
+      "name": "edifice5001.logowik.com 1",
+      "file": "fill-6a1d4433b278a9a07f3c19f2d6a77f3011cb9951.png",
+      "webp": "fill-6a1d4433b278a9a07f3c19f2d6a77f3011cb9951.webp"
+    },
+    {
+      "imageRef": "753adcb427d9d1ee160ef3645e152566b189df0a",
+      "sourceNode": "8000:10025",
+      "name": "edifice5001.logowik.com 1",
+      "file": "fill-753adcb427d9d1ee160ef3645e152566b189df0a.png",
+      "webp": "fill-753adcb427d9d1ee160ef3645e152566b189df0a.webp"
+    },
+    {
+      "imageRef": "7f9e0ce7e2c9139a83e47b085ce13a881b99a02b",
+      "sourceNode": "8000:10009",
+      "name": "idXdWonEmY_logos 1",
+      "file": "fill-7f9e0ce7e2c9139a83e47b085ce13a881b99a02b.jpg",
+      "webp": "fill-7f9e0ce7e2c9139a83e47b085ce13a881b99a02b.webp"
+    },
+    {
+      "imageRef": "838509bfaf282cda036f3466a59d23372eb28013",
+      "sourceNode": "8000:9906",
+      "name": "OIP (2) 1",
+      "file": "fill-838509bfaf282cda036f3466a59d23372eb28013.png",
+      "webp": "fill-838509bfaf282cda036f3466a59d23372eb28013.webp"
+    },
+    {
+      "imageRef": "94ac7541c69e23887ab7c5a7f328b04f7bd89358",
+      "sourceNode": "8000:9993",
+      "name": "idm2-iYpWA_1779718153159 1",
+      "file": "fill-94ac7541c69e23887ab7c5a7f328b04f7bd89358.png",
+      "webp": "fill-94ac7541c69e23887ab7c5a7f328b04f7bd89358.webp"
+    },
+    {
+      "imageRef": "96ce2c931b765b1295b53b543c57286325438a4c",
+      "sourceNode": "8000:9906",
+      "name": "OIP (2) 1",
+      "file": "fill-96ce2c931b765b1295b53b543c57286325438a4c.png",
+      "webp": "fill-96ce2c931b765b1295b53b543c57286325438a4c.webp"
+    },
+    {
+      "imageRef": "a97ecd68c3c9c052316d94231f48f3ffa8c895f8",
+      "sourceNode": "8000:9874",
+      "name": "1537786172-67-national-universities-commission-nuc 1",
+      "file": "fill-a97ecd68c3c9c052316d94231f48f3ffa8c895f8.png",
+      "webp": "fill-a97ecd68c3c9c052316d94231f48f3ffa8c895f8.webp"
+    },
+    {
+      "imageRef": "ab81d8166a30573bfb5a198cd4d926d42d4313ae",
+      "sourceNode": "8000:9914",
+      "name": "British_Council_Logo_2 1",
+      "file": "fill-ab81d8166a30573bfb5a198cd4d926d42d4313ae.png",
+      "webp": "fill-ab81d8166a30573bfb5a198cd4d926d42d4313ae.webp"
+    },
+    {
+      "imageRef": "ae492b727629813ac6e6762afde420cfcb94c9db",
+      "sourceNode": "8000:10009",
+      "name": "idXdWonEmY_logos 1",
+      "file": "fill-ae492b727629813ac6e6762afde420cfcb94c9db.png",
+      "webp": "fill-ae492b727629813ac6e6762afde420cfcb94c9db.webp"
+    },
+    {
+      "imageRef": "b17cafa11730bad7e8ed4f89a31f4c9c07000b71",
+      "sourceNode": "8000:9985",
+      "name": "Drake_University_idrnvTSo_o_0 1",
+      "file": "fill-b17cafa11730bad7e8ed4f89a31f4c9c07000b71.png",
+      "webp": "fill-b17cafa11730bad7e8ed4f89a31f4c9c07000b71.webp"
+    },
+    {
+      "imageRef": "dda29c92913d42d22b1e9f7cc298472945e33e94",
+      "sourceNode": "8000:9818",
+      "name": "WAEC-Logo2 1",
+      "file": "fill-dda29c92913d42d22b1e9f7cc298472945e33e94.png",
+      "webp": "fill-dda29c92913d42d22b1e9f7cc298472945e33e94.webp"
+    },
+    {
+      "imageRef": "e8a6c8991e2327d95ce10132058cf03b0c8f5278",
+      "sourceNode": "8000:9977",
+      "name": "idXdWonEmY_logos 1",
+      "file": "fill-e8a6c8991e2327d95ce10132058cf03b0c8f5278.png",
+      "webp": "fill-e8a6c8991e2327d95ce10132058cf03b0c8f5278.webp"
+    },
+    {
+      "imageRef": "e9713477c42d3f9c1e7d774d1e191233e7fb4eb4",
+      "sourceNode": "8000:9898",
+      "name": "OIP 1",
+      "file": "fill-e9713477c42d3f9c1e7d774d1e191233e7fb4eb4.png",
+      "webp": "fill-e9713477c42d3f9c1e7d774d1e191233e7fb4eb4.webp"
+    },
+    {
+      "imageRef": "e99690d202090bf1d021547637734b4c222c8579",
+      "sourceNode": "8000:9890",
+      "name": "The_College_Board_ida-vihlkb_1 1",
+      "file": "fill-e99690d202090bf1d021547637734b4c222c8579.png",
+      "webp": "fill-e99690d202090bf1d021547637734b4c222c8579.webp"
+    },
+    {
+      "imageRef": "ea4198e3dd0d9a8e2cc3a95e52a6ab1207c2d86e",
+      "sourceNode": "8000:10017",
+      "name": "Microsoft_Logo_1 1",
+      "file": "fill-ea4198e3dd0d9a8e2cc3a95e52a6ab1207c2d86e.png",
+      "webp": "fill-ea4198e3dd0d9a8e2cc3a95e52a6ab1207c2d86e.webp"
+    },
+    {
+      "imageRef": "f9a0bcb2bfe389c4dd9e419b4fdd2918fb168f31",
+      "sourceNode": "8000:10033",
+      "name": "idXdWonEmY_logos 1",
+      "file": "fill-f9a0bcb2bfe389c4dd9e419b4fdd2918fb168f31.png",
+      "webp": "fill-f9a0bcb2bfe389c4dd9e419b4fdd2918fb168f31.webp"
+    }
+  ],
+  "notes": [
+    "fill-sterling-bank-8000-9930.{png,webp}: the Sterling Bank card's logo (node 8000:9930, 'sterling_bank 1') is a ~40-path vector group with every path generically named 'Vector' — the fetch helper's name-dedup treats anonymous 'Vector' nodes as noise and skips them (Phase 0 decision), so it wasn't captured on first ingestion. Backfilled during the Partners (Phase 5) build via a direct one-node Figma images API render (scale 4 PNG, re-encoded to WebP with sharp) rather than a --all-vectors re-run of the whole page. Not part of the original manifest.json generation."
+  ]
+}
