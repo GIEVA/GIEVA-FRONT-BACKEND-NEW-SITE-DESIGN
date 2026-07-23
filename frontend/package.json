@@ -6,6 +6,7 @@
   "dependencies": {
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
+    "@fontsource/plus-jakarta-sans": "^5.3.0",
     "@livekit/components-core": "^0.12.13",
     "@livekit/components-react": "^2.9.21",
     "@livekit/components-styles": "^1.2.0",
@@ -30,6 +31,7 @@
     "@tiptap/starter-kit": "^3.23.5",
     "axios": "^1.13.6",
     "dompurify": "^3.4.5",
+    "framer-motion": "^12.42.2",
     "html-react-parser": "^6.1.1",
     "livekit-client": "^2.19.0",
     "lowlight": "^3.3.0",
@@ -41,7 +43,7 @@
     "react-scripts": "5.0.1",
     "recharts": "^3.8.1",
     "slugify": "^1.6.9",
-    "swiper": "^12.1.4",
+    "swiper": "^12.2.0",
     "tldraw": "^5.1.1",
     "web-vitals": "^2.1.4"
   },

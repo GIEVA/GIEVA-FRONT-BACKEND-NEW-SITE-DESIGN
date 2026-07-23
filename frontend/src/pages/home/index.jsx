@@ -1,0 +1,10 @@
+export { Hero } from "./hero";
+export { Partners } from "./Partners";
+export { Services } from "./Services";
+export { AboutPreview } from "./AboutPreview";
+export { WhyChooseUs } from "./WhyChooseUs";
+export { Statistics } from "./Statistics";
+export { Programs } from "./Programs";
+export { Testimonials } from "./Testimonials";
+export { Campaigns } from "./Campaigns";
+export { News } from "./News";
