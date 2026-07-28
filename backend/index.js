@@ -119,6 +119,7 @@ app.use((req, res, next) => {
 });
 
     // Routes
+app.use("/api/service", serviceRoutes);
 app.use('/api/users', registerUserRoute);
 app.use('/api', studentProfileRoutes);
 app.use('/api/tutor', tutorProfileRouter);
@@ -223,7 +224,7 @@ app.use("/admin/get-payments",  adminPaymentROutes)
 app.use("/api/contact", contactRoutes);
 app.use("/api/admin/contacts", adminContactMessageRoutes);
 
-app.use("/api/service", serviceRoutes);
+
 app.use("/api/admin/service", adminServiceRoutes);
 
 app.use("/api/consultations", consultationRoutes);
