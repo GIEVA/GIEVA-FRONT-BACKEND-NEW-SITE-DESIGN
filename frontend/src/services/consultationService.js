@@ -28,10 +28,10 @@ export const cancelMyBooking = (id, reason = "") =>
 
 // ── Admin ──────────────────────────────────────────────────────
 
-export const adminGetSummary    = ()              => API.get(`${BASE}/admin/summary`).then((r) => r.data);
-export const adminListBookings  = (params = {})   => API.get(`${BASE}/admin`, { params }).then((r) => r.data);
-export const adminGetBooking    = (id)            => API.get(`${BASE}/admin/${id}`).then((r) => r.data);
-export const adminUpdateStatus  = (id, body)      => API.patch(`${BASE}/admin/${id}/status`, body).then((r) => r.data);
-export const adminReply         = (id, body)      => API.post(`${BASE}/admin/${id}/reply`, body).then((r) => r.data);
-export const adminAddNote       = (id, note)      => API.patch(`${BASE}/admin/${id}/note`, { note }).then((r) => r.data);
-export const adminDeleteBooking = (id)            => API.delete(`${BASE}/admin/${id}`).then((r) => r.data);
+export const adminGetSummary    = ()              => API.get(`${BASE}/admin/admin/summary`).then((r) => r.data);
+export const adminListBookings  = (params = {})   => API.get(`${BASE}/admin/admin`, { params }).then((r) => r.data);
+export const adminGetBooking    = (id)            => API.get(`${BASE}/admin/admin/${id}`).then((r) => r.data);
+export const adminUpdateStatus  = (id, body)      => API.patch(`${BASE}/admin/admin/${id}/status`, body).then((r) => r.data);
+export const adminReply         = (id, body)      => API.post(`${BASE}/admin/admin/${id}/reply`, body).then((r) => r.data);
+export const adminAddNote       = (id, note)      => API.patch(`${BASE}/admin/admin/${id}/note`, { note }).then((r) => r.data);
+export const adminDeleteBooking = (id)            => API.delete(`${BASE}/admin/admin/${id}`).then((r) => r.data);
