@@ -12,7 +12,7 @@ const BASE = "/api/service";
  */
 export const getServices = async () => {
    console.log("✅ getServices reached");
-  const { data } = await api.get(BASE);
+  const { data } = await api.get("/api/service/services");
   return data; // array of Service objects
 };
 
@@ -21,6 +21,6 @@ export const getServices = async () => {
  * GET /api/service/:id
  */
 export const getService = async (id) => {
-  const { data } = await api.get(`${BASE}/${id}`);
+  const { data } = await api.get(`${BASE}/service/${id}`);
   return data; // single Service object
 };

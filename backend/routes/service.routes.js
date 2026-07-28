@@ -9,8 +9,8 @@ import {
 
 const router = express.Router();
 
-router.get("/", getServices);
+router.get("/services", getServices);
 
-router.get("/:id", getService);
+router.get("/service/:id", getService);
 
 export default router;

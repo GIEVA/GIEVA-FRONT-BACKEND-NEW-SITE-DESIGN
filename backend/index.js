@@ -120,6 +120,10 @@ app.use((req, res, next) => {
 
     // Routes
 app.use("/api/service", serviceRoutes);
+app.use(
+  "/api/campaigns",
+  campaignRoutes
+);
 app.use('/api/users', registerUserRoute);
 app.use('/api', studentProfileRoutes);
 app.use('/api/tutor', tutorProfileRouter);
@@ -164,10 +168,7 @@ app.use(
   adminDashboardRoutes
 );
 
-app.use(
-  "/api/campaigns",
-  campaignRoutes
-);
+
 
 app.use(
   "/api/campaign-messages",
