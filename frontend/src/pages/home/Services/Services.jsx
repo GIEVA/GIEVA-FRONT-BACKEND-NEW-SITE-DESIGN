@@ -59,7 +59,7 @@ export default function Services({
                     description: service.description,
                     // Map API image field → what FeatureGrid expects
                     image: service.imageUrl || service.image || null,
-                    href: service.href || `/services/${service.id}`,
+                    href: `/services/${service.id}`,
                     featured: service.featured ?? false,
                     category: service.category || "",
                     order: service.order ?? index + 1,

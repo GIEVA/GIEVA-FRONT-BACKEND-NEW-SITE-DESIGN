@@ -1,5 +1,5 @@
 import models from "../models/index.js";
-
+import { cloudinary } from "../config/cloudinary.js";
 const { Service } = models;
 
 
@@ -35,50 +35,31 @@ export const adminGetServices = async (req, res) => {
 /**
  * Create service
  */
+// controllers/adminService.controller.js
+
 export const createService = async (req, res) => {
-
     try {
-
         const service = await Service.create({
-
             title: req.body.title,
-
             description: req.body.description,
-
             iconName: req.body.iconName,
-
-            imageUrl: req.body.imageUrl,
-
-            imageCloudinaryId:
-                req.body.imageCloudinaryId,
-
+            imageUrl: req.file ? req.file.path : null,
+            imageCloudinaryId: req.file ? req.file.filename : null,
             href: req.body.href,
-
             featured: req.body.featured,
-
             category: req.body.category,
-
             order: req.body.order,
-
             status: req.body.status,
-
             createdBy: req.user.id,
         });
 
-        return res.status(201).json({
-            message: "Service created successfully",
-            service,
-        });
-
+        return res.status(201).json({ message: "Service created successfully", service });
     } catch (error) {
-
         console.error(error);
-
-        return res.status(500).json({
-            message: "Failed to create service",
-        });
+        return res.status(500).json({ message: "Failed to create service" });
     }
 };
+
 
 
 
@@ -114,96 +95,71 @@ export const adminGetService = async (req, res) => {
 
 
 
-/**
- * Update
- */
 export const updateService = async (req, res) => {
-
     try {
+        const service = await Service.findByPk(req.params.id);
+        if (!service) return res.status(404).json({ message: "Service not found" });
 
-        const service =
-            await Service.findByPk(req.params.id);
-
-        if (!service) {
-
-            return res.status(404).json({
-                message: "Service not found",
-            });
-
+        // If a new file was uploaded, delete the old Cloudinary asset first
+        if (req.file && service.imageCloudinaryId) {
+            try {
+                await cloudinary.uploader.destroy(service.imageCloudinaryId);
+            } catch (cloudErr) {
+                console.error("Cloudinary destroy failed:", cloudErr);
+            }
         }
 
         await service.update({
-
             title: req.body.title,
-
             description: req.body.description,
-
             iconName: req.body.iconName,
-
-            imageUrl: req.body.imageUrl,
-
-            imageCloudinaryId:
-                req.body.imageCloudinaryId,
-
+            imageUrl: req.file ? req.file.path : service.imageUrl,
+            imageCloudinaryId: req.file ? req.file.filename : service.imageCloudinaryId,
             href: req.body.href,
-
             featured: req.body.featured,
-
             category: req.body.category,
-
             order: req.body.order,
-
             status: req.body.status,
         });
 
-        return res.json({
-            message: "Service updated",
-            service,
-        });
+        return res.json({ message: "Service updated", service });
 
     } catch (error) {
-
         console.error(error);
-
-        return res.status(500).json({
-            message: "Failed to update service",
-        });
+        return res.status(500).json({ message: "Failed to update service" });
     }
 };
-
 
 
 /**
  * Delete
  */
 export const deleteService = async (req, res) => {
-
     try {
-
-        const service =
-            await Service.findByPk(req.params.id);
+        const service = await Service.findByPk(req.params.id);
 
         if (!service) {
+            return res.status(404).json({ message: "Service not found" });
+        }
 
-            return res.status(404).json({
-                message: "Service not found",
-            });
-
+        // Clean up the Cloudinary asset before removing the DB row
+        if (service.imageCloudinaryId) {
+            try {
+                await cloudinary.uploader.destroy(service.imageCloudinaryId);
+            } catch (cloudErr) {
+                // Don't block deletion if Cloudinary cleanup fails —
+                // just log it so it doesn't silently orphan forever
+                console.error("Cloudinary destroy failed:", cloudErr);
+            }
         }
 
         await service.destroy();
 
-        return res.json({
-            message: "Service deleted",
-        });
+        return res.json({ message: "Service deleted" });
 
     } catch (error) {
-
         console.error(error);
-
-        return res.status(500).json({
-            message: "Failed to delete service",
-        });
+        return res.status(500).json({ message: "Failed to delete service" });
     }
 };
 
