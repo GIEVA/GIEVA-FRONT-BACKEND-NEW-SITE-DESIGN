@@ -16,8 +16,8 @@ import upload from "../middleware/upload.js";
 
 const router = express.Router();
 
-router.use(authenticate);
-router.use(authorizeRoles);
+// router.use(authenticate);
+// router.use(authorizeRoles);
 
 router.get("/", adminGetServices);
 
@@ -25,9 +25,9 @@ router.get("/stats", getServiceStats);
 
 router.get("/:id", adminGetService);
 
-router.post("/",  upload.single("image"), createService);
+router.post("/", authenticate, upload.single("image"), createService);
 
-router.put("/:id", upload.single("image"), updateService);
+router.put("/:id",authenticate, upload.single("image"), updateService);
 
 router.delete("/:id", deleteService);
 
