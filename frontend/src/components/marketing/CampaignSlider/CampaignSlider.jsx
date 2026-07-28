@@ -19,7 +19,7 @@ import "swiper/css/navigation";
 import "swiper/css/pagination";
 
 
-import { getCampaigns } from "../../../services/campaignService";
+import { getPublicCampaigns } from "../../../services/campaignService";
 
 import CampaignCard from "../CampaignCard/CampaignCard";
 import CampaignModal from "../CampaignModal/CampaignModal";
@@ -39,25 +39,21 @@ export default function CampaignSlider() {
   // FETCH CAMPAIGNS
   // ======================================================
 
-  const fetchCampaigns = async () => {
-    try {
-      setLoading(true);
+const fetchCampaigns = async () => {
+  try {
+    setLoading(true);
 
-      const data = await getCampaigns();
+    const data = await getPublicCampaigns();
 
-      const activeCampaigns =
-        (data?.campaigns || []).filter(
-          (campaign) =>
-            campaign.status === "active"
-        );
-
-      setCampaigns(activeCampaigns);
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setLoading(false);
-    }
-  };
+    // data is already an array of active campaigns
+    setCampaigns(Array.isArray(data) ? data : []);
+  } catch (error) {
+    console.error(error);
+    setCampaigns([]);
+  } finally {
+    setLoading(false);
+  }
+};
 
   useEffect(() => {
     fetchCampaigns();
@@ -67,17 +63,15 @@ export default function CampaignSlider() {
   // MODAL
   // ======================================================
 
-  const handleOpenCampaign = (
-    campaign
-  ) => {
-    setSelectedCampaign(campaign.id);
-    setModalOpen(true);
-  };
+const handleOpenCampaign = (campaign) => {
+  setSelectedCampaign(campaign);   // pass the whole campaign object
+  setModalOpen(true);
+};
 
-  const handleCloseCampaign = () => {
-    setModalOpen(false);
-    setSelectedCampaign(null);
-  };
+const handleCloseCampaign = () => {
+  setModalOpen(false);
+  setSelectedCampaign(null);
+};
 
   // ======================================================
   // LOADING
@@ -172,10 +166,8 @@ export default function CampaignSlider() {
 
       <CampaignModal
         open={modalOpen}
-        campaignId={selectedCampaign}
-        onClose={
-          handleCloseCampaign
-        }
+        campaign={selectedCampaign}   // full object
+        onClose={handleCloseCampaign}
       />
     </>
   );

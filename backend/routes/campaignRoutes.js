@@ -12,7 +12,9 @@ import {
   publishCampaign,
   incrementCampaignClicks,
   incrementCampaignViews,
-  featureCampaign
+  featureCampaign,
+  getPublicCampaigns,     
+  getPublicCampaignById,  
 
 } from "../controllers/campaign.controller.js";
 
@@ -56,7 +58,7 @@ router.get(
 router.post(
 
   "/",
-
+  authenticate,
 
   authorizeRoles(
     "admin",
@@ -77,7 +79,7 @@ router.put(
 
   "/:id",
 
-  
+  authenticate,
 
   authorizeRoles(
     "admin",
@@ -97,7 +99,7 @@ router.put(
 router.delete(
 
   "/:id",
-
+authenticate,
   authorizeRoles(
     "admin",
     "superadmin"
@@ -108,7 +110,7 @@ router.delete(
 
 router.put(
   "/:id/feature",
-
+  authenticate,
   authorizeRoles(
     "admin",
     "superadmin"
@@ -120,7 +122,7 @@ router.put(
 
 router.put(
   "/:id/publish",
-
+  authenticate,
   authorizeRoles(
     "admin",
     "superadmin",
@@ -153,5 +155,13 @@ router.post(
   "/:id/click",
   incrementCampaignClicks
 );
+
+
+//For users --- public //
+
+router.get("/public", getPublicCampaigns);
+router.get("/public/:id", getPublicCampaignById);
+
+
 
 export default router;

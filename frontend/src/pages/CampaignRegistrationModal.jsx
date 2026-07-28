@@ -67,62 +67,43 @@ const CampaignRegistrationModal =
   // SUBMIT
   // ======================================================
 
-  const handleSubmit =
-    async () => {
+const handleSubmit = async () => {
+  if (!campaign?.id) {
+    setError("Invalid campaign");
+    return;
+  }
 
-      try {
+  try {
+    setLoading(true);
+    setError("");
+    setSuccess("");
 
-        setLoading(true);
-
-        setError("");
-
-
-
-        const payload = {
-
-          ...form,
-
-          campaignId:
-            campaign.id,
-        };
-
-
-
-        const res =
-          await createCampaignRegistration(
-            payload
-          );
-
-
-
-        setSuccess(
-          res.message
-        );
-
-
-
-        setTimeout(() => {
-
-          onClose();
-
-        }, 2000);
-
-      } catch (err) {
-
-        setError(
-
-          err.response?.data
-            ?.message ||
-
-          "Registration failed"
-        );
-
-      } finally {
-
-        setLoading(false);
-      }
+    const payload = {
+      campaignId: campaign.id,
+      fullName: form.fullName.trim(),
+      email: form.email.trim(),
+      phoneNumber: form.phoneNumber.trim(),
+      dob: form.dob || null,
     };
 
+    const res = await createCampaignRegistration(payload);
+
+    setSuccess(res.message || "Registration successful");
+
+    setForm({ fullName: "", email: "", phoneNumber: "", dob: "" });
+
+    setTimeout(() => {
+      onClose();
+      setSuccess("");
+    }, 2000);
+  } catch (err) {
+    setError(
+      err.response?.data?.message || "Registration failed"
+    );
+  } finally {
+    setLoading(false);
+  }
+};
 
 
   return (
