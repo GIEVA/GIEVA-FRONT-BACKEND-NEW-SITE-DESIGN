@@ -11,6 +11,7 @@ const BASE = "/api/service";
  * GET /api/service
  */
 export const getServices = async () => {
+   console.log("✅ getServices reached");
   const { data } = await api.get(BASE);
   return data; // array of Service objects
 };

@@ -1,4 +1,4 @@
-// controllers/service.controller.js
+
 
 import models from "../models/index.js";
 
