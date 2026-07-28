@@ -119,7 +119,7 @@ app.use((req, res, next) => {
 });
 
     // Routes
-app.use('/api', registerUserRoute);
+app.use('/api/users', registerUserRoute);
 app.use('/api', studentProfileRoutes);
 app.use('/api/tutor', tutorProfileRouter);
 app.use('/api/modules', moduleRoute);
