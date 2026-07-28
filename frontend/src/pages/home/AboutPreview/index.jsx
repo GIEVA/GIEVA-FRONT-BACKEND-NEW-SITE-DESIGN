@@ -1,1 +1,1 @@
-export { default as AboutPreview } from "./AboutPreview";
+export { default  } from "./AboutPreview";

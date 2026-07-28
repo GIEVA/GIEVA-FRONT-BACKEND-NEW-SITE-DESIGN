@@ -7,14 +7,13 @@ import { LogoCloud } from "../../../components/marketing";
 import partnerData from "./PartnerData";
 
 export default function Partners({
-    eyebrow = "Our Partners",
+    eyebrow = "OUR PARTNERS",
     title = "Trusted by Leading Institutions Worldwide",
     description = "We collaborate with universities, organizations, and strategic partners to create opportunities that transform lives through education, innovation, and global engagement.",
 
     logos = partnerData,
 
-    variant = "grayscale",
-
+    variant = "default",        // ← Changed from "grayscale" to "default"
     columns = {
         xs: 2,
         sm: 3,
@@ -24,9 +23,7 @@ export default function Partners({
     sx = {},
 }) {
     return (
-        <Section
-            sx={sx}
-        >
+        <Section sx={sx}>
             <SectionHeader
                 eyebrow={eyebrow}
                 title={title}
@@ -43,27 +40,3 @@ export default function Partners({
         </Section>
     );
 }
-
-Partners.propTypes = {
-    eyebrow: PropTypes.string,
-
-    title: PropTypes.string,
-
-    description: PropTypes.string,
-
-    logos: PropTypes.array,
-
-    variant: PropTypes.oneOf([
-        "default",
-        "grayscale",
-        "outlined",
-    ]),
-
-    columns: PropTypes.shape({
-        xs: PropTypes.number,
-        sm: PropTypes.number,
-        md: PropTypes.number,
-    }),
-
-    sx: PropTypes.object,
-};

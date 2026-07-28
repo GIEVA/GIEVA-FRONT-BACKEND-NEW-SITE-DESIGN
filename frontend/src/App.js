@@ -117,6 +117,12 @@ import AdminExamTypes              from "./pages/exams/AdminExamTypes";
 import ContactUs from "./pages/ContactUs";
 import AdminContactMessages from "./pages/AdminContactMessages";
 import HomePage from "./pages/HomePage";
+import PublicLayout from "./layouts/PublicLayout";
+import AuthenticatedLayout from "./layouts/AuthenticatedLayout";
+import ConsultationBookingPage from "./pages/ConsultationBooking";
+import WhatWeDo from "./pages/WhatWeDo";
+import AdminServices from "./pages/AdminServices";
+import AdminConsultations from "./pages/AdminConsultations";
 // (Optional later)
 // import Dashboard from "./pages/Dashboard";
 // import ProtectedRoute from "./components/ProtectedRoute";
@@ -126,9 +132,13 @@ function App() {
     <AuthProvider>
       <BrowserRouter>
         {/* Navbar always visible */}
-        <Navbar />
+        {/* <Navbar /> */}
+         
 
         <Routes>
+          {/* Public Website */}
+          <Route element={<PublicLayout />}>
+
           {/* Public routes */}
           <Route path="/" element={<HomePage />} />
           <Route path="/register" element={<Register />} />
@@ -138,8 +148,62 @@ function App() {
           <Route path="/verify/:token" element={<VerifyEmail />} />
           <Route path="/public-meet/:roomName" element={<PublicMeetingRedirect />} />
           <Route path="/contact" element={<ContactUs />} />
-          
 
+          <Route path="/courses" element={<CourseCatalog />} />
+
+          <Route path="/courses/:id" element={<CourseDetail />} />
+
+             <Route
+          path="/articles"
+          element={<PublicArticlesUsers />}
+        />
+          <Route
+          path="/consultations"
+          element={<ConsultationBookingPage />}
+        />
+         <Route
+          path="/services"
+          element={<WhatWeDo />}
+        />
+
+        <Route
+          path="/articles/:slug"
+          element={<PublicArticleDetailsUsers />}
+        />
+
+        <Route
+          path="/campaigns"
+          element={<PublicCampaigns />}
+        />
+
+        <Route
+          path="/campaigns/:id"
+          element={<PublicCampaignDetails />}
+        />
+
+         <Route
+          path="/exam-catalog"
+          element={<ExamCatalog />}
+        />
+
+          <Route
+          path="/live/:roomName/:sessionId"
+          element={
+            
+          <LiveClassroom />
+            
+          }
+        />
+
+          </Route>
+
+        <Route
+    element={
+        <ProtectedRoute>
+            <AuthenticatedLayout />
+        </ProtectedRoute>
+    }
+>
 
           <Route
             path="/student/profile"
@@ -172,22 +236,7 @@ function App() {
             <StudentDashboard  /> 
           </ProtectedRoute>} />
 
-        <Route
-          path="/admin/dashboard"
-          element={
-
-            <AdminLayout>
-
-              <AdminDashboard />
-
-            </AdminLayout>
-          }
-        />
-
-          <Route path="/courses" element={<CourseCatalog />} />
-
-          <Route path="/courses/:id" element={<CourseDetail />} />
-            <Route
+          <Route
             path="/learn/:courseId"
             element={
               <ProtectedRoute>
@@ -200,6 +249,95 @@ function App() {
           element={ <ProtectedRoute><PaymentCallback /></ProtectedRoute>} />
 
           <Route
+            path="/heals/apply"
+            element={
+              <ProtectedRoute>
+                <HealsApplicationForm />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/heals/my-applications"
+            element={
+              <ProtectedRoute>
+                <HealsApplications />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/heals/application/:id"
+            element={
+              <ProtectedRoute>
+                <HealsApplicationDetails />
+              </ProtectedRoute>
+            }
+          />
+
+           <Route
+          path="/student/live-classes"
+          element={
+            <ProtectedRoute>
+              <StudentLiveClasses />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/tutor/live-classes"
+          element={
+            <ProtectedRoute>
+              <TutorLiveClasses />
+            </ProtectedRoute>
+          }
+        />
+
+         <Route
+          path="/exam-register/:examType"
+          element={
+            <DynamicExamRegistrationPage />
+          }
+        />
+
+          <Route
+            path="/exam-payment/callback"
+            element={
+              <ExamPaymentCallback />
+            }
+          />
+
+          <Route
+            path="/my-exam-registrations"
+            element={<MyExamRegistrations />}
+          />
+
+          <Route
+            path="/exam-registrations/:id"
+            element={
+              <RegistrationDetailsPage />
+            }
+          />
+
+
+          </Route>
+
+        <Route
+          path="/admin/dashboard"
+          element={
+
+            <AdminLayout>
+
+              <AdminDashboard />
+
+            </AdminLayout>
+          }
+        />
+
+          
+            
+
+          <Route
 
             path="/admin/users"
 
@@ -208,6 +346,34 @@ function App() {
               <AdminLayout>
 
                 <UserManagement />
+
+              </AdminLayout>
+            }
+          />
+
+           <Route
+
+            path="/admin/services"
+
+            element={
+
+              <AdminLayout>
+
+                <AdminServices />
+
+              </AdminLayout>
+            }
+          />
+
+          <Route
+
+            path="/admin/consultations"
+
+            element={
+
+          <AdminLayout>
+
+                <AdminConsultations />
 
               </AdminLayout>
             }
@@ -258,32 +424,7 @@ function App() {
             }
           />
                     
-          <Route
-            path="/heals/apply"
-            element={
-              <ProtectedRoute>
-                <HealsApplicationForm />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/heals/my-applications"
-            element={
-              <ProtectedRoute>
-                <HealsApplications />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/heals/application/:id"
-            element={
-              <ProtectedRoute>
-                <HealsApplicationDetails />
-              </ProtectedRoute>
-            }
-          />
+          
 
 
           <Route
@@ -315,42 +456,10 @@ function App() {
 
 
 
-          <Route
-          path="/student/live-classes"
-          element={
-            <ProtectedRoute>
-              <StudentLiveClasses />
-            </ProtectedRoute>
-          }
-        />
+         
+      
 
-        <Route
-          path="/tutor/live-classes"
-          element={
-            <ProtectedRoute>
-              <TutorLiveClasses />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/live/:roomName/:sessionId"
-          element={
-            
-              <LiveClassroom />
-            
-          }
-        />
-
-        <Route
-          path="/articles"
-          element={<PublicArticlesUsers />}
-        />
-
-        <Route
-          path="/articles/:slug"
-          element={<PublicArticleDetailsUsers />}
-        />
+     
 
         <Route
           path="/admin/cms/articles"
@@ -450,15 +559,7 @@ function App() {
     </AdminLayout>
   }
 />
-<Route
-  path="/campaigns"
-  element={<PublicCampaigns />}
-/>
 
-<Route
-  path="/campaigns/:id"
-  element={<PublicCampaignDetails />}
-/>
 
 <Route
 
@@ -483,36 +584,12 @@ function App() {
   }
 />
         {/* student/applicant frontend route */}
-        <Route
+        {/* <Route
           path="/exam-catalog"
           element={<ExamCatalog />}
-        />
+        /> */}
 
-        <Route
-          path="/exam-register/:examType"
-          element={
-            <DynamicExamRegistrationPage />
-          }
-        />
-
-          <Route
-            path="/exam-payment/callback"
-            element={
-              <ExamPaymentCallback />
-            }
-          />
-
-          <Route
-            path="/my-exam-registrations"
-            element={<MyExamRegistrations />}
-          />
-
-          <Route
-            path="/exam-registrations/:id"
-            element={
-              <RegistrationDetailsPage />
-            }
-          />
+       
           {/* admin exams reg section */}
           <Route
             path="/admin/exams"

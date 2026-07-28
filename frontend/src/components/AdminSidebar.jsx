@@ -42,6 +42,8 @@ import {
   Public,
   Category,
   ContactMail,
+  WorkOutline,
+  SupportAgent,
 } from "@mui/icons-material";
 
 import { useState } from "react";
@@ -251,7 +253,9 @@ export default function AdminSidebar() {
 
         {/* ── OTHER ──────────────────────────────────── */}
         {[
-          { label: "Notifications", icon: <Notifications />, path: "/admin/notifications"  },
+          { label: "Services", icon: <WorkOutline />, path: "/admin/services"  },
+          { label: "Consultancy", icon: <SupportAgent />, path: "/admin/consultations"  },
+          { label: "Notifications", icon: <Notifications WorkOutline/>, path: "/admin/notifications"  },
           { label: "Payments",      icon: <Payment />,       path: "/admin/payments"        },
           { label: "Activity Logs", icon: <History />,       path: "/admin/activity-logs"   },
           { label: "Settings",      icon: <Settings />,      path: "/admin/settings"        },

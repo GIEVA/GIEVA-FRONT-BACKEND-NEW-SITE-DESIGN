@@ -1,29 +1,19 @@
 import PropTypes from "prop-types";
 import { Link as RouterLink } from "react-router-dom";
-
-import {
-    Stack,
-} from "@mui/material";
+import { Stack, Box } from "@mui/material";
 
 import PrimaryButton from "../../../components/ui/PrimaryButton";
 import SecondaryButton from "../../../components/ui/SecondaryButton";
-
 
 export default function HeroActions({
     primary,
     secondary,
     tertiary,
-    direction = {
-        xs: "column",
-        sm: "row",
-    },
+    direction = { xs: "column", sm: "row" },
     spacing = 2,
     sx = {},
 }) {
-    const renderButton = (
-        action,
-        ButtonComponent
-    ) => {
+    const renderButton = (action, ButtonComponent, defaultColor) => {
         if (!action) return null;
 
         const {
@@ -35,6 +25,8 @@ export default function HeroActions({
             loading,
             disabled,
             onClick,
+            color,
+            variant = "contained",
         } = action;
 
         const commonProps = {
@@ -44,6 +36,12 @@ export default function HeroActions({
             loading,
             onClick,
             size: "large",
+            color: color || defaultColor,
+            variant,
+            sx: {
+                whiteSpace: "nowrap",
+                minWidth: { xs: "100%", sm: "auto" },
+            },
         };
 
         if (href) {
@@ -72,53 +70,34 @@ export default function HeroActions({
             );
         }
 
-        return (
-            <ButtonComponent
-                {...commonProps}
-            >
-                {label}
-            </ButtonComponent>
-        );
+        return <ButtonComponent {...commonProps}>{label}</ButtonComponent>;
     };
 
     return (
-        <Stack
-            direction={direction}
-            spacing={spacing}
-            sx={sx}
-        >
-            {renderButton(
-                primary,
-                PrimaryButton
-            )}
+        <Stack spacing={2} sx={sx}>
+            {/* Primary button full width on mobile, natural width on desktop */}
+            {renderButton(primary, PrimaryButton, "warning")}
 
-            {renderButton(
-                secondary,
-                SecondaryButton
+            {/* Secondary + Tertiary side by side */}
+            {(secondary || tertiary) && (
+                <Stack
+                    direction={{ xs: "column", sm: "row" }}
+                    spacing={2}
+                    sx={{ width: "100%" }}
+                >
+                    {renderButton(secondary, SecondaryButton, "secondary")}
+                    {renderButton(tertiary, SecondaryButton, "success")}
+                </Stack>
             )}
-
-            {tertiary &&
-                renderButton(
-                    tertiary,
-                    SecondaryButton
-                )}
         </Stack>
     );
 }
 
 HeroActions.propTypes = {
     primary: PropTypes.object,
-
     secondary: PropTypes.object,
-
     tertiary: PropTypes.object,
-
-    direction: PropTypes.oneOfType([
-        PropTypes.object,
-        PropTypes.string,
-    ]),
-
+    direction: PropTypes.oneOfType([PropTypes.object, PropTypes.string]),
     spacing: PropTypes.number,
-
     sx: PropTypes.object,
 };

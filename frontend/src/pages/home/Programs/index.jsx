@@ -1,1 +1,1 @@
-export { default as Programs } from "./Programs";
+export { default} from "./Programs";

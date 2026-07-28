@@ -78,7 +78,11 @@ import adminExamTypeRoutes from "./routes/adminExamTypeRoutes.js"
 import corsConfig from "./middleware/corsConfig.js";
 import contactRoutes from "./routes/contactRoutes.js";
 import adminContactMessageRoutes from "./routes/adminContactMessageRoutes.js";
-
+import serviceRoutes from "./routes/service.routes.js";
+import adminServiceRoutes from "./routes/adminService.routes.js"
+ import { startConsultationReminderJob } from "./jobs/consultationReminder.js";
+ import consultationRoutes from "./routes/consultationRoutes.js";
+ import adminConsultancyRoutes from "./routes/adminConsultancyRoutes.js"
 
 dotenv.config({
   path: "./.env",
@@ -96,7 +100,7 @@ const PORT = process.env.PORT || 5000;
 corsConfig(app);
 
 startSessionReminderCron();
-
+startConsultationReminderJob();
 startCampaignAutoCloseJob();
 startCampaignEmailScheduler();
 startEmailScheduler();
@@ -214,11 +218,17 @@ app.use("/admin/get-payments",  adminPaymentROutes)
 
 
 app.use("/api/contact", contactRoutes);
-app.use("/api/admin/contact", adminContactMessageRoutes);
+app.use("/api/admin/contacts", adminContactMessageRoutes);
+
+app.use("/api/service", serviceRoutes);
+app.use("/api/admin/service", adminServiceRoutes);
+
+app.use("/api/consultations", consultationRoutes);
+app.use("/api/admin/consultations", adminConsultancyRoutes);
 
 
     // Sync models AFTER models are loaded
-    await sequelize.sync({alter:true});
+    await sequelize.sync();
     console.log("🚀 Sequelize models synced");
 
     app.listen(PORT , () => {
