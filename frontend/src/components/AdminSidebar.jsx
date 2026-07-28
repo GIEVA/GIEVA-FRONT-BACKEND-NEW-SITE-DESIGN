@@ -1,6 +1,7 @@
 import {
   Link,
   useLocation,
+  useNavigate,
 } from "react-router-dom";
 
 import {
@@ -36,6 +37,7 @@ import {
   People,
   History,
   Quiz,
+  Groups,
   Assessment,
   Download,
   AccessTime,
@@ -57,6 +59,8 @@ const GREEN = "#1E7F4F";
 export default function AdminSidebar() {
   const location = useLocation();
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
+ 
 
   const [campaignOpen, setCampaignOpen] = useState(true);
   const [examOpen,     setExamOpen]     = useState(true);
@@ -64,6 +68,11 @@ export default function AdminSidebar() {
 
   const isActive     = (path) => location.pathname === path;
   const startsWith   = (path) => location.pathname.startsWith(path);
+
+  const handleLogout = () => {
+    logout();
+    navigate("/login");
+  };
 
   // ── shared styles ────────────────────────────────────────
   const itemSx = {
@@ -254,6 +263,7 @@ export default function AdminSidebar() {
         {/* ── OTHER ──────────────────────────────────── */}
         {[
           { label: "Services", icon: <WorkOutline />, path: "/admin/services"  },
+          { label: "Staff", icon: <Groups />, path: "/admin/staff"  },
           { label: "Consultancy", icon: <SupportAgent />, path: "/admin/consultations"  },
           { label: "Notifications", icon: <Notifications WorkOutline/>, path: "/admin/notifications"  },
           { label: "Payments",      icon: <Payment />,       path: "/admin/payments"        },
@@ -274,8 +284,8 @@ export default function AdminSidebar() {
       </List>
 
       {/* ── FOOTER / LOGOUT ────────────────────────────── */}
-      <Box sx={{ p: 2, borderTop: "1px solid #E6E9F0" }}>
-        <ListItemButton onClick={logout} sx={{ borderRadius: 2.5 }}>
+        <Box sx={{ p: 2, borderTop: "1px solid #E6E9F0" }}>
+        <ListItemButton onClick={handleLogout} sx={{ borderRadius: 2.5 }}>
           <ListItemIcon><Logout color="error" /></ListItemIcon>
           <ListItemText primary="Logout" primaryTypographyProps={{ fontSize: 14 }} />
         </ListItemButton>

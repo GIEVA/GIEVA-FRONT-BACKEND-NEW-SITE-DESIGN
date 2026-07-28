@@ -1,11 +1,12 @@
-import { useState, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import PropTypes from "prop-types";
 import {
     Box,
     Typography,
     IconButton,
     Stack,
-    Avatar,
+    CircularProgress,
+    Alert,
 } from "@mui/material";
 import ArrowBackIosNewRoundedIcon from "@mui/icons-material/ArrowBackIosNewRounded";
 import ArrowForwardIosRoundedIcon from "@mui/icons-material/ArrowForwardIosRounded";
@@ -16,7 +17,7 @@ import InstagramIcon from "@mui/icons-material/Instagram";
 import YouTubeIcon from "@mui/icons-material/YouTube";
 
 import Section from "../../../components/ui/Section";
-import staffData from "./StaffData";
+import { getStaffList } from "../../../services/publicStaffService";
 
 const socialIconMap = {
     facebook: <FacebookIcon sx={{ fontSize: 14 }} />,
@@ -26,10 +27,32 @@ const socialIconMap = {
     youtube: <YouTubeIcon sx={{ fontSize: 14 }} />,
 };
 
-export default function Staff({ data = staffData, sx = {} }) {
+export default function Staff({ sx = {} }) {
     const scrollRef = useRef(null);
     const [canScrollLeft, setCanScrollLeft] = useState(false);
     const [canScrollRight, setCanScrollRight] = useState(true);
+
+    const [data, setData] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState("");
+
+    useEffect(() => {
+        let isMounted = true;
+
+        getStaffList()
+            .then((list) => {
+                if (!isMounted) return;
+                setData(Array.isArray(list) ? list : []);
+            })
+            .catch(() => {
+                if (isMounted) setError("Unable to load staff at the moment.");
+            })
+            .finally(() => {
+                if (isMounted) setLoading(false);
+            });
+
+        return () => { isMounted = false; };
+    }, []);
 
     const checkScroll = () => {
         const el = scrollRef.current;
@@ -99,156 +122,147 @@ export default function Staff({ data = staffData, sx = {} }) {
                 </Typography>
             </Box>
 
-            {/* Slider */}
-            <Box sx={{ position: "relative" }}>
-                {/* Left Arrow */}
-                {canScrollLeft && (
-                    <IconButton
-                        onClick={() => scroll("left")}
-                        sx={{
-                            position: "absolute",
-                            left: { xs: -8, md: -20 },
-                            top: "38%",
-                            zIndex: 10,
-                            width: 44,
-                            height: 44,
-                            bgcolor: "#F97316",
-                            color: "#fff",
-                            boxShadow: "0 4px 14px rgba(249,115,22,0.4)",
-                            "&:hover": { bgcolor: "#ea580c" },
-                        }}
-                    >
-                        <ArrowBackIosNewRoundedIcon sx={{ fontSize: 18 }} />
-                    </IconButton>
-                )}
-
-                {/* Right Arrow */}
-                {canScrollRight && (
-                    <IconButton
-                        onClick={() => scroll("right")}
-                        sx={{
-                            position: "absolute",
-                            right: { xs: -8, md: -20 },
-                            top: "38%",
-                            zIndex: 10,
-                            width: 44,
-                            height: 44,
-                            bgcolor: "#F97316",
-                            color: "#fff",
-                            boxShadow: "0 4px 14px rgba(249,115,22,0.4)",
-                            "&:hover": { bgcolor: "#ea580c" },
-                        }}
-                    >
-                        <ArrowForwardIosRoundedIcon sx={{ fontSize: 18 }} />
-                    </IconButton>
-                )}
-
-                {/* Cards Container */}
-                <Box
-                    ref={scrollRef}
-                    onScroll={checkScroll}
-                    sx={{
-                        display: "flex",
-                        gap: 3,
-                        overflowX: "auto",
-                        scrollSnapType: "x mandatory",
-                        pb: 2,
-                        "&::-webkit-scrollbar": { display: "none" },
-                        msOverflowStyle: "none",
-                        scrollbarWidth: "none",
-                    }}
-                >
-                    {data.map((person) => (
-                        <Box
-                            key={person.id}
+            {loading ? (
+                <Box sx={{ display: "flex", justifyContent: "center", py: 8 }}>
+                    <CircularProgress />
+                </Box>
+            ) : error ? (
+                <Alert severity="error" sx={{ maxWidth: 480, mx: "auto" }}>
+                    {error}
+                </Alert>
+            ) : (
+                <Box sx={{ position: "relative" }}>
+                    {canScrollLeft && (
+                        <IconButton
+                            onClick={() => scroll("left")}
                             sx={{
-                                flex: "0 0 auto",
-                                width: { xs: 240, sm: 260, md: 280 },
-                                scrollSnapAlign: "start",
+                                position: "absolute",
+                                left: { xs: -8, md: -20 },
+                                top: "38%",
+                                zIndex: 10,
+                                width: 44,
+                                height: 44,
+                                bgcolor: "#F97316",
+                                color: "#fff",
+                                boxShadow: "0 4px 14px rgba(249,115,22,0.4)",
+                                "&:hover": { bgcolor: "#ea580c" },
                             }}
                         >
-                            {/* Photo */}
+                            <ArrowBackIosNewRoundedIcon sx={{ fontSize: 18 }} />
+                        </IconButton>
+                    )}
+
+                    {canScrollRight && (
+                        <IconButton
+                            onClick={() => scroll("right")}
+                            sx={{
+                                position: "absolute",
+                                right: { xs: -8, md: -20 },
+                                top: "38%",
+                                zIndex: 10,
+                                width: 44,
+                                height: 44,
+                                bgcolor: "#F97316",
+                                color: "#fff",
+                                boxShadow: "0 4px 14px rgba(249,115,22,0.4)",
+                                "&:hover": { bgcolor: "#ea580c" },
+                            }}
+                        >
+                            <ArrowForwardIosRoundedIcon sx={{ fontSize: 18 }} />
+                        </IconButton>
+                    )}
+
+                    <Box
+                        ref={scrollRef}
+                        onScroll={checkScroll}
+                        sx={{
+                            display: "flex",
+                            gap: 3,
+                            overflowX: "auto",
+                            scrollSnapType: "x mandatory",
+                            pb: 2,
+                            "&::-webkit-scrollbar": { display: "none" },
+                            msOverflowStyle: "none",
+                            scrollbarWidth: "none",
+                        }}
+                    >
+                        {data.map((person) => (
                             <Box
+                                key={person.id}
                                 sx={{
-                                    borderRadius: 3,
-                                    overflow: "hidden",
-                                    height: 300,
-                                    mb: 2,
-                                    bgcolor: "#F1F5F9",
-                                    boxShadow: "0 8px 24px rgba(15,23,42,0.08)",
+                                    flex: "0 0 auto",
+                                    width: { xs: 240, sm: 260, md: 280 },
+                                    scrollSnapAlign: "start",
                                 }}
                             >
                                 <Box
-                                    component="img"
-                                    src={person.image}
-                                    alt={person.name}
                                     sx={{
-                                        width: "100%",
-                                        height: "100%",
-                                        objectFit: "cover",
-                                        objectPosition: "top",
-                                        transition: "transform 0.4s ease",
-                                        "&:hover": { transform: "scale(1.04)" },
+                                        borderRadius: 3,
+                                        overflow: "hidden",
+                                        height: 300,
+                                        mb: 2,
+                                        bgcolor: "#F1F5F9",
+                                        boxShadow: "0 8px 24px rgba(15,23,42,0.08)",
                                     }}
-                                />
-                            </Box>
-
-                            {/* Name & Role */}
-                            <Typography
-                                sx={{
-                                    fontSize: 16,
-                                    fontWeight: 700,
-                                    color: "#0F172A",
-                                    mb: 0.3,
-                                }}
-                            >
-                                {person.name}
-                            </Typography>
-                            <Typography
-                                sx={{
-                                    fontSize: 13.5,
-                                    color: "text.secondary",
-                                    mb: 1.5,
-                                }}
-                            >
-                                {person.role}
-                            </Typography>
-
-                            {/* Social Icons */}
-                            <Stack direction="row" spacing={1}>
-                                {Object.entries(person.socials || {}).map(([key, url]) => (
-                                    <IconButton
-                                        key={key}
-                                        component="a"
-                                        href={url}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        size="small"
+                                >
+                                    <Box
+                                        component="img"
+                                        src={person.imageUrl}
+                                        alt={person.name}
                                         sx={{
-                                            width: 30,
-                                            height: 30,
-                                            border: "1px solid #E2E8F0",
-                                            color: "#64748B",
-                                            "&:hover": {
-                                                bgcolor: "#F97316",
-                                                borderColor: "#F97316",
-                                                color: "#fff",
-                                            },
+                                            width: "100%",
+                                            height: "100%",
+                                            objectFit: "cover",
+                                            objectPosition: "top",
+                                            transition: "transform 0.4s ease",
+                                            "&:hover": { transform: "scale(1.04)" },
                                         }}
-                                    >
-                                        {socialIconMap[key]}
-                                    </IconButton>
-                                ))}
-                            </Stack>
-                        </Box>
-                    ))}
+                                    />
+                                </Box>
+
+                                <Typography sx={{ fontSize: 16, fontWeight: 700, color: "#0F172A", mb: 0.3 }}>
+                                    {person.name}
+                                </Typography>
+                                <Typography sx={{ fontSize: 13.5, color: "text.secondary", mb: 1.5 }}>
+                                    {person.role}
+                                </Typography>
+
+                                <Stack direction="row" spacing={1}>
+                                    {Object.entries(person.socials || {}).map(([key, url]) => (
+                                        url ? (
+                                            <IconButton
+                                                key={key}
+                                                component="a"
+                                                href={url}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                size="small"
+                                                sx={{
+                                                    width: 30,
+                                                    height: 30,
+                                                    border: "1px solid #E2E8F0",
+                                                    color: "#64748B",
+                                                    "&:hover": {
+                                                        bgcolor: "#F97316",
+                                                        borderColor: "#F97316",
+                                                        color: "#fff",
+                                                    },
+                                                }}
+                                            >
+                                                {socialIconMap[key]}
+                                            </IconButton>
+                                        ) : null
+                                    ))}
+                                </Stack>
+                            </Box>
+                        ))}
+                    </Box>
                 </Box>
-            </Box>
+            )}
         </Section>
     );
 }
 
 Staff.propTypes = {
-    data: PropTypes.array,
     sx: PropTypes.object,
 };

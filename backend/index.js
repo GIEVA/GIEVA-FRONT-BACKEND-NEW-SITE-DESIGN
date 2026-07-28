@@ -83,6 +83,10 @@ import adminServiceRoutes from "./routes/adminService.routes.js"
  import { startConsultationReminderJob } from "./jobs/consultationReminder.js";
  import consultationRoutes from "./routes/consultationRoutes.js";
  import adminConsultancyRoutes from "./routes/adminConsultancyRoutes.js"
+ import staffRoutes from "./routes/staff.routes.js";
+import adminStaffRoutes from "./routes/adminStaff.routes.js";
+
+
 
 dotenv.config({
   path: "./.env",
@@ -230,6 +234,11 @@ app.use("/api/admin/service", adminServiceRoutes);
 
 app.use("/api/consultations", consultationRoutes);
 app.use("/api/consultations/admin", adminConsultancyRoutes);
+
+
+
+app.use("/api/staff", staffRoutes);
+app.use("/api/admin/staff", adminStaffRoutes);
 
 
     // Sync models AFTER models are loaded

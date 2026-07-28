@@ -123,6 +123,7 @@ import ConsultationBookingPage from "./pages/ConsultationBooking";
 import WhatWeDo from "./pages/WhatWeDo";
 import AdminServices from "./pages/AdminServices";
 import AdminConsultations from "./pages/AdminConsultations";
+import AdminStaff from "./pages/AdminStaff";
 // (Optional later)
 // import Dashboard from "./pages/Dashboard";
 // import ProtectedRoute from "./components/ProtectedRoute";
@@ -334,8 +335,19 @@ function App() {
           }
         />
 
+      <Route
+          path="/admin/staff"
+          element={
+
+            <AdminLayout>
+
+              <AdminStaff />
+
+            </AdminLayout>
+          }
+        />
           
-            
+           
 
           <Route
 
