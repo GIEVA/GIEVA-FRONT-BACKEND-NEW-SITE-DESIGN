@@ -7,7 +7,7 @@ import api from "./api";
 ============================== */
 
 export const getAdminServices = async (params = {}) => {
-    const { data } = await api.get("/admin/service", {
+    const { data } = await api.get("/api/admin/service", {
         params,
     });
 
@@ -15,14 +15,14 @@ export const getAdminServices = async (params = {}) => {
 };
 
 export const getAdminService = async (id) => {
-    const { data } = await api.get(`/admin/service/${id}`);
+    const { data } = await api.get(`/api/admin/service/${id}`);
 
     return data;
 };
 
 export const createService = async (formData) => {
     const { data } = await api.post(
-        "/admin/service",
+        "/api/admin/service",
         formData,
         {
             headers: {
@@ -39,7 +39,7 @@ export const updateService = async (
     formData
 ) => {
     const { data } = await api.put(
-        `/admin/service/${id}`,
+        `/api/admin/service/${id}`,
         formData,
         {
             headers: {
@@ -53,7 +53,7 @@ export const updateService = async (
 
 export const deleteService = async (id) => {
     const { data } = await api.delete(
-        `/admin/service/${id}`
+        `/api/admin/service/${id}`
     );
 
     return data;
@@ -61,7 +61,7 @@ export const deleteService = async (id) => {
 
 export const getServiceStats = async () => {
     const { data } = await api.get(
-        "/admin/service/stats"
+        "/api/admin/service/stats"
     );
 
     return data;
