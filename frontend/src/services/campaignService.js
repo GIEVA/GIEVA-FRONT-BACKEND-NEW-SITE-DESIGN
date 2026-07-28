@@ -7,7 +7,7 @@ import API from "./api";
  * PUBLIC – list active campaigns
  */
 export const getPublicCampaigns = async () => {
-  const res = await API.get("/api/campaigns/public");
+  const res = await API.get("/api/campaigns");
   return res.data; // plain array from getPublicCampaigns
 };
 
@@ -15,7 +15,7 @@ export const getPublicCampaigns = async () => {
  * PUBLIC – single campaign
  */
 export const getPublicCampaignById = async (id) => {
-  const res = await API.get(`/api/campaigns/public/${id}`);
+  const res = await API.get(`/api/campaigns/${id}`);
   return res.data;
 };
 

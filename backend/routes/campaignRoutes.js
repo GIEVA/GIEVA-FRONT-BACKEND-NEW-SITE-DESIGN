@@ -159,8 +159,8 @@ router.post(
 
 //For users --- public //
 
-router.get("/public", getPublicCampaigns);
-router.get("/public/:id", getPublicCampaignById);
+router.get("/", getPublicCampaigns);
+router.get("/:id", getPublicCampaignById);
 
 
 
