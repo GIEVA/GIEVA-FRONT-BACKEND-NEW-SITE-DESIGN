@@ -25,9 +25,9 @@ router.get("/stats", getServiceStats);
 
 router.get("/:id", adminGetService);
 
-router.post("/", authenticate, upload.single("image"), createService);
+router.post("/",  upload.single("image"), createService);
 
-router.put("/:id",authenticate, upload.single("image"), updateService);
+router.put("/:id", upload.single("image"), updateService);
 
 router.delete("/:id", deleteService);
 

@@ -57,7 +57,6 @@ router.post(
 
   "/",
 
-  authenticate,
 
   authorizeRoles(
     "admin",
@@ -78,7 +77,7 @@ router.put(
 
   "/:id",
 
-  authenticate,
+  
 
   authorizeRoles(
     "admin",
@@ -99,8 +98,6 @@ router.delete(
 
   "/:id",
 
-  authenticate,
-
   authorizeRoles(
     "admin",
     "superadmin"
@@ -111,7 +108,7 @@ router.delete(
 
 router.put(
   "/:id/feature",
-  authenticate,
+
   authorizeRoles(
     "admin",
     "superadmin"
@@ -123,7 +120,7 @@ router.put(
 
 router.put(
   "/:id/publish",
-  authenticate,
+
   authorizeRoles(
     "admin",
     "superadmin",
@@ -136,7 +133,6 @@ router.put(
 
 router.put(
   "/:id/archive",
-  authenticate,
   authorizeRoles(
     "admin",
     "superadmin"
