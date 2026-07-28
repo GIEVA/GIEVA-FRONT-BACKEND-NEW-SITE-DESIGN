@@ -22,7 +22,7 @@ export const getAdminService = async (id) => {
 
 export const createService = async (formData) => {
     const { data } = await api.post(
-        "api/admin/service",
+        "/api/admin/service",
         formData,
         {
             headers: {
