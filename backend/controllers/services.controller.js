@@ -9,6 +9,8 @@ const { Service } = models;
  * Only published services
  */
 export const getServices = async (req, res) => {
+    console.log("✅ getServices reached");
+
     try {
         const services = await Service.findAll({
             where: {
