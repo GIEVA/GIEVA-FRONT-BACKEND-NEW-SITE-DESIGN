@@ -224,7 +224,7 @@ app.use("/api/service", serviceRoutes);
 app.use("/api/admin/service", adminServiceRoutes);
 
 app.use("/api/consultations", consultationRoutes);
-app.use("/api/admin/consultations", adminConsultancyRoutes);
+app.use("/api/consultations/admin", adminConsultancyRoutes);
 
 
     // Sync models AFTER models are loaded
