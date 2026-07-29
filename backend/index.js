@@ -242,7 +242,7 @@ app.use("/api/admin/staff", adminStaffRoutes);
 
 
     // Sync models AFTER models are loaded
-    await sequelize.sync();
+    await sequelize.sync({alter:true});
     console.log("🚀 Sequelize models synced");
 
     app.listen(PORT , () => {

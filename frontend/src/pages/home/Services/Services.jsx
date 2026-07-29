@@ -119,7 +119,7 @@ export default function Services({
                     >
                         <Button
                             component={RouterLink}
-                            to="/our-services"          // ← change if your route is different
+                            to="/services"          // ← change if your route is different
                             variant="contained"
                             endIcon={<ArrowForwardIcon />}
                             size="large"
