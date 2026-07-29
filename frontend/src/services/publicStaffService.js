@@ -1,7 +1,7 @@
 // services/publicStaffService.js
 import api from "./api";
 
-const BASE = "/api/all/staff";
+const BASE = "/api/staff/all";
 
 export const getStaffList = async () => {
   const { data } = await api.get(BASE);
