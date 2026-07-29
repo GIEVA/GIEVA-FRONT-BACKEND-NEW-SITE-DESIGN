@@ -85,6 +85,9 @@ import adminServiceRoutes from "./routes/adminService.routes.js"
  import adminConsultancyRoutes from "./routes/adminConsultancyRoutes.js"
  import staffRoutes from "./routes/staff.routes.js";
 import adminStaffRoutes from "./routes/adminStaff.routes.js";
+import programRoutes from "./routes/program.routes.js";
+import adminProgramRoutes from "./routes/adminProgram.routes.js";
+
 
 
 
@@ -237,9 +240,13 @@ app.use("/api/consultations/admin", adminConsultancyRoutes);
 
 
 
-app.use("/api/staff", staffRoutes);
+app.use("/api/staff/all", staffRoutes);
 app.use("/api/admin/staff", adminStaffRoutes);
 
+
+
+app.use("/api/programs/all", programRoutes);
+app.use("/api/admin/programs", adminProgramRoutes);
 
     // Sync models AFTER models are loaded
     await sequelize.sync({alter:true});
