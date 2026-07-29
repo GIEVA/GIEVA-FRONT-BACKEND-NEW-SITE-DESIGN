@@ -222,7 +222,7 @@ app.use(
   adminExamRegistrationRoutes
 );
 app.use(
-  "/api/exam-types",
+  "/api/exam-types/catalog",
   adminExamTypeRoutes
 );
 app.use("/admin/live-session",  adminClassSessionRoutes)
