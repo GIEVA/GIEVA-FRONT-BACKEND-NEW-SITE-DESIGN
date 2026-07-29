@@ -28,7 +28,7 @@ import {
   ChevronRight,
 } from "@mui/icons-material";
 import { Link } from "react-router-dom";
-import { getServices, getService } from "../services/publicServiceService";
+import { getServices, getService } from "../../../services/publicServiceService";
 
 // ─────────────────────────────────────────────────────────────
 // COLOURS — marketing site palette
