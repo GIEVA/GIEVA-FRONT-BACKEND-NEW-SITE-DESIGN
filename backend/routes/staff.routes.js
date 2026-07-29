@@ -7,7 +7,7 @@ import {
 
 const router = express.Router();
 
-router.get("/", getStaffList);
-router.get("/:id", getStaff);
+router.get("/all", getStaffList);
+router.get("/all/:id", getStaff);
 
 export default router;
