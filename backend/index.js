@@ -212,10 +212,10 @@ app.use(
 examPaymentRoutes
 );
 
-app.use(
-"/api/exam-types",
-examPaymentRoutes
-);
+// app.use(
+// "/api/exam-types",
+// adminExamTypeRoutes
+// );
 
 app.use(
   "/admin",
