@@ -127,6 +127,7 @@ import AdminStaff from "./pages/AdminStaff";
 import OurPrograms from "./pages/OurPrograms";
 import About from "./pages/About";
 import History from "./pages/history/History";
+import AdminPrograms from "./pages/AdminPrograms";
 // (Optional later)
 // import Dashboard from "./pages/Dashboard";
 // import ProtectedRoute from "./components/ProtectedRoute";
@@ -677,6 +678,17 @@ function App() {
               <AdminContactMessages />
             </AdminLayout>
           }/>
+           <Route
+          path="/admin/programs"
+          element={
+
+            <AdminLayout>
+
+              <AdminPrograms />
+
+            </AdminLayout>
+          }
+        />
         </Routes>
       </BrowserRouter>
     </AuthProvider>
