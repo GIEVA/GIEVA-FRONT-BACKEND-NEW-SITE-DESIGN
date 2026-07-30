@@ -4,6 +4,11 @@
 
 export const publicNavigation = [
   {
+    label: "Home",
+    path: "/",
+    
+  },
+  {
     label: "Consultancy",
     children: [
       {
@@ -120,7 +125,7 @@ export const publicNavigation = [
 
 export const guestActions = [
   {
-    label: "Log In",
+    label: "Log in",
     path: "/login",
     variant: "text",
   },
