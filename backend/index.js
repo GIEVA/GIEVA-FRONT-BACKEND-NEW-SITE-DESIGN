@@ -87,6 +87,8 @@ import adminServiceRoutes from "./routes/adminService.routes.js"
 import adminStaffRoutes from "./routes/adminStaff.routes.js";
 import programRoutes from "./routes/program.routes.js";
 import adminProgramRoutes from "./routes/adminProgram.routes.js";
+import historyRoutes from "./routes/history.routes.js";
+import adminHistoryRoutes from "./routes/adminHistory.routes.js";
 
 
 
@@ -247,6 +249,11 @@ app.use("/api/admin/staff", adminStaffRoutes);
 
 app.use("/api/programs/all", programRoutes);
 app.use("/api/admin/programs", adminProgramRoutes);
+
+
+
+app.use("/api/gieva/history", historyRoutes);
+app.use("/api/admin/gieva/history", adminHistoryRoutes);
 
     // Sync models AFTER models are loaded
     await sequelize.sync({alter:true});

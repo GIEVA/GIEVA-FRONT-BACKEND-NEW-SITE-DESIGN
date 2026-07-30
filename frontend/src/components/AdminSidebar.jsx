@@ -46,6 +46,7 @@ import {
   ContactMail,
   WorkOutline,
   SupportAgent,
+  HistoryEdu,
 } from "@mui/icons-material";
 
 import { useState } from "react";
@@ -266,6 +267,7 @@ export default function AdminSidebar() {
           { label: "Programs", icon: <School />, path: "/admin/programs"  },
           { label: "Staff", icon: <Groups />, path: "/admin/staff"  },
           { label: "Consultancy", icon: <SupportAgent />, path: "/admin/consultations"  },
+          { label: "History", icon: <WorkOutline />, path: "/admin/services"  },
           { label: "Notifications", icon: <Notifications WorkOutline/>, path: "/admin/notifications"  },
           { label: "Payments",      icon: <Payment />,       path: "/admin/payments"        },
           { label: "Activity Logs", icon: <History />,       path: "/admin/activity-logs"   },

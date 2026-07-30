@@ -20,8 +20,8 @@ router.get("/:id", adminGetProgram);
 
 // upload.any() — needed because we don't know section image field names
 // in advance (they're keyed by section id: sectionImage_<id>)
-router.post("/", authenticate, upload.any(), createProgram);
-router.put("/:id", authenticate, upload.any(), updateProgram);
-router.delete("/:id", authenticate, deleteProgram);
+router.post("/", authenticate, authorizeRoles("superadmin", "admin"), upload.any(), createProgram);
+router.put("/:id", authenticate, authorizeRoles("superadmin", "admin"), upload.any(), updateProgram);
+router.delete("/:id", authenticate, authorizeRoles("superadmin", "admin"), deleteProgram);
 
 export default router;
