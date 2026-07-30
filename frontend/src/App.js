@@ -124,6 +124,9 @@ import WhatWeDo from "./pages/WhatWeDo";
 import AdminServices from "./pages/AdminServices";
 import AdminConsultations from "./pages/AdminConsultations";
 import AdminStaff from "./pages/AdminStaff";
+import OurPrograms from "./pages/OurPrograms";
+import About from "./pages/About";
+import History from "./pages/history/History";
 // (Optional later)
 // import Dashboard from "./pages/Dashboard";
 // import ProtectedRoute from "./components/ProtectedRoute";
@@ -181,6 +184,10 @@ function App() {
           path="/campaigns/:id"
           element={<PublicCampaignDetails />}
         />
+
+        <Route path="/our-programs" element={<OurPrograms />} />
+        <Route path="/history" element={<History />} />
+        <Route path="/about" element={<About />} />
 
          <Route
           path="/exam-catalog"
