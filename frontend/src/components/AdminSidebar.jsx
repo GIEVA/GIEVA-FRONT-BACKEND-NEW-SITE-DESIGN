@@ -46,7 +46,6 @@ import {
   ContactMail,
   WorkOutline,
   SupportAgent,
-  School,
 } from "@mui/icons-material";
 
 import { useState } from "react";
