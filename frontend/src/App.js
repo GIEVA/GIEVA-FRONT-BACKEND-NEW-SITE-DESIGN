@@ -128,6 +128,7 @@ import OurPrograms from "./pages/OurPrograms";
 import About from "./pages/About";
 import History from "./pages/history/History";
 import AdminPrograms from "./pages/AdminPrograms";
+import HistoryAdminForm from "./pages/HistoryAdminForm";
 // (Optional later)
 // import Dashboard from "./pages/Dashboard";
 // import ProtectedRoute from "./components/ProtectedRoute";
@@ -685,6 +686,17 @@ function App() {
             <AdminLayout>
 
               <AdminPrograms />
+
+            </AdminLayout>
+          }
+        />
+         <Route
+          path="/admin/history"
+          element={
+
+            <AdminLayout>
+
+              <HistoryAdminForm />
 
             </AdminLayout>
           }
