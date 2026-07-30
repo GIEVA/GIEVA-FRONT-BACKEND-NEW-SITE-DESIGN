@@ -99,7 +99,7 @@ export const publicNavigation = [
       },
       {
         label: "Programs",
-        path: "/programs",
+        path: "/our-programs",
       },
       {
         label: "FAQs",
