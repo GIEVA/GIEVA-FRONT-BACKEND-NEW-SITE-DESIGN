@@ -39,6 +39,7 @@ import ContactMessageModel from './ContactMessage.js';
 import ServiceModel from './Service.js';
 import ConsultationBookingModel from './ConsultationBooking.js';
 import StaffModel from './Staff.js';
+import ProgramModel from './Program.js';
 
 // Init models
 const User = UserModel(sequelize, DataTypes);
@@ -80,7 +81,7 @@ const ContactMessage = ContactMessageModel(sequelize)
 const Service = ServiceModel(sequelize)
 const ConsultationBooking = ConsultationBookingModel(sequelize)
 const Staff = StaffModel(sequelize)
-
+const Program = ProgramModel(sequelize)
 // Collect models
 export const models = {
   User,
@@ -123,6 +124,7 @@ export const models = {
   Service,
   ConsultationBooking,
   Staff,
+  Program,
 };
 
 // Run associations
