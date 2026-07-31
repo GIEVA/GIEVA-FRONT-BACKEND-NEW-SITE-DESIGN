@@ -131,6 +131,8 @@ import AdminPrograms from "./pages/AdminPrograms";
 import HistoryAdminForm from "./pages/HistoryAdminForm";
 import ProgramDetail from "./pages/ProgramDetail";
 import ServiceDetail from "./pages/ServiceDetail";
+import OurTeam from "./pages/OurTeam";
+import StaffDetail from "./pages/StaffDetail";
 // (Optional later)
 // import Dashboard from "./pages/Dashboard";
 // import ProtectedRoute from "./components/ProtectedRoute";
@@ -195,6 +197,8 @@ function App() {
         <Route path="/our-programs" element={<OurPrograms />} />
         <Route path="/program/:id" element={<ProgramDetail />} />
         <Route path="/history" element={<History />} />
+        <Route path="/our-team" element={<OurTeam />} />
+        <Route path="/team/:id" element={<StaffDetail />} />
         <Route path="/about" element={<About />} />
 
          <Route
