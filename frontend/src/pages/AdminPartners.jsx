@@ -120,7 +120,7 @@ const PartnerFormDialog = ({ open, onClose, editId, onSaved, setToast }) => {
       formData.append("order", form.order);
       formData.append("status", form.status);
 
-      if (form.logoFile) formData.append("logo", form.logoFile);
+      if (form.logoFile) formData.append("image", form.logoFile);
 
       if (editId) {
         await updatePartner(editId, formData);
