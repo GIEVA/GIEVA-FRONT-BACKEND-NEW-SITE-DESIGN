@@ -356,17 +356,17 @@ export const footerNavigation = {
 
     {
       label: "Study Abroad",
-      path: "/study-abroad",
+      path: "/study",
     },
 
     {
       label: "Scholarships",
-      path: "/services/scholarships",
+      path: "/services",
     },
 
     {
       label: "Visa Assistance",
-      path: "/services/visa",
+      path: "/services",
     },
   ],
 
@@ -383,7 +383,7 @@ export const footerNavigation = {
 
     {
       label: "Programs",
-      path: "/programs",
+      path: "/our-programs",
     },
 
     {

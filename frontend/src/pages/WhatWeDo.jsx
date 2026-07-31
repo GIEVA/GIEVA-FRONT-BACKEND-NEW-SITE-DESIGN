@@ -8,27 +8,13 @@ import {
   Grid,
   Paper,
   Chip,
-  Dialog,
-  DialogContent,
-  DialogTitle,
-  IconButton,
   CircularProgress,
   Alert,
   Divider,
-  Button,
-  Breadcrumbs,
-  Link as MuiLink,
 } from "@mui/material";
-import {
-  Close,
-  ArrowForward,
-  Star,
-  OpenInNew,
-  Home,
-  ChevronRight,
-} from "@mui/icons-material";
-import { Link } from "react-router-dom";
-import { getServices, getService } from "../services/publicServiceService";
+import { ArrowForward, Star, Home, ChevronRight } from "@mui/icons-material";
+import { Link, useNavigate } from "react-router-dom";
+import { getServices } from "../services/publicServiceService";
 
 // ─────────────────────────────────────────────────────────────
 // COLOURS — marketing site palette
@@ -74,227 +60,109 @@ const HOW_INCOUNTRY = [
 ];
 
 // ─────────────────────────────────────────────────────────────
-// SERVICE CARD
+// SERVICE CARD — now navigates to the detail page
 // ─────────────────────────────────────────────────────────────
-const ServiceCard = ({ service, onClick }) => (
-  <Paper
-    onClick={() => onClick(service)}
-    elevation={0}
-    sx={{
-      bgcolor: CARD,
-      border: `1px solid ${BORDER}`,
-      borderRadius: 3,
-      overflow: "hidden",
-      cursor: "pointer",
-      height: "100%",
-      display: "flex",
-      flexDirection: "column",
-      transition: "border-color 0.2s, transform 0.2s, box-shadow 0.2s",
-      "&:hover": {
-        borderColor: ORANGE,
-        transform: "translateY(-4px)",
-        boxShadow: "0 12px 32px rgba(15, 23, 42, 0.08)",
-      },
-    }}
-  >
-    {service.imageUrl && (
-      <Box
-        component="img"
-        src={service.imageUrl}
-        alt={service.title}
-        sx={{ width: "100%", height: 180, objectFit: "cover", flexShrink: 0 }}
-        onError={(e) => {
-          e.target.style.display = "none";
-        }}
-      />
-    )}
-
-    <Box sx={{ p: 3, display: "flex", flexDirection: "column", flexGrow: 1 }}>
-      {service.category && (
-        <Chip
-          label={service.category}
-          size="small"
-          sx={{
-            alignSelf: "flex-start",
-            mb: 1.5,
-            bgcolor: "#ECFDF5",
-            color: GREEN,
-            fontWeight: 700,
-            fontSize: 11,
-          }}
-        />
-      )}
-
-      {service.featured && (
-        <Star sx={{ fontSize: 16, color: ORANGE, mb: 0.5 }} />
-      )}
-
-      <Typography
-        sx={{
-          fontSize: 17,
-          fontWeight: 800,
-          color: TEXT,
-          lineHeight: 1.3,
-          mb: 1,
-        }}
-      >
-        {service.title}
-      </Typography>
-
-      {service.description && (
-        <Typography
-          sx={{
-            fontSize: 13.5,
-            color: MUTED,
-            lineHeight: 1.65,
-            mb: 2,
-            flexGrow: 1,
-            display: "-webkit-box",
-            WebkitLineClamp: 3,
-            WebkitBoxOrient: "vertical",
-            overflow: "hidden",
-          }}
-        >
-          {service.description}
-        </Typography>
-      )}
-
-      <Box
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          gap: 0.5,
-          color: ORANGE,
-          fontWeight: 700,
-          fontSize: 13,
-          mt: "auto",
-        }}
-      >
-        Learn more <ArrowForward sx={{ fontSize: 14 }} />
-      </Box>
-    </Box>
-  </Paper>
-);
-
-// ─────────────────────────────────────────────────────────────
-// SERVICE DETAIL MODAL
-// ─────────────────────────────────────────────────────────────
-const ServiceModal = ({ service, open, onClose }) => {
-  if (!service) return null;
+const ServiceCard = ({ service }) => {
+  const navigate = useNavigate();
 
   return (
-    <Dialog
-      open={open}
-      onClose={onClose}
-      maxWidth="sm"
-      fullWidth
-      scroll="paper"
-      PaperProps={{
-        sx: {
-          bgcolor: CARD,
-          border: `1px solid ${BORDER}`,
-          borderRadius: 4,
-          color: TEXT,
+    <Paper
+      onClick={() => navigate(`/services/${service.id}`)}
+      elevation={0}
+      sx={{
+        bgcolor: CARD,
+        border: `1px solid ${BORDER}`,
+        borderRadius: 3,
+        overflow: "hidden",
+        cursor: "pointer",
+        height: "100%",
+        display: "flex",
+        flexDirection: "column",
+        transition: "border-color 0.2s, transform 0.2s, box-shadow 0.2s",
+        "&:hover": {
+          borderColor: ORANGE,
+          transform: "translateY(-4px)",
+          boxShadow: "0 12px 32px rgba(15, 23, 42, 0.08)",
         },
       }}
     >
       {service.imageUrl && (
-        <Box sx={{ position: "relative", height: 220, flexShrink: 0 }}>
-          <Box
-            component="img"
-            src={service.imageUrl}
-            alt={service.title}
-            sx={{ width: "100%", height: "100%", objectFit: "cover" }}
-          />
-          <Box
-            sx={{
-              position: "absolute",
-              inset: 0,
-              background:
-                "linear-gradient(to top, rgba(255,255,255,0.95) 0%, transparent 60%)",
-            }}
-          />
-        </Box>
+        <Box
+          component="img"
+          src={service.imageUrl}
+          alt={service.title}
+          sx={{ width: "100%", height: 180, objectFit: "cover", flexShrink: 0 }}
+          onError={(e) => {
+            e.target.style.display = "none";
+          }}
+        />
       )}
 
-      <DialogTitle
-        sx={{
-          px: 3,
-          pt: service.imageUrl ? 2 : 3,
-          pb: 1.5,
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "flex-start",
-          gap: 2,
-        }}
-      >
-        <Box>
-          {service.category && (
-            <Chip
-              label={service.category}
-              size="small"
-              sx={{
-                mb: 1,
-                bgcolor: "#ECFDF5",
-                color: GREEN,
-                fontWeight: 700,
-                fontSize: 11,
-              }}
-            />
-          )}
-          <Typography
-            sx={{ fontSize: 20, fontWeight: 800, color: TEXT, lineHeight: 1.25 }}
-          >
-            {service.title}
-          </Typography>
-        </Box>
-        <IconButton onClick={onClose} size="small" sx={{ color: MUTED, flexShrink: 0 }}>
-          <Close />
-        </IconButton>
-      </DialogTitle>
+      <Box sx={{ p: 3, display: "flex", flexDirection: "column", flexGrow: 1 }}>
+        {service.category && (
+          <Chip
+            label={service.category}
+            size="small"
+            sx={{
+              alignSelf: "flex-start",
+              mb: 1.5,
+              bgcolor: "#ECFDF5",
+              color: GREEN,
+              fontWeight: 700,
+              fontSize: 11,
+            }}
+          />
+        )}
 
-      <Divider sx={{ borderColor: BORDER }} />
+        {service.featured && (
+          <Star sx={{ fontSize: 16, color: ORANGE, mb: 0.5 }} />
+        )}
 
-      <DialogContent sx={{ px: 3, py: 3 }}>
         <Typography
           sx={{
-            fontSize: 14.5,
-            color: MUTED,
-            lineHeight: 1.75,
-            whiteSpace: "pre-wrap",
+            fontSize: 17,
+            fontWeight: 800,
+            color: TEXT,
+            lineHeight: 1.3,
+            mb: 1,
           }}
         >
-          {service.description || "No additional details available for this service."}
+          {service.title}
         </Typography>
 
-        {service.href && (
-          <Box sx={{ mt: 3 }}>
-            <Button
-              variant="contained"
-              endIcon={<OpenInNew sx={{ fontSize: 16 }} />}
-              component={service.href.startsWith("http") ? "a" : Link}
-              href={service.href.startsWith("http") ? service.href : undefined}
-              to={!service.href.startsWith("http") ? service.href : undefined}
-              target={service.href.startsWith("http") ? "_blank" : undefined}
-              rel={service.href.startsWith("http") ? "noreferrer" : undefined}
-              onClick={onClose}
-              sx={{
-                bgcolor: ORANGE,
-                color: "#fff",
-                textTransform: "none",
-                fontWeight: 700,
-                borderRadius: 2.5,
-                px: 3,
-                py: 1.25,
-                "&:hover": { bgcolor: "#ea580c" },
-              }}
-            >
-              Get Started
-            </Button>
-          </Box>
+        {service.description && (
+          <Typography
+            sx={{
+              fontSize: 13.5,
+              color: MUTED,
+              lineHeight: 1.65,
+              mb: 2,
+              flexGrow: 1,
+              display: "-webkit-box",
+              WebkitLineClamp: 3,
+              WebkitBoxOrient: "vertical",
+              overflow: "hidden",
+            }}
+          >
+            {service.description}
+          </Typography>
         )}
-      </DialogContent>
-    </Dialog>
+
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: 0.5,
+            color: ORANGE,
+            fontWeight: 700,
+            fontSize: 13,
+            mt: "auto",
+          }}
+        >
+          Learn more <ArrowForward sx={{ fontSize: 14 }} />
+        </Box>
+      </Box>
+    </Paper>
   );
 };
 
@@ -352,8 +220,6 @@ export default function WhatWeDo() {
   const [services, setServices] = useState([]);
   const [loadingServices, setLoadingServices] = useState(true);
   const [fetchError, setFetchError] = useState("");
-  const [selectedService, setSelectedService] = useState(null);
-  const [modalOpen, setModalOpen] = useState(false);
 
   useEffect(() => {
     getServices()
@@ -361,23 +227,6 @@ export default function WhatWeDo() {
       .catch(() => setFetchError("Failed to load services. Please try again."))
       .finally(() => setLoadingServices(false));
   }, []);
-
-  const handleOpenService = async (service) => {
-    setSelectedService(service);
-    setModalOpen(true);
-
-    try {
-      const full = await getService(service.id);
-      setSelectedService(full);
-    } catch {
-      // keep list data
-    }
-  };
-
-  const handleCloseModal = () => {
-    setModalOpen(false);
-    setTimeout(() => setSelectedService(null), 300);
-  };
 
   return (
     <Box sx={{ bgcolor: BG, minHeight: "100vh", color: TEXT }}>
@@ -584,19 +433,13 @@ export default function WhatWeDo() {
             <Grid container spacing={3}>
               {services.map((service) => (
                 <Grid item xs={12} sm={6} md={4} key={service.id}>
-                  <ServiceCard service={service} onClick={handleOpenService} />
+                  <ServiceCard service={service} />
                 </Grid>
               ))}
             </Grid>
           )}
         </Box>
       </Container>
-
-      <ServiceModal
-        service={selectedService}
-        open={modalOpen}
-        onClose={handleCloseModal}
-      />
     </Box>
   );
 }

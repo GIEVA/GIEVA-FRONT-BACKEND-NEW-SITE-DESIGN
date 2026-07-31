@@ -32,6 +32,11 @@ export default (sequelize) => {
         allowNull: true,
       },
 
+      bio: {
+            type: DataTypes.TEXT,
+            allowNull: true,
+            },
+
       // Store socials as JSON: { facebook, linkedin, x, instagram, youtube }
       socials: {
         type:         DataTypes.JSON,

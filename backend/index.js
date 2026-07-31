@@ -256,7 +256,7 @@ app.use("/api/gieva/history", historyRoutes);
 app.use("/api/admin/gieva/history", adminHistoryRoutes);
 
     // Sync models AFTER models are loaded
-    await sequelize.sync({alter:true});
+    await sequelize.sync();
     console.log("🚀 Sequelize models synced");
 
     app.listen(PORT , () => {

@@ -96,6 +96,7 @@ const StatCard = ({ title, value, color = NAVY, icon }) => (
 const EMPTY_FORM = {
   name: "",
   role: "",
+  bio: "",
   order: 0,
   status: "draft",
   socials: { facebook: "", linkedin: "", x: "", instagram: "", youtube: "" },
@@ -124,6 +125,7 @@ const StaffFormDialog = ({ open, onClose, editId, onSaved, setToast }) => {
         setForm({
           name:   s.name   || "",
           role:   s.role   || "",
+          bio: s.bio || "",
           order:  s.order  ?? 0,
           status: s.status || "draft",
           socials: {
@@ -167,6 +169,7 @@ const StaffFormDialog = ({ open, onClose, editId, onSaved, setToast }) => {
       const formData = new FormData();
       formData.append("name", form.name);
       formData.append("role", form.role);
+      formData.append("bio", form.bio || "");
       formData.append("order", form.order);
       formData.append("status", form.status);
 
@@ -252,6 +255,16 @@ const StaffFormDialog = ({ open, onClose, editId, onSaved, setToast }) => {
                   sx={{ "& fieldset": { borderColor: BORDER } }}
                 />
               </Grid>
+
+              {/* Bio */}
+            <Grid item xs={12}>
+            <TextField
+                fullWidth multiline rows={4} label="Short Bio (optional)"
+                value={form.bio} onChange={set("bio")}
+                placeholder="A sentence or two about this person — shown on their profile page"
+                sx={{ "& fieldset": { borderColor: BORDER } }}
+            />
+            </Grid>
 
               {/* Image Upload */}
               <Grid item xs={12}>

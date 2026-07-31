@@ -57,6 +57,7 @@ export const createStaff = async (req, res) => {
         const staff = await Staff.create({
             name: req.body.name,
             role: req.body.role,
+            bio: req.body.bio || "",
             imageUrl: req.file ? req.file.path : null,
             imageCloudinaryId: req.file ? req.file.filename : null,
             socials,
@@ -101,6 +102,7 @@ export const updateStaff = async (req, res) => {
         await staff.update({
             name: req.body.name,
             role: req.body.role,
+            bio: req.body.bio || "",
             imageUrl: req.file ? req.file.path : staff.imageUrl,
             imageCloudinaryId: req.file ? req.file.filename : staff.imageCloudinaryId,
             socials,
