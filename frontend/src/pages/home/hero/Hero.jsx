@@ -13,34 +13,30 @@ export default function Hero({
     align = "left",
     maxWidth = "xl",
     minHeight = "90vh",
-    background = "background.default",
-    contentWidth = 5,   // NEW
-    imageWidth = 7,     // NEW
+    background,
+    contentWidth = 5,
+    imageWidth = 7,
     sx = {},
 }) {
     return (
         <Box
             component="section"
             sx={{
-                bgcolor: "linear-gradient(135deg, #f8fafc 0%, #f0f9ff 100%)",
+                background: background || "linear-gradient(135deg, #f8fafc 0%, #f0f9ff 100%)",
                 display: "flex",
                 alignItems: "center",
-                minHeight,
+                minHeight: { xs: "auto", lg: minHeight },
+                py: { xs: 10, lg: 0 },
                 overflow: "hidden",
                 position: "relative",
                 ...sx,
             }}
         >
             <Container maxWidth={maxWidth}>
-                <Grid
-                    container
-                    spacing={{ xs: 4, lg: 6 }} // Tighter spacing
-                    alignItems="center"
-                >
-                    {/* Left Content - Slightly wider */}
+                <Grid container spacing={{ xs: 6, lg: 6 }} alignItems="center">
                     <Grid size={{ xs: 12, lg: contentWidth }}>
                         <HeroContent
-                            eyebrow={subtitle} // Using subtitle prop as eyebrow for GIEVA feel
+                            eyebrow={subtitle}
                             title={title}
                             description={description}
                             actions={actions}
@@ -49,7 +45,6 @@ export default function Hero({
                         />
                     </Grid>
 
-                    {/* Right Illustration - Larger & More Impactful */}
                     <Grid size={{ xs: 12, lg: imageWidth }}>
                         <HeroImage image={image} />
                     </Grid>
@@ -59,16 +54,27 @@ export default function Hero({
     );
 }
 
-// ... (PropTypes updated with contentWidth & imageWidth)
+Hero.propTypes = {
+    title: PropTypes.string.isRequired,
+    subtitle: PropTypes.string,
+    description: PropTypes.string,
+    actions: PropTypes.object,
+    stats: PropTypes.array,
+    image: PropTypes.shape({
+        src: PropTypes.string,
+        alt: PropTypes.string,
+    }),
+    align: PropTypes.oneOf(["left", "center"]),
+    maxWidth: PropTypes.oneOf(["xs", "sm", "md", "lg", "xl", false]),
+    minHeight: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    background: PropTypes.string,
+    contentWidth: PropTypes.number,
+    imageWidth: PropTypes.number,
+    sx: PropTypes.object,
+};
 
 // import PropTypes from "prop-types";
-
-// import {
-//     Box,
-//     Container,
-//     Grid,
-// } from "@mui/material";
-
+// import { Box, Container, Grid } from "@mui/material";
 // import HeroContent from "./HeroContent";
 // import HeroImage from "./HeroImage";
 
@@ -76,64 +82,41 @@ export default function Hero({
 //     title,
 //     subtitle,
 //     description,
-
 //     actions,
-
 //     stats,
-
 //     image,
-
 //     align = "left",
-
 //     maxWidth = "xl",
-
-//     minHeight = "85vh",
-
+//     minHeight = "90vh",
 //     background = "background.default",
-
+//     contentWidth = 5,   // NEW
+//     imageWidth = 7,     // NEW
 //     sx = {},
 // }) {
 //     return (
 //         <Box
 //             component="section"
 //             sx={{
-//                 bgcolor: background,
-
+//                 bgcolor: "linear-gradient(135deg, #f8fafc 0%, #f0f9ff 100%)",
 //                 display: "flex",
-
 //                 alignItems: "center",
-
 //                 minHeight,
-
 //                 overflow: "hidden",
-
 //                 position: "relative",
-
 //                 ...sx,
 //             }}
 //         >
-//             <Container
-//                 maxWidth={maxWidth}
-//             >
+//             <Container maxWidth={maxWidth}>
 //                 <Grid
 //                     container
-//                     spacing={{
-//                         xs: 6,
-//                         lg: 10,
-//                     }}
+//                     spacing={{ xs: 4, lg: 6 }} // Tighter spacing
 //                     alignItems="center"
 //                 >
-//                     {/* Left Content */}
-
-//                     <Grid
-//                         size={{
-//                             xs: 12,
-//                             lg: 4,
-//                         }}
-//                     >
+//                     {/* Left Content - Slightly wider */}
+//                     <Grid size={{ xs: 12, lg: contentWidth }}>
 //                         <HeroContent
+//                             eyebrow={subtitle} // Using subtitle prop as eyebrow for GIEVA feel
 //                             title={title}
-//                             subtitle={subtitle}
 //                             description={description}
 //                             actions={actions}
 //                             stats={stats}
@@ -141,17 +124,9 @@ export default function Hero({
 //                         />
 //                     </Grid>
 
-//                     {/* Right Illustration */}
-
-//                     <Grid
-//                         size={{
-//                             xs: 12,
-//                             lg: 8,
-//                         }}
-//                     >
-//                         <HeroImage
-//                             image={image}
-//                         />
+//                     {/* Right Illustration - Larger & More Impactful */}
+//                     <Grid size={{ xs: 12, lg: imageWidth }}>
+//                         <HeroImage image={image} />
 //                     </Grid>
 //                 </Grid>
 //             </Container>
@@ -159,47 +134,3 @@ export default function Hero({
 //     );
 // }
 
-// Hero.propTypes = {
-//     title: PropTypes.string.isRequired,
-
-//     subtitle: PropTypes.string,
-
-//     description: PropTypes.string,
-
-//     actions: PropTypes.shape({
-//         primary: PropTypes.object,
-
-//         secondary: PropTypes.object,
-//     }),
-
-//     stats: PropTypes.array,
-
-//     image: PropTypes.shape({
-//         src: PropTypes.string,
-
-//         alt: PropTypes.string,
-//     }),
-
-//     align: PropTypes.oneOf([
-//         "left",
-//         "center",
-//     ]),
-
-//     maxWidth: PropTypes.oneOf([
-//         "xs",
-//         "sm",
-//         "md",
-//         "lg",
-//         "xl",
-//         false,
-//     ]),
-
-//     minHeight: PropTypes.oneOfType([
-//         PropTypes.string,
-//         PropTypes.number,
-//     ]),
-
-//     background: PropTypes.string,
-
-//     sx: PropTypes.object,
-// };
