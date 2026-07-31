@@ -133,6 +133,8 @@ import ProgramDetail from "./pages/ProgramDetail";
 import ServiceDetail from "./pages/ServiceDetail";
 import OurTeam from "./pages/OurTeam";
 import StaffDetail from "./pages/StaffDetail";
+import AdminPartners from "./pages/AdminPartners";
+
 // (Optional later)
 // import Dashboard from "./pages/Dashboard";
 // import ProtectedRoute from "./components/ProtectedRoute";
@@ -707,6 +709,17 @@ function App() {
             <AdminLayout>
 
               <HistoryAdminForm />
+
+            </AdminLayout>
+          }
+        />
+         <Route
+          path="/admin/partners"
+          element={
+
+            <AdminLayout>
+
+              <AdminPartners />
 
             </AdminLayout>
           }

@@ -41,6 +41,10 @@ import ConsultationBookingModel from './ConsultationBooking.js';
 import StaffModel from './Staff.js';
 import ProgramModel from './Program.js';
 import HistoryPageModel from './HistoryPage.js';
+import PartnerModel from './Partner.js';
+
+
+
 // Init models
 const User = UserModel(sequelize, DataTypes);
 const TutorProfile = TutorProfileModel(sequelize, DataTypes);
@@ -83,6 +87,7 @@ const ConsultationBooking = ConsultationBookingModel(sequelize)
 const Staff = StaffModel(sequelize)
 const Program = ProgramModel(sequelize)
 const HistoryPage = HistoryPageModel(sequelize)
+const Partner = PartnerModel(sequelize)
 
 // Collect models
 export const models = {
@@ -127,7 +132,8 @@ export const models = {
   ConsultationBooking,
   Staff,
   Program,
-  HistoryPage
+  HistoryPage,
+  Partner
 };
 
 // Run associations
