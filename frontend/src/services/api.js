@@ -4,9 +4,9 @@ import axios from "axios";
 
 const API = axios.create({
   baseURL: "https://gieva-front-backend-new-site-design-production.up.railway.app/",
-  headers: {
-    "Content-Type": "application/json",
-  },
+  // headers: {
+  //   "Content-Type": "application/json",
+  // },
   withCredentials: true,
 });
 
