@@ -18,8 +18,8 @@ router.get("/", adminGetPartners);
 router.get("/stats", getPartnerStats);   // before /:id
 router.get("/:id", adminGetPartner);
 
-router.post("/", authenticate, upload.single("image"), createPartner);
-router.put("/:id", authenticate, upload.single("image"), updatePartner);
+router.post("/", authenticate, upload.single("logo"), createPartner);
+router.put("/:id", authenticate, upload.single("logo"), updatePartner);
 router.delete("/:id", authenticate, deletePartner);
 
 export default router;
