@@ -6,7 +6,7 @@ import {
 } from "@mui/material";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 
-import { getCampaign } from "../../../services/campaignService";
+import { getPublicCampaign } from "../../../services/publicCampaignService";
 import CampaignRegistrationModal from "../../../pages/CampaignRegistrationModal"; // adjust path to match your file location
 
 export default function CampaignModal({ open, campaignId, onClose }) {
@@ -20,7 +20,7 @@ export default function CampaignModal({ open, campaignId, onClose }) {
         const fetchCampaign = async () => {
             try {
                 setLoading(true);
-                const data = await getCampaign(campaignId);
+                const data = await getPublicCampaign(campaignId);
                 setCampaign(data);
             } catch (error) {
                 console.error(error);

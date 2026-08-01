@@ -20,7 +20,7 @@ import "swiper/css/pagination";
 
 
 
-import { getPublicCampaigns } from "../../../services/campaignService";
+import { getPublicCampaigns } from "../../../services/publicCampaignService";
 
 import CampaignCard from "../CampaignCard/CampaignCard";
 import CampaignModal from "../CampaignModal/CampaignModal";

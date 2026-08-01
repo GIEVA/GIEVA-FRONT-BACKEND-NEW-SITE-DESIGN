@@ -1,84 +1,43 @@
-import API
-from "./api";
+// services/publicCampaignService.js
+// Public endpoints — no auth required
+// Maps to: app.use("/api/campaigns", userGetCampaignRoutes)
 
+import api from "./api";
 
+const BASE = "/api/user/campaigns";
 
-// ======================================================
-// GET PUBLIC CAMPAIGNS
-// ======================================================
+/**
+ * Fetch all active campaigns
+ * GET /api/campaigns
+ */
+export const getPublicCampaigns = async (params = {}) => {
+  const { data } = await api.get(BASE, { params });
+  return data; // array of Campaign objects
+};
 
-export const getPublicCampaigns =
-  async (params = {}) => {
+/**
+ * Fetch a single active campaign by id or slug
+ * GET /api/campaigns/:id
+ */
+export const getPublicCampaign = async (id) => {
+  const { data } = await api.get(`${BASE}/${id}`);
+  return data; // single Campaign object
+};
 
-    const res =
-      await API.get(
+/**
+ * Track a view
+ * POST /api/campaigns/:id/view
+ */
+export const trackCampaignView = async (id) => {
+  const { data } = await api.post(`${BASE}/${id}/view`);
+  return data;
+};
 
-        "/api/campaigns",
-
-        { params }
-      );
-
-
-
-    return res.data;
-  };
-
-
-
-// ======================================================
-// GET PUBLIC CAMPAIGN DETAILS
-// ======================================================
-
-export const getPublicCampaignDetails =
-  async (id) => {
-
-    const res =
-      await API.get(
-
-        `/api/campaigns/${id}`
-      );
-
-
-
-    return res.data;
-  };
-
-
-
-// ======================================================
-// TRACK VIEW
-// ======================================================
-
-export const trackCampaignView =
-  async (id) => {
-
-    const res =
-      await API.post(
-
-        `/api/campaigns/${id}/view`
-      );
-
-
-
-    return res.data;
-  };
-
-
-
-// ======================================================
-// TRACK CLICK
-// ======================================================
-
-export const trackCampaignClick =
-  async (id) => {
-
-    const res =
-      await API.post(
-
-        `/api/campaigns/${id}/click`
-      );
-
-
-
-    return res.data;
-  };
+/**
+ * Track a click
+ * POST /api/campaigns/:id/click
+ */
+export const trackCampaignClick = async (id) => {
+  const { data } = await api.post(`${BASE}/${id}/click`);
+  return data;
+};

@@ -198,8 +198,13 @@ app.use(
   adminCampaignRegistrationRoutes
 );
 
+// app.use(
+//   "/api/campaigns",
+//   campaignRoutes
+// );
+
 app.use(
-  "/api/campaigns",
+  "/api/user/campaigns",
   userGetCampaignRoutes
 );
 

@@ -6,18 +6,18 @@ import API from "./api";
 /**
  * PUBLIC – list active campaigns
  */
-export const getPublicCampaigns = async () => {
-  const res = await API.get("/api/campaigns");
-  return res.data; // plain array from getPublicCampaigns
-};
+// export const getPublicCampaigns = async () => {
+//   const res = await API.get("/api/campaigns");
+//   return res.data; // plain array from getPublicCampaigns
+// };
 
-/**
- * PUBLIC – single campaign
- */
-export const getPublicCampaignById = async (id) => {
-  const res = await API.get(`/api/campaigns/${id}`);
-  return res.data;
-};
+// /**
+//  * PUBLIC – single campaign
+//  */
+// export const getPublicCampaignById = async (id) => {
+//   const res = await API.get(`/api/campaigns/${id}`);
+//   return res.data;
+// };
 
 
 // ======================================================

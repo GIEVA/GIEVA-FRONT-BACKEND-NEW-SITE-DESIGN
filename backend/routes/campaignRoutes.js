@@ -13,8 +13,8 @@ import {
   incrementCampaignClicks,
   incrementCampaignViews,
   featureCampaign,
-  getPublicCampaigns,     
-  getPublicCampaignById,  
+  // getPublicCampaigns,     
+  // getPublicCampaignById,  
 
 } from "../controllers/campaign.controller.js";
 
@@ -159,8 +159,8 @@ router.post(
 
 //For users --- public //
 
-router.get("/", getPublicCampaigns);
-router.get("/:id", getPublicCampaignById);
+// router.get("/", getPublicCampaigns);
+// router.get("/:id", getPublicCampaignById);
 
 
 
