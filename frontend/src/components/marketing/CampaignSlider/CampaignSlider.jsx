@@ -165,9 +165,10 @@ const handleCloseCampaign = () => {
         )}
       </Swiper>
 
+      // After
       <CampaignModal
         open={modalOpen}
-        campaign={selectedCampaign}   // full object
+        campaignId={selectedCampaign?.id}
         onClose={handleCloseCampaign}
       />
     </>
