@@ -132,11 +132,11 @@ function PartnerLogo({ partner }) {
                 height: { xs: 32, md: 40 },
                 maxWidth: 140,
                 objectFit: "contain",
-                filter: "grayscale(1) opacity(0.55)",
-                transition: "filter 0.3s ease, transform 0.3s ease",
+                opacity: 0.9,
+                transition: "opacity 0.3s ease, transform 0.3s ease",
                 flexShrink: 0,
                 "&:hover": {
-                    filter: "grayscale(0) opacity(1)",
+                    opacity: 1,
                     transform: "scale(1.06)",
                 },
             }}
@@ -157,7 +157,6 @@ function PartnerLogo({ partner }) {
         </Box>
     );
 }
-
 Partners.propTypes = {};
 
 // import PropTypes from "prop-types";
