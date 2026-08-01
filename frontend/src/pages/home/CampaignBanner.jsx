@@ -4,7 +4,7 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import ArrowForwardRoundedIcon from "@mui/icons-material/ArrowForwardRounded";
 
-import { getPublicCampaigns } from "../../services/campaignService";
+import { getPublicCampaigns } from "../../services/publicCampaignService";
 import CampaignModal from "../../components/marketing/CampaignModal/CampaignModal";
 
 const NAVY   = "#0B1F3A";
