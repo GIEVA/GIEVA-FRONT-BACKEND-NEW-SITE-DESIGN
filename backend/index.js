@@ -273,7 +273,7 @@ app.use("/api/admin/faqs", adminFaqRoutes);
 app.use("/api/faqs/all", faqRoutes);
 
     // Sync models AFTER models are loaded
-    await sequelize.sync({alter:true});
+    await sequelize.sync();
     console.log("🚀 Sequelize models synced");
 
     app.listen(PORT , () => {
