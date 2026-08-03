@@ -48,6 +48,7 @@ import {
   SupportAgent,
   HistoryEdu,
   Group,
+  HelpOutline
 } from "@mui/icons-material";
 
 import { useState } from "react";
@@ -270,6 +271,7 @@ export default function AdminSidebar() {
           { label: "Consultancy", icon: <SupportAgent />, path: "/admin/consultations"  },
           { label: "History", icon: <HistoryEdu />, path: "/admin/history"  },
           { label: "Partners", icon: <Groups />, path: "/admin/partners"  },
+          { label: "FAQs", icon: <HelpOutline />, path: "/admin/faqs"  },
           { label: "Notifications", icon: <Notifications WorkOutline/>, path: "/admin/notifications"  },
           { label: "Payments",      icon: <Payment />,       path: "/admin/payments"        },
           { label: "Activity Logs", icon: <History />,       path: "/admin/activity-logs"   },

@@ -18,6 +18,8 @@ export default function CampaignCard({
     onClick,
     sx = {},
 }) {
+    const stripHtml = (html = "") => html.replace(/<[^>]*>/g, "");
+
     return (
         <Card
             elevation={0}
@@ -92,8 +94,7 @@ export default function CampaignCard({
                                 WebkitBoxOrient: "vertical",
                             }}
                         >
-                            {campaign.shortDescription ||
-                                campaign.description}
+                            {stripHtml(campaign.shortDescription || campaign.description)}
                         </Typography>
 
                         <Box

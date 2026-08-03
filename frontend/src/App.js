@@ -134,6 +134,8 @@ import ServiceDetail from "./pages/ServiceDetail";
 import OurTeam from "./pages/OurTeam";
 import StaffDetail from "./pages/StaffDetail";
 import AdminPartners from "./pages/AdminPartners";
+import AdminFaqs from "./pages/AdminFaqs";
+import FaqPage from "./pages/FaqPage";
 
 // (Optional later)
 // import Dashboard from "./pages/Dashboard";
@@ -202,6 +204,7 @@ function App() {
         <Route path="/our-team" element={<OurTeam />} />
         <Route path="/team/:id" element={<StaffDetail />} />
         <Route path="/about" element={<About />} />
+        <Route path="/faqs" element={<FaqPage />} />
 
          <Route
           path="/exam-catalog"
@@ -720,6 +723,18 @@ function App() {
             <AdminLayout>
 
               <AdminPartners />
+
+            </AdminLayout>
+          }
+        />
+
+         <Route
+          path="/admin/faqs/page"
+          element={
+
+            <AdminLayout>
+
+              <AdminFaqs />
 
             </AdminLayout>
           }

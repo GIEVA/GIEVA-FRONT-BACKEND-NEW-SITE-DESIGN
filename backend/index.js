@@ -91,6 +91,8 @@ import historyRoutes from "./routes/history.routes.js";
 import adminHistoryRoutes from "./routes/adminHistory.routes.js";
 import partnerRoutes from "./routes/partner.routes.js";
 import adminPartnerRoutes from "./routes/adminPartner.routes.js";
+import adminFaqRoutes from "./routes/adminFaq.routes.js"
+import faqRoutes from "./routes/faq.routes.js"
 
 
 
@@ -267,8 +269,11 @@ app.use("/api/admin/gieva/history", adminHistoryRoutes);
 app.use("/api/partners/all", partnerRoutes);
 app.use("/api/admin/partners/all", adminPartnerRoutes);
 
+app.use("/api/admin/faqs", adminFaqRoutes);
+app.use("/api/faqs/all", faqRoutes);
+
     // Sync models AFTER models are loaded
-    await sequelize.sync();
+    await sequelize.sync({alter:true});
     console.log("🚀 Sequelize models synced");
 
     app.listen(PORT , () => {

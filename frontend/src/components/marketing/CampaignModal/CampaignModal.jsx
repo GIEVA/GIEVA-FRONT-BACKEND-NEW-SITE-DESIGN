@@ -68,7 +68,26 @@ export default function CampaignModal({ open, campaignId, onClose }) {
                                         {campaign.featured && <Chip label="Featured" color="warning" />}
                                     </Stack>
 
-                                    <Typography variant="body1">{campaign.description}</Typography>
+                                                                    
+                                    <Typography
+                                        variant="body1"
+                                        component="div"
+                                        dangerouslySetInnerHTML={{ __html: campaign.description }}
+                                        sx={{
+                                            "& p": { mb: 1.5, lineHeight: 1.75 },
+                                            "& strong": { fontWeight: 700 },
+                                            "& mark": { bgcolor: "#FEF3C7", px: 0.3, borderRadius: 0.5 },
+                                            "& ul, & ol": { pl: 3, mb: 1.5 },
+                                            "& blockquote": {
+                                                borderLeft: "3px solid #E2E8F0",
+                                                pl: 2, ml: 0, color: "text.secondary", fontStyle: "italic",
+                                            },
+                                            "& a": { color: "primary.main" },
+                                            "& img": { maxWidth: "100%", borderRadius: 2, my: 1.5 },
+                                            "& table": { borderCollapse: "collapse", width: "100%", my: 1.5 },
+                                            "& th, & td": { border: "1px solid #E2E8F0", p: 1, textAlign: "left" },
+                                        }}
+                                    />
 
                                     <Typography variant="body2" color="text.secondary">
                                         Start: {new Date(campaign.startDate).toLocaleString()}
