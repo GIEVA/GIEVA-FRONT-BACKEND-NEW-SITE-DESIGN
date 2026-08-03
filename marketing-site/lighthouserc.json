@@ -7,9 +7,21 @@
         "/index.html",
         "/styleguide/index.html",
         "/services/index.html",
+        "/services/sat/index.html",
+        "/services/act/index.html",
+        "/services/toefl/index.html",
+        "/services/ielts/index.html",
+        "/services/gre/index.html",
+        "/services/professional-development/index.html",
         "/about/index.html",
         "/team/index.html",
-        "/partners/index.html"
+        "/partners/index.html",
+        "/ngo/index.html",
+        "/ngo/styleguide/index.html",
+        "/ngo/partners/index.html",
+        "/ngo/about/index.html",
+        "/ngo/program/index.html",
+        "/ngo/contact/index.html"
       ],
       "settings": {
         "chromeFlags": "--no-sandbox --headless=new --disable-dev-shm-usage --disable-gpu"

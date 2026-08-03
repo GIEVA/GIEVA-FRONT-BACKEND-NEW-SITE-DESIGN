@@ -44,18 +44,23 @@ export interface PartnerLogo {
   height: number;
 }
 
+/**
+ * Heights match the design's 60px logo band (node 12023:32445): full-bleed marks sit at 60px,
+ * the padded/inset marks at 40px. (These are 5/3× the earlier 36/24 values, which under-scaled
+ * the whole row.)
+ */
 export const partnerLogos: PartnerLogo[] = [
-  { name: 'Microsoft', src: logoMicrosoft, height: 24 },
-  { name: 'WAEC', src: logoWaec, height: 36 },
-  { name: 'R', src: logoR, height: 24 },
-  { name: 'Drake University', src: logoDrake, height: 24 },
-  { name: 'The College Board', src: logoCollegeBoardMark, height: 36 },
-  { name: 'ETS', src: logoEts, height: 24 },
-  { name: 'ECOSOC', src: logoEcosocSmall, height: 36 },
-  { name: 'UN ECOSOC', src: logoUnEcosoc, height: 36 },
-  { name: 'ujweb', src: logoUjweb, height: 24 },
-  { name: 'US Embassy', src: logoUsEmbassy, height: 36 },
-  { name: 'College Board', src: logoCollegeBoardFull, height: 24 },
-  { name: 'British Council', src: logoBritishCouncil, height: 24 },
-  { name: 'idXdWonEmY', src: logoIdxdwonemy, height: 36 },
+  { name: 'Microsoft', src: logoMicrosoft, height: 40 },
+  { name: 'WAEC', src: logoWaec, height: 60 },
+  { name: 'R', src: logoR, height: 40 },
+  { name: 'Drake University', src: logoDrake, height: 40 },
+  { name: 'The College Board', src: logoCollegeBoardMark, height: 60 },
+  { name: 'ETS', src: logoEts, height: 40 },
+  { name: 'ECOSOC', src: logoEcosocSmall, height: 60 },
+  { name: 'UN ECOSOC', src: logoUnEcosoc, height: 60 },
+  { name: 'ujweb', src: logoUjweb, height: 40 },
+  { name: 'US Embassy', src: logoUsEmbassy, height: 60 },
+  { name: 'College Board', src: logoCollegeBoardFull, height: 40 },
+  { name: 'British Council', src: logoBritishCouncil, height: 40 },
+  { name: 'idXdWonEmY', src: logoIdxdwonemy, height: 60 },
 ];

@@ -9,19 +9,26 @@
  *
  * The visual system is the token layer in src/styles (Phase 1); this layout only wires it up.
  */
+import { Font } from 'astro:assets';
 import '@styles/tokens.css';
 import '@styles/base.css';
 import SiteHeader from '@components/SiteHeader.astro';
+import NgoSiteHeader from '@components/NgoSiteHeader.astro';
 import SiteFooter from '@components/SiteFooter.astro';
 
 export interface Props {
   title: string;
   description?: string;
-  /** Which brand theme this route belongs to. See WORKFLOW.md §3a. */
+  /** Which brand theme this route belongs to. See WORKFLOW.md §3a. Defaults from the route:
+   *  `/ngo/*` → 'ngo', everything else → 'consultancy'. Pass explicitly to override. */
   brand?: 'consultancy' | 'ngo';
 }
 
-const { title, description, brand = 'consultancy' } = Astro.props;
+const { title, description } = Astro.props;
+// Path-derived default so every `/ngo/*` route gets data-brand="ngo" (and the NGO shell)
+// without each page having to remember the prop; Consultancy root routes stay untouched.
+const brand =
+  Astro.props.brand ?? (Astro.url.pathname.startsWith('/ngo') ? 'ngo' : 'consultancy');
 ---
 
 <!doctype html>
@@ -31,16 +38,28 @@ const { title, description, brand = 'consultancy' } = Astro.props;
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{title}</title>
     {description && <meta name="description" content={description} />}
-    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    {/* GIEVA logotype webfont — emits @font-face + preloads the woff2 (Open Sans 400/600). */}
+    <Font cssVariable="--font-open-sans" preload />
+    <link rel="icon" href="/favicon.png" type="image/png" sizes="64x64" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
   </head>
   <body>
     <a class="skip-link" href="#main-content">Skip to main content</a>
-    <SiteHeader />
-    <main id="main-content">
+    {brand === 'ngo' ? <NgoSiteHeader /> : <SiteHeader />}
+    {
+      /* data-pagefind-body scopes the site-search index to real page content (the shared
+        header/footer chrome is excluded); brand meta lets results carry a Consultancy/NGO
+        tag. See SiteSearch.astro + the `pagefind` build step. */
+    }
+    <main
+      id="main-content"
+      data-pagefind-body
+      data-pagefind-meta={`brand:${brand === 'ngo' ? 'NGO' : 'Consultancy'}`}
+    >
       <slot />
     </main>
     <footer>
-      <SiteFooter />
+      <SiteFooter homeHref={brand === 'ngo' ? '/ngo' : '/'} />
     </footer>
   </body>
 </html>

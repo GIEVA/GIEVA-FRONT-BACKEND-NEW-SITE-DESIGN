@@ -1,0 +1,338 @@
+---
+/**
+ * Partners (/ngo/partners) — NGO. Built against the committed Figma node 7434:8750
+ * (design/figma/fTqnnV20l9htP7vFJrOsvn/7434-8750/). See docs/ngo-build-plan.md Phase 2.
+ *
+ * STEP-0 node resolution (recorded in the build plan): the plan flagged 7434-8750 as possibly a
+ * second "ABOUT PAGE NGO" frame rather than Partners. Confirmed via the Figma page section
+ * (5839:2529): there is NO frame literally named "PARTNERS PAGE NGO" — the NGO Partners page is a
+ * frame the designer duplicated from About and never renamed, so it carries the misleading name
+ * "ABOUT PAGE NGO" while its CONTENT is unambiguously the Partners page (breadcrumb → "Our
+ * Partners" → 24-logo directory → "Become a Partner" form). The sibling 7429-5025 (also named
+ * "ABOUT PAGE NGO") is the genuine About page ("Our Story"). So 7434-8750 is the right Partners
+ * node and was already correctly ingested — no re-fetch needed.
+ *
+ * REUSE (confirmed against this page's own node.json, not assumed):
+ *   - The 24-org directory content is IDENTICAL to the Consultancy Partners page (7385:5219):
+ *     same orgs, same visual (row,col) order, same descriptions (23/24 byte-identical; UniJos
+ *     differs only by a trailing space), same special cases — Datadotorg underlines "Data.Org"
+ *     (characterStyleOverrides textDecoration UNDERLINE), Care4Water keeps authored line breaks,
+ *     Sterling Bank is a "Vector"-only logo. So `partnerOrgs` + `partnerFormFields` are reused
+ *     verbatim from `@lib/partners-content` (which sources logos from `@lib/partners-images`).
+ *   - The manual GRID anchoring trap recurs (gridColumnAnchorIndex 0/3/6/9, not document order),
+ *     but the reused array is already sorted by real visual (row,col) order, so it maps 1:1.
+ *
+ * NGO-SPECIFIC DIFFERENCES from the Consultancy Partners page (this is NOT a straight
+ * theme-swap — each confirmed against 7434:8750's node.json):
+ *   - NO photo hero. NGO opens with a plain white page-header: a breadcrumb + "Our Partners"
+ *     title (mirrors the NGO About page header), left-aligned. Consultancy used a lecture-hall
+ *     photo hero with a scrim.
+ *   - The breadcrumb text is literally "HOME / ABOUT" (18/24/700, orange #E65320) — a duplication
+ *     artifact from the About frame this page was cloned off. Reproduced verbatim per the
+ *     exact-replica-first non-negotiable (same precedent as About's "Mision"/the frame name);
+ *     tracked in the build-plan Phase 2 note for a post-sign-off correction. Rendered as plain
+ *     styled text, not fabricated nav links.
+ *   - The card divider under each logo is GREEN #007F0E (node.json: `individualStrokeWeights.top:
+ *     5` + `paddingTop: 24` on each "Heading 4" frame), not Consultancy's orange accent-warm —
+ *     so it consumes `--color-heading-accent` (green on NGO).
+ *   - The "Become a Partner" panel is the deep-teal inverse surface #0E3E40 with a 12px corner
+ *     radius (the Consultancy panel was flat violet, no radius); its "Partner" accent run and its
+ *     form labels are GREEN #007F0E (Consultancy's were orange). Green resolves automatically via
+ *     the brand tokens (`.u-accent-em` → --color-heading-accent; labels → --color-cta).
+ *   - Form field labels sit in a FIXED 387px column, RIGHT-aligned text (node: Label sizingH
+ *     FIXED w=387, counterAxisAlignItems MAX), with a 122px gap to a filling input; the panel
+ *     header + submit button are centred. Consultancy used a right-aligned max-content column
+ *     (same alignment, but its column hugs the label instead of being a fixed width).
+ *   - Card names/descriptions are neutral near-black #16191A (node fills), and "Our Partners" is
+ *     #292929 (= --color-mine-shaft) — NOT NGO's violet --color-text-default. Applied page-local
+ *     (same one-off precedent as the Consultancy Partners page's direct colour usages).
+ *
+ * Heading order: h1 "Our Partners" → h2 ×24 card names → h2 "Become a Partner". With no lead
+ * sentence above the grid (unlike Consultancy, which used one as its h2), the card names are
+ * promoted from h3 to h2 so no level is skipped — keeps axe heading-order clean.
+ */
+import BaseLayout from '@layouts/BaseLayout.astro';
+import Button from '@components/Button.astro';
+import { Image } from 'astro:assets';
+import { partnerOrgs, partnerFormFields } from '@lib/partners-content';
+---
+
+<BaseLayout
+  title="Our Partners — GIEVA NGO"
+  description="The organisations, institutions, and companies GIEVA partners with to transform lives and expand opportunity across Nigeria and beyond."
+  brand="ngo"
+>
+  <!-- ── Page header ──────────────────────────────────────────────────────────── -->
+  <section class="partners-header">
+    <div class="container">
+      {
+        /* "HOME / ABOUT" is the source's own (duplicated-from-About) breadcrumb text — reproduced
+          verbatim per exact-replica-first, tracked for a post-sign-off fix. Plain text, no links. */
+      }
+      <p class="partners-breadcrumb">HOME / ABOUT</p>
+      <h1 class="u-section-title partners-title">Our Partners</h1>
+    </div>
+  </section>
+
+  <!-- ── Partner directory ────────────────────────────────────────────────────── -->
+  <section class="partners-directory">
+    <div class="container">
+      <ul role="list" class="partners-grid">
+        {
+          partnerOrgs.map((org) => (
+            <li class="partner-card">
+              <div class="partner-card__logo">
+                <Image src={org.logo} alt="" class="partner-card__logo-img" />
+              </div>
+              <h2 class="partner-card__name">{org.name}</h2>
+              <p class="u-body-lg partner-card__desc">
+                {org.descriptionUnderline
+                  ? org.description.split(org.descriptionUnderline).map((chunk, i, arr) => (
+                      <>
+                        {chunk}
+                        {i < arr.length - 1 && (
+                          <span class="u-underline">{org.descriptionUnderline}</span>
+                        )}
+                      </>
+                    ))
+                  : org.description}
+              </p>
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+  </section>
+
+  <!-- ── Become a Partner ─────────────────────────────────────────────────────── -->
+  <section class="partners-cta-section">
+    <div class="container">
+      <div class="partners-form ngo-partners-form surface-inverse" data-surface="inverse">
+        <div class="partners-form__header">
+          <h2 class="u-section-title">
+            Become a <em class="u-accent-em">Partner</em>
+          </h2>
+          <p class="u-body-lg">
+            Answer Interview questions to help us know how we can impact lives together
+          </p>
+        </div>
+
+        <form class="partners-form__body">
+          <div class="partners-form__fields">
+            {
+              partnerFormFields.map((field) => (
+                <>
+                  <label class="partners-form__label u-body-lg" for={`ngo-${field.id}`}>
+                    {field.label}
+                  </label>
+                  <div class="partners-form__control">
+                    <input
+                      id={`ngo-${field.id}`}
+                      class="partners-form__input u-body-lg"
+                      type={field.type}
+                      name={field.id}
+                      placeholder="Your Answer"
+                      autocomplete={field.autocomplete}
+                      required
+                    />
+                  </div>
+                </>
+              ))
+            }
+          </div>
+          <div class="partners-form__submit">
+            <Button variant="primary" type="submit">Send Message</Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  /* ── Page header (white) ────────────────────────────────────────────────────
+     node 7434:8753: paddingTop 240 / paddingBottom 120 with the nav absolutely overlaying the
+     top 102px. Our nav is in-flow (sticky), so the visible top offset is authored below and
+     confirmed against frame.png at 1440 rather than transcribing the raw 240. */
+  .partners-header {
+    padding-top: var(--space-6xl);
+    padding-bottom: var(--space-6xl);
+  }
+  /* "HOME / ABOUT" breadcrumb — orange eyebrow colour, 18/24/700 (node 7434:8753). */
+  .partners-breadcrumb {
+    margin: 0 0 40px; /* node 7445:5912 itemSpacing 40 — one-off gap, not a scale step */
+    font-family: var(--font-family-base);
+    font-size: var(--font-size-underline);
+    line-height: var(--line-height-underline);
+    letter-spacing: var(--letter-spacing-none);
+    font-weight: var(--font-weight-bold);
+    color: var(--color-eyebrow); /* NGO eyebrow = orange #E65320 */
+  }
+  /* "Our Partners" — 48/56/700 (u-section-title), neutral #292929 (= --color-mine-shaft), NOT
+     NGO's violet default ink. Left-aligned per node (textAlignHorizontal LEFT). */
+  .partners-title {
+    margin: 0;
+    color: var(--color-mine-shaft);
+  }
+
+  /* ── Partner directory ──────────────────────────────────────────────────────
+     Grid container has paddingTop 60 above the cards (node 7434:9111). 84px row/column gap and
+     4 columns are confirmed straight from the node (gridRowGap/gridColumnGap 84), same one-off
+     value as the Consultancy Partners grid. */
+  .partners-directory {
+    padding-top: 60px;
+    padding-bottom: 0;
+  }
+  .partners-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 84px;
+  }
+  /* Cards carry neutral near-black ink #16191A (node fills on every name + description) — a
+     page-local one-off, not the violet --color-text-default. Rows are a roughly uniform budget
+     in the source regardless of copy length; min-height reproduces that airy rhythm while still
+     letting a longer card grow. */
+  .partner-card {
+    display: flex;
+    flex-direction: column;
+    min-height: 552px; /* dominant source row height (rows 1–4 are 552; node grid pitch ~636) */
+    color: #16191a;
+  }
+  .partner-card__logo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 180px;
+  }
+  .partner-card__logo-img {
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+  }
+  /* Green 5px divider between the logo and the name (node: individualStrokeWeights.top 5 +
+     paddingTop 24 on the "Heading 4" frame). Green = --color-heading-accent on NGO. */
+  .partner-card__name {
+    margin: 0 0 var(--space-sm);
+    padding-top: var(--space-md);
+    border-top: 5px solid var(--color-heading-accent);
+    font-family: var(--font-family-base);
+    font-size: var(--font-size-underline);
+    line-height: var(--line-height-underline);
+    letter-spacing: var(--letter-spacing-none);
+    font-weight: var(--font-weight-bold);
+    color: inherit;
+  }
+  .partner-card__desc {
+    margin: 0;
+    color: inherit;
+    /* Care4Water's description carries authored line breaks — honour them verbatim. */
+    white-space: pre-line;
+  }
+
+  /* ── Become a Partner ───────────────────────────────────────────────────────
+     Deep-teal inverse panel (#0E3E40) with a 12px corner radius (node "Background" fill +
+     Margin cornerRadius 12). 64px internal padding + 64px gap between header / fields / submit. */
+  .partners-cta-section {
+    padding-block: var(--space-6xl);
+  }
+  .partners-form {
+    padding: var(--space-3xl);
+    border-radius: var(--radius-md);
+    display: grid;
+    gap: var(--space-3xl);
+  }
+  .partners-form__header {
+    display: grid;
+    gap: var(--space-sm);
+    justify-items: center;
+    text-align: center;
+  }
+  .partners-form__header h2 {
+    margin: 0;
+  }
+  .partners-form__body {
+    display: grid;
+    gap: var(--space-3xl);
+  }
+  /* Fixed 387px label column, RIGHT-aligned text, 122px gap to a filling input (node: Label
+     sizingH FIXED w=387, counterAxisAlignItems MAX, row itemSpacing 122) — both one-off values
+     outside the shared scale, same precedent as the Consultancy Partners form's 122px gap. */
+  .partners-form__fields {
+    display: grid;
+    grid-template-columns: 387px minmax(0, 1fr);
+    column-gap: 122px;
+    row-gap: var(--space-sm);
+    align-items: center;
+  }
+  .partners-form__label {
+    color: var(--color-cta); /* green #007F0E labels (node fill) */
+    text-align: right; /* node: Label counterAxisAlignItems MAX, text RIGHT within the 387px column */
+  }
+  .partners-form__control {
+    display: flex;
+  }
+  .partners-form__input {
+    width: 100%;
+    background: transparent;
+    border: 0;
+    border-bottom: 2px solid var(--color-white);
+    padding-block: var(--space-2xs);
+    color: var(--color-text-inverse);
+    font-family: var(--font-family-base);
+  }
+  .partners-form__input::placeholder {
+    color: var(--color-text-inverse);
+    opacity: 1;
+  }
+  .partners-form__input:focus-visible {
+    outline: 3px solid var(--color-focus-ring);
+    outline-offset: 4px;
+  }
+  /* Submit is centred in the panel (node: GIEVA Button counterAxisAlignItems CENTER). */
+  .partners-form__submit {
+    display: flex;
+    justify-content: center;
+  }
+
+  /* ── Responsive ─────────────────────────────────────────────────────────────
+     No tablet/mobile NGO Partners frame exists in the design; these are our authored,
+     content-preserving reflows (same approach as the Consultancy Partners page). */
+  @media (max-width: 1024px) {
+    .partners-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .partners-form__fields {
+      grid-template-columns: 220px minmax(0, 1fr);
+      column-gap: var(--space-3xl);
+    }
+  }
+  @media (max-width: 640px) {
+    .partners-grid {
+      grid-template-columns: 1fr;
+      gap: var(--space-4xl);
+    }
+    .partner-card {
+      min-height: 0;
+    }
+    /* Panel padding drops from 64→32 so the 48px "Become a Partner" heading isn't squeezed into
+       a word-breaking column on a 375px viewport (authored responsive behaviour — no mobile
+       frame exists). */
+    .partners-form {
+      padding: var(--space-lg);
+      gap: var(--space-2xl);
+    }
+    .partners-form__body {
+      gap: var(--space-2xl);
+    }
+    .partners-form__fields {
+      grid-template-columns: 1fr;
+      row-gap: var(--space-3xs);
+    }
+    .partners-form__label {
+      text-align: left;
+      margin-top: var(--space-sm);
+    }
+  }
+</style>

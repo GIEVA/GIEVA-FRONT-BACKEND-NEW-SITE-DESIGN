@@ -111,9 +111,12 @@ a:hover {
 
 /* ── Layout primitives ──────────────────────────────────────────────────────── */
 
+/* `--container-max` is the *content* column (1312px at the 1440px design width), so the
+   gutter has to be added on top of it — capping the box at 1312px would leave only 1184px
+   of content and shrink every section by 128px. */
 .container {
   width: 100%;
-  max-width: var(--container-max);
+  max-width: calc(var(--container-max) + 2 * var(--container-gutter));
   margin-inline: auto;
   padding-inline: var(--container-gutter);
 }
@@ -128,6 +131,7 @@ a:hover {
    `overflow-wrap: anywhere` keeps large display type from forcing horizontal page scroll
    on narrow viewports; true responsive scaling is authored per page during builds. */
 .u-hero,
+.u-page-title,
 .u-display,
 .u-section-title,
 .u-h2,
@@ -138,7 +142,8 @@ a:hover {
 .u-body-lg,
 .u-body-tight,
 .u-eyebrow,
-.u-caption {
+.u-caption,
+.u-legal {
   font-family: var(--font-family-base);
   overflow-wrap: anywhere;
 }
@@ -147,6 +152,12 @@ a:hover {
   line-height: var(--type-hero-line);
   font-weight: var(--type-hero-weight);
   letter-spacing: var(--type-hero-tracking);
+}
+.u-page-title {
+  font-size: var(--type-page-title-size);
+  line-height: var(--type-page-title-line);
+  font-weight: var(--type-page-title-weight);
+  letter-spacing: var(--type-page-title-tracking);
 }
 .u-display {
   font-size: var(--type-display-size);
@@ -202,13 +213,31 @@ a:hover {
   font-weight: var(--type-body-weight);
   letter-spacing: var(--type-body-tight-tracking);
 }
+/* Carries its own family (see --type-label-family) — hence not in the base-family group above. */
+.u-label {
+  font-family: var(--type-label-family);
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line);
+  font-weight: var(--type-label-weight);
+  letter-spacing: var(--type-label-tracking);
+  overflow-wrap: anywhere;
+}
+.u-legal {
+  font-size: var(--type-legal-size);
+  line-height: var(--type-legal-line);
+  font-weight: var(--type-legal-weight);
+  letter-spacing: var(--type-legal-tracking);
+}
 .u-eyebrow {
   font-size: var(--type-eyebrow-size);
   line-height: var(--type-eyebrow-line);
   font-weight: var(--type-eyebrow-weight);
   letter-spacing: var(--type-eyebrow-tracking);
   text-transform: uppercase;
-  color: var(--color-feedback-success);
+  /* Eyebrow/kicker colour is brand-specific: Consultancy green, NGO orange (they invert the
+     eyebrow↔heading-accent pairing — see tokens.css). Resolved via --color-eyebrow, defined per
+     brand, so this utility renders each brand's real kicker colour. */
+  color: var(--color-eyebrow);
 }
 .u-caption {
   font-size: var(--type-caption-size);
@@ -224,11 +253,13 @@ a:hover {
   text-underline-offset: 0.12em;
 }
 
-/* Bold-italic-orange emphasis span inside a heading (Home node.json: every recurring section
-   headline highlights its key phrase this way). A real <em> — it IS emphasis. */
+/* Bold-italic emphasis span inside a heading (Home node.json: every recurring section headline
+   highlights its key phrase this way). A real <em> — it IS emphasis. The accent hue is
+   brand-specific: Consultancy orange, NGO green (the inverse of each brand's eyebrow colour) —
+   resolved via --color-heading-accent, defined per brand. */
 .u-accent-em {
   font-style: italic;
-  color: var(--color-accent-warm);
+  color: var(--color-heading-accent);
 }
 
 /* ── Reduced motion — honour the user's OS preference globally (WORKFLOW.md §2). ── */

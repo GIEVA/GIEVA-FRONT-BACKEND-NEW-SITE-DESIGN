@@ -47,10 +47,9 @@
  *     reproduced by simply rendering 5 items into a 2-col CSS grid (auto-placement leaves the
  *     last cell empty on its own), rather than the explicit-empty-div technique Services used
  *     for its cost-row's blank second column.
- *   - The CTA banner (eyebrow/heading/body/buttons) is identical content and shape to Home's
- *     and Services' CTA, including the same "Book Free ConsultationView All Services"
- *     copy/paste artifact trailing the paragraph (trimmed here the same way) and both buttons'
- *     `ArrowRight` instances `visible: false` (arrow={false}) — confirmed per-instance.
+ *   - The closing CTA band is the shared `CtaSection.astro`. This page's node.json agrees with
+ *     Home's, Services' and Team's byte-for-byte, so it is instantiated rather than
+ *     re-authored; see that file for the confirmed content and geometry.
  *   - The hero photo (imageRef `55fffb0d206b64f043184380f13f723b24c692a3`) is the same stock
  *     lecture-hall image Home's "who we are" section and Services' hero already use.
  *
@@ -61,7 +60,7 @@
  * component.
  */
 import BaseLayout from '@layouts/BaseLayout.astro';
-import Button from '@components/Button.astro';
+import CtaSection from '@components/CtaSection.astro';
 import { Image } from 'astro:assets';
 import { aboutHeroPhoto } from '@lib/about-images';
 
@@ -189,24 +188,7 @@ const coreValues = [
   <!-- ── CTA ──────────────────────────────────────────────────────────────────── -->
   <section class="section cta">
     <div class="container">
-      <div class="cta__card surface-inverse" data-surface="inverse">
-        <div class="cta__text">
-          <p class="u-eyebrow">Get in Touch</p>
-          <h2 class="u-section-title">
-            Ready to Take Your <em class="u-accent-em">First Step?</em>
-          </h2>
-          <p class="u-body-lg">
-            Book a free consultation with a GIEVA counselor today. No commitment, no pressure —
-            just clarity on your path forward.
-          </p>
-        </div>
-        <div class="cta__actions">
-          <Button variant="primary" href="/book-consultancy" arrow={false}>
-            Book Consultancy
-          </Button>
-          <Button variant="secondary" href="/services" arrow={false}>View all Services</Button>
-        </div>
-      </div>
+      <CtaSection />
     </div>
   </section>
 </BaseLayout>
@@ -323,25 +305,8 @@ const coreValues = [
   }
 
   /* ── CTA (same content/shape as Home's/Services') ──────────────────────── */
-  .cta__card {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--space-2xl);
-    padding: var(--space-3xl);
-    border-radius: var(--radius-md);
-  }
-  .cta__text {
-    display: grid;
-    gap: var(--space-sm);
-    max-width: 34rem;
-  }
-  .cta__actions {
-    display: flex;
-    gap: var(--space-md);
-    flex-wrap: wrap;
-  }
+  /* The CTA band's styles live in src/components/CtaSection.astro, which owns the
+     markup for all four Consultancy pages. */
 
   /* ── Responsive ─────────────────────────────────────────────────────────── */
   @media (max-width: 1024px) {
@@ -364,16 +329,6 @@ const coreValues = [
     }
     .about-story__stat:not([data-first]) {
       border-inline-start: none;
-    }
-    .cta__card {
-      justify-content: center;
-      text-align: center;
-    }
-    .cta__text {
-      max-width: none;
-    }
-    .cta__actions {
-      justify-content: center;
     }
   }
 </style>

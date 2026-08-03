@@ -1,7 +1,7 @@
 ---
 /**
  * SiteHeader — the shared masthead: floating "glass" pill nav, confirmed against Home's
- * node.json (5891:5463 → "TOP MENU", scrollBehavior: FIXED, backdrop blur radius 6).
+ * node.json (5891:5463 → "TOP MENU", scrollBehavior: FIXED, backdrop blur radius 3).
  *
  * Zero-JS baseline (WORKFLOW.md §1.5): every link is a real, keyboard-reachable <a>. No
  * mobile frame exists in the design, so the mobile collapse below is authored by us — a
@@ -15,32 +15,30 @@
  */
 import { primaryNav, isActive } from '@lib/nav';
 import Button from '@components/Button.astro';
-import { Image } from 'astro:assets';
-import { logoMark } from '@lib/home-images';
+import SiteSearch from '@components/SiteSearch.astro';
+import BrandLockup from '@components/BrandLockup.astro';
 
 const current = Astro.url.pathname;
 ---
 
 <header class="site-header">
   <div class="site-header__pill">
-    <a class="site-header__brand" href="/">
-      <Image src={logoMark} alt="" width={40} height={40} class="site-header__logo" />
-      <span class="site-header__wordmark">GIEVA<span class="site-header__tld">.org</span></span
-      >
-      <span class="visually-hidden"> — go to home page</span>
-    </a>
+    <BrandLockup href="/" size="lg" ink="brand" />
 
-    <nav class="site-nav site-nav--desktop" aria-label="Primary">
+    <nav class="site-nav site-nav--desktop" aria-label="Primary" data-search-anchor>
       <ul role="list" class="site-nav__list">
         {
-          primaryNav.map((item) => (
-            <li>
+          primaryNav.map((item, i) => (
+            <li class:list={['site-nav__item', { 'site-nav__item--has-menu': item.menu }]}>
               <a
                 class="site-nav__link"
                 href={item.href}
                 aria-current={isActive(current, item.href) ? 'page' : undefined}
               >
                 {item.label}
+                {/* Design (5891:5463) shows a caret on every top-level item — including
+                    Resource, which has no captured dropdown. It's decorative (aria-hidden);
+                    only items with `item.menu` get the JS-wired disclosure below. */}
                 <svg
                   class="site-nav__caret"
                   width="12"
@@ -58,6 +56,36 @@ const current = Astro.url.pathname;
                   />
                 </svg>
               </a>
+              {item.menu && (
+                <div
+                  class:list={[
+                    'site-nav__menu',
+                    { 'site-nav__menu--wide': item.menu.columns.length > 1 },
+                  ]}
+                  id={`nav-menu-${i}`}
+                >
+                  <div class="site-nav__menu-inner">
+                    {item.menu.columns.map((col) => (
+                      <div class="site-nav__menu-col">
+                        <p class="site-nav__menu-heading">{col.heading}</p>
+                        <ul role="list" class="site-nav__menu-list">
+                          {col.items.map((sub) => (
+                            <li>
+                              <a
+                                class="site-nav__menu-link"
+                                href={sub.href}
+                                aria-current={isActive(current, sub.href) ? 'page' : undefined}
+                              >
+                                {sub.label}
+                              </a>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </li>
           ))
         }
@@ -65,26 +93,10 @@ const current = Astro.url.pathname;
     </nav>
 
     <div class="site-header__actions site-header__actions--desktop">
-      <a class="site-header__icon-link" href="/search">
-        <span class="visually-hidden">Search the site</span>
-        <svg
-          width="20"
-          height="20"
-          viewBox="0 0 20 20"
-          fill="none"
-          aria-hidden="true"
-          focusable="false"
-        >
-          <circle cx="9" cy="9" r="7" stroke="currentColor" stroke-width="1.6"></circle>
-          <path
-            d="M14.5 14.5L19 19"
-            stroke="currentColor"
-            stroke-width="1.6"
-            stroke-linecap="round"></path>
-        </svg>
-      </a>
+      <SiteSearch />
       <Button variant="secondary" href="/login" arrow={false}>Log In</Button>
-      <Button variant="primary" href="/book-consultancy">Book Consultancy</Button>
+      <Button variant="primary" href="/book-consultancy" arrow={false}>Book Consultancy</Button
+      >
     </div>
 
     <details class="site-header__menu">
@@ -115,6 +127,23 @@ const current = Astro.url.pathname;
                   >
                     {item.label}
                   </a>
+                  {item.menu && (
+                    <ul role="list" class="site-nav__submenu">
+                      {item.menu.columns.flatMap((col) =>
+                        col.items.map((sub) => (
+                          <li>
+                            <a
+                              class="site-nav__submenu-link"
+                              href={sub.href}
+                              aria-current={isActive(current, sub.href) ? 'page' : undefined}
+                            >
+                              {sub.label}
+                            </a>
+                          </li>
+                        )),
+                      )}
+                    </ul>
+                  )}
                 </li>
               ))
             }
@@ -122,7 +151,9 @@ const current = Astro.url.pathname;
         </nav>
         <div class="site-header__actions">
           <Button variant="secondary" href="/login" arrow={false}>Log In</Button>
-          <Button variant="primary" href="/book-consultancy">Book Consultancy</Button>
+          <Button variant="primary" href="/book-consultancy" arrow={false}
+            >Book Consultancy</Button
+          >
         </div>
       </div>
     </details>
@@ -147,29 +178,18 @@ const current = Astro.url.pathname;
     padding: var(--space-sm) var(--space-lg);
     border-radius: var(--radius-lg);
     background: rgb(255 255 255 / 0.85);
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(3px);
   }
-  .site-header__brand {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-3xs);
-    text-decoration: none;
-    flex: none;
+  /* Safari < 18 needs the prefixed property, and it must sit in its own block — Lightning CSS
+     collapses a prefixed/standard pair in one block down to the prefixed form alone, which
+     drops the blur in Chrome and Firefox. */
+  @supports (-webkit-backdrop-filter: blur(1px)) {
+    .site-header__pill {
+      -webkit-backdrop-filter: blur(3px);
+    }
   }
-  .site-header__logo {
-    border-radius: 50%;
-  }
-  .site-header__wordmark {
-    font-weight: var(--font-weight-bold);
-    font-size: 1.75rem;
-    line-height: 1;
-    color: var(--color-text-default);
-  }
-  .site-header__tld {
-    color: var(--color-feedback-success);
-    font-weight: var(--font-weight-regular);
-  }
+  /* The lockup — mark size, 48px SemiBold "GIEVA", green ".org", and its `flex: none` — lives
+     entirely in BrandLockup.astro (design 5891:5463). Nothing about it belongs here. */
 
   .site-nav__list {
     display: flex;
@@ -181,7 +201,7 @@ const current = Astro.url.pathname;
     display: inline-flex;
     align-items: center;
     gap: var(--space-2xs);
-    color: var(--color-mine-shaft);
+    color: var(--color-black); /* design nav labels are pure #000000 */
     text-decoration: none;
     font-size: var(--type-body-lg-size);
     font-weight: var(--font-weight-bold);
@@ -198,21 +218,116 @@ const current = Astro.url.pathname;
     color: var(--color-accent-warm);
   }
 
+  /* ── Desktop dropdowns ─────────────────────────────────────────────────────
+     Progressive enhancement (WORKFLOW.md §1.5): the panel is revealed by pure CSS on
+     :hover / :focus-within so it works with zero JS and stays keyboard-reachable. The
+     enhancement script (bottom of file) marks <html data-js-nav> to hand hover timing to
+     JS — the hover-open rule below is gated on :not([data-js-nav]) so it doesn't fight the
+     script's intent delay; :focus-within and .is-open keep working either way. */
+  .site-nav__item {
+    position: relative;
+  }
+  .site-nav__caret {
+    flex: none;
+    transition: transform 150ms ease;
+  }
+  .site-nav__item.is-open .site-nav__caret {
+    transform: rotate(180deg);
+  }
+
+  .site-nav__menu {
+    /* --menu-x: horizontal offset baked into the transform so the reveal animation and the
+       centering of the wide (Services) menu can share one `transform` without clobbering each
+       other. 0 for the left-anchored single-column menus; -50% for the centered wide one. */
+    --menu-x: 0;
+    position: absolute;
+    inset-inline-start: 0;
+    top: 100%;
+    /* Transparent bridge across the gap between trigger and panel so the pointer never leaves
+       the hoverable area en route to the panel (WCAG 2.2 §1.4.13 "hoverable"). Doubles as the
+       visible gap: 8px base + 13px. */
+    padding-top: calc(var(--space-2xs) + 13px);
+    z-index: 10;
+    opacity: 0;
+    visibility: hidden; /* removes submenu links from the tab order while closed */
+    transform: translate(var(--menu-x), -4px);
+    transition:
+      opacity 150ms ease,
+      transform 150ms ease,
+      visibility 0s linear 150ms;
+  }
+  html:not([data-js-nav]) .site-nav__item:hover > .site-nav__menu,
+  .site-nav__item:focus-within > .site-nav__menu,
+  .site-nav__item.is-open > .site-nav__menu {
+    opacity: 1;
+    visibility: visible;
+    transform: translate(var(--menu-x), 0);
+    transition-delay: 0s;
+  }
+  /* Wide (multi-column) menu — centre it on its trigger for balance instead of dangling
+     off the left edge. */
+  .site-nav__menu--wide {
+    inset-inline-start: 50%;
+    --menu-x: -50%;
+  }
+
+  .site-nav__menu-inner {
+    display: flex;
+    background: var(--color-surface-default);
+    /* Mine Shaft @ 25% — the confirmed design border (rgba(41,41,41,0.25)). */
+    border: 1px solid rgb(41 41 41 / 0.25);
+  }
+  .site-nav__menu-col {
+    /* Figma: pl 24 / pr 8 / py 24, 19px between rows, 264px columns (Services). */
+    padding: var(--space-md) var(--space-2xs) var(--space-md) var(--space-md);
+    min-width: 240px;
+  }
+  .site-nav__menu-heading {
+    margin: 0 0 19px;
+    font-size: var(--font-size-body);
+    line-height: var(--line-height-body);
+    font-weight: var(--font-weight-regular);
+    letter-spacing: var(--letter-spacing-narrow);
+    text-transform: uppercase;
+    color: var(--color-mine-shaft);
+    opacity: 0.5;
+  }
+  .site-nav__menu-list {
+    display: flex;
+    flex-direction: column;
+    gap: 19px;
+  }
+  .site-nav__menu-link {
+    display: block;
+    color: var(--color-mine-shaft);
+    text-decoration: none;
+    font-size: var(--type-body-lg-size);
+    line-height: var(--type-body-lg-line);
+    font-weight: var(--font-weight-regular);
+    letter-spacing: var(--type-body-lg-tracking);
+    white-space: nowrap;
+  }
+  .site-nav__menu-link:hover,
+  .site-nav__menu-link:focus-visible {
+    color: var(--color-accent-warm);
+  }
+  .site-nav__menu-link[aria-current='page'] {
+    color: var(--color-accent-warm);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .site-nav__menu,
+    .site-nav__caret {
+      transition: none;
+    }
+  }
+
   .site-header__actions {
     display: flex;
     align-items: center;
     gap: var(--space-sm);
     flex: none;
   }
-  .site-header__icon-link {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    inline-size: 2.5rem;
-    block-size: 2.5rem;
-    color: var(--color-text-default);
-  }
-
   .site-header__menu {
     display: none;
   }
@@ -251,6 +366,28 @@ const current = Astro.url.pathname;
     flex-direction: column;
     align-items: stretch;
   }
+  /* Mobile: dropdown children are always-visible nested links (no hover on touch), so those
+     destinations stay reachable. Indented under their parent. */
+  .site-nav__submenu {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2xs);
+    margin: var(--space-2xs) 0 0;
+    padding-inline-start: var(--space-sm);
+  }
+  .site-nav__submenu-link {
+    display: block;
+    color: var(--color-mine-shaft);
+    text-decoration: none;
+    font-size: var(--type-body-lg-size);
+    line-height: var(--type-body-lg-line);
+    letter-spacing: var(--type-body-lg-tracking);
+  }
+  .site-nav__submenu-link:hover,
+  .site-nav__submenu-link:focus-visible,
+  .site-nav__submenu-link[aria-current='page'] {
+    color: var(--color-accent-warm);
+  }
 
   @media (max-width: 900px) {
     .site-nav--desktop,
@@ -262,3 +399,66 @@ const current = Astro.url.pathname;
     }
   }
 </style>
+
+<script>
+  /**
+   * Dropdown enhancement — layered on the CSS baseline, never the thing that makes the menu
+   * work. Adds: hover-intent close delay (leaving the trigger keeps the panel open long
+   * enough to reach it), `aria-expanded` state, and Escape-to-dismiss (WCAG 2.2 §1.4.13).
+   * Marking <html data-js-nav> hands hover timing to this script (see the CSS note).
+   */
+  const CLOSE_DELAY = 260; // ms grace period after the pointer leaves
+
+  function closeItem(el: Element) {
+    el.classList.remove('is-open');
+    el.querySelector('.site-nav__link')?.setAttribute('aria-expanded', 'false');
+  }
+
+  const items = Array.from(
+    document.querySelectorAll<HTMLElement>('.site-nav--desktop .site-nav__item--has-menu'),
+  );
+
+  if (items.length) {
+    document.documentElement.setAttribute('data-js-nav', '');
+    const canHover = window.matchMedia('(hover: hover)').matches;
+
+    for (const item of items) {
+      const trigger = item.querySelector<HTMLElement>('.site-nav__link');
+      const menu = item.querySelector<HTMLElement>('.site-nav__menu');
+      if (!trigger || !menu) continue;
+
+      trigger.setAttribute('aria-expanded', 'false');
+      if (menu.id) trigger.setAttribute('aria-controls', menu.id);
+
+      let closeTimer: ReturnType<typeof setTimeout>;
+      const open = () => {
+        clearTimeout(closeTimer);
+        for (const other of items) if (other !== item) closeItem(other);
+        item.classList.add('is-open');
+        trigger.setAttribute('aria-expanded', 'true');
+      };
+      const scheduleClose = () => {
+        clearTimeout(closeTimer);
+        closeTimer = setTimeout(() => closeItem(item), CLOSE_DELAY);
+      };
+
+      if (canHover) {
+        item.addEventListener('pointerenter', open);
+        item.addEventListener('pointerleave', scheduleClose);
+      }
+      item.addEventListener('focusin', () => {
+        clearTimeout(closeTimer);
+        open();
+      });
+      item.addEventListener('focusout', (e) => {
+        if (!item.contains(e.relatedTarget as Node)) closeItem(item);
+      });
+      item.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && item.classList.contains('is-open')) {
+          closeItem(item);
+          trigger.focus();
+        }
+      });
+    }
+  }
+</script>

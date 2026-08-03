@@ -1,0 +1,493 @@
+---
+/**
+ * /ngo/styleguide (NGO) — the living proof of the NGO brand theme. Same shape as the
+ * Consultancy /styleguide, re-themed via [data-brand='ngo']: every token, the type scale,
+ * measured WCAG contrast grades, and the shared shell components (NGO header + themed footer),
+ * so the NGO foundation is shown coherent BEFORE any NGO page is built (build plan Phase 0B).
+ *
+ * All colour values below are read off NGO Home's node.json (5990:3672), not the shared token
+ * export. Pairings display their measured WCAG ratio + grade — a11y verified, not asserted.
+ */
+import BaseLayout from '@layouts/BaseLayout.astro';
+import Button from '@components/Button.astro';
+import { contrastRatio, wcagLevel } from '@lib/contrast';
+
+const primitives = [
+  { name: 'Green', varName: '--color-green', hex: '#007F0E' },
+  { name: 'Deep teal', varName: '--color-deep-teal', hex: '#0E3E40' },
+  { name: 'Violet (ink)', varName: '--color-violet', hex: '#120633' },
+  { name: 'Orange', varName: '--color-orange', hex: '#E65320' },
+  { name: 'Mid gray', varName: '--color-mid-gray', hex: '#636366' },
+  { name: 'White', varName: '--color-white', hex: '#FFFFFF' },
+];
+
+const semanticRoles = [
+  { token: '--color-action-primary', value: 'Green', role: 'Primary buttons, links, focus' },
+  {
+    token: '--color-cta',
+    value: 'Green',
+    role: 'Button/control fill (Get Involved, Donate…)',
+  },
+  { token: '--color-surface-default', value: 'White', role: 'Header + page background' },
+  { token: '--color-surface-inverse', value: 'Deep teal', role: 'Footer, program cards, CTA' },
+  {
+    token: '--color-text-default',
+    value: 'Violet ink (#120633)',
+    role: 'Headings + body on light',
+  },
+  {
+    token: '--color-text-muted',
+    value: 'Mid gray',
+    role: 'Secondary text (confirm per-screen)',
+  },
+  { token: '--color-text-inverse', value: 'White', role: 'Text on dark' },
+  { token: '--color-accent-warm', value: 'Orange', role: 'Eyebrow / kicker labels only' },
+  {
+    token: '--color-border-subtle',
+    value: 'Black 12%',
+    role: 'Hairlines (confirm per-screen)',
+  },
+  { token: '--color-feedback-success', value: 'Green', role: 'Success states' },
+];
+
+// Foreground/background pairings graded against WCAG (TOKENS.md §3). `large` uses the
+// large-text thresholds (≥24px, or ≥18.66px bold). Only pairings that pass at the rendered
+// sample size (24px bold → large, 3:1) get a live swatch here; the sub-AA green-on-teal
+// "Learn more" case is described in the note below and tracked in docs/a11y-known-issues.md
+// rather than shown as a live failing sample.
+const pairings = [
+  {
+    label: 'Body / heading text',
+    fg: '#120633',
+    fgName: 'Violet ink',
+    bg: '#FFFFFF',
+    bgName: 'White',
+    large: false,
+  },
+  {
+    label: 'Muted text',
+    fg: '#636366',
+    fgName: 'Mid gray',
+    bg: '#FFFFFF',
+    bgName: 'White',
+    large: false,
+  },
+  {
+    label: 'Link / CTA',
+    fg: '#007F0E',
+    fgName: 'Green',
+    bg: '#FFFFFF',
+    bgName: 'White',
+    large: false,
+  },
+  {
+    label: 'Label on CTA',
+    fg: '#FFFFFF',
+    fgName: 'White',
+    bg: '#007F0E',
+    bgName: 'Green',
+    large: false,
+  },
+  {
+    label: 'Inverse body',
+    fg: '#FFFFFF',
+    fgName: 'White',
+    bg: '#0E3E40',
+    bgName: 'Deep teal',
+    large: false,
+  },
+  {
+    label: 'Warm accent (eyebrow)',
+    fg: '#E65320',
+    fgName: 'Orange',
+    bg: '#FFFFFF',
+    bgName: 'White',
+    large: true,
+  },
+].map((p) => {
+  const ratio = contrastRatio(p.fg, p.bg);
+  return { ...p, ratio: ratio.toFixed(2), level: wcagLevel(ratio, p.large) };
+});
+
+const typeScale = [
+  { name: 'Hero', cls: 'u-hero', spec: '64 / 72 · 700 · −3.3', sample: 'Transforming lives' },
+  {
+    name: 'Section title',
+    cls: 'u-section-title',
+    spec: '48 / 56 · 700 · −3.3',
+    sample: 'Initiatives built for real impact',
+  },
+  { name: 'Heading 3', cls: 'u-h3', spec: '40 / 46 · 700 · 0', sample: 'One youth at a time' },
+  {
+    name: 'Lead',
+    cls: 'u-lead',
+    spec: '24 / 32 · 700 · −1.2',
+    sample: 'Community-centered, measurable, and built for change.',
+  },
+  {
+    name: 'Body large',
+    cls: 'u-body-lg',
+    spec: '18 / 24 · 400 · −0.16',
+    sample: 'The running-paragraph and button-label size used across the NGO site.',
+  },
+  {
+    name: 'Body',
+    cls: 'u-body',
+    spec: '14 / 20 · 400 · 0',
+    sample: 'The micro-label body size — footer group headings and fine print.',
+  },
+  {
+    name: 'Caption',
+    cls: 'u-caption',
+    spec: '14 / 21 · 400 · −0.14',
+    sample: 'Captions, labels, and footnotes.',
+  },
+];
+
+const spacing = ['3xs', '2xs', 'xs', 'sm', 'md', 'lg', 'xl', '2xl', '3xl', '4xl', '5xl'];
+---
+
+<BaseLayout
+  title="Styleguide — GIEVA NGO"
+  description="The GIEVA NGO design system: tokens, type scale, colour contrast, and shell components."
+  brand="ngo"
+>
+  <div class="container sg">
+    <header class="sg__intro">
+      <p class="u-caption">GIEVA · NGO</p>
+      <h1 class="u-title">Design system styleguide</h1>
+      <p class="u-body sg__lead">
+        The NGO foundation, proven coherent before any page is built. Tokens flow primitives →
+        semantic roles → the NGO brand theme (<code>[data-brand="ngo"]</code>). NGO's action
+        colour is green and its eyebrow accent is orange — the split the shared shell reads via
+        <code>--color-cta</code> vs <code>--color-accent-warm</code>. Colour pairings show
+        their measured WCAG ratio and grade.
+      </p>
+    </header>
+
+    <!-- Colour primitives -->
+    <section class="sg__section" aria-labelledby="sg-primitives">
+      <h2 id="sg-primitives" class="u-h3">Colour primitives</h2>
+      <ul role="list" class="sg__swatches">
+        {
+          primitives.map((c) => (
+            <li class="sg__swatch">
+              <span
+                class="sg__chip"
+                style={`background: var(${c.varName});`}
+                aria-hidden="true"
+              />
+              <span class="sg__swatch-name u-body">{c.name}</span>
+              <code class="sg__swatch-code">{c.hex}</code>
+            </li>
+          ))
+        }
+      </ul>
+    </section>
+
+    <!-- Semantic roles -->
+    <section class="sg__section" aria-labelledby="sg-semantic">
+      <h2 id="sg-semantic" class="u-h3">Semantic colour roles</h2>
+      <p class="u-body sg__note">Components consume these, never primitives directly.</p>
+      <div class="sg__tablewrap">
+        <table class="sg__table">
+          <thead>
+            <tr>
+              <th scope="col">Token</th>
+              <th scope="col">NGO value</th>
+              <th scope="col">Role</th>
+            </tr>
+          </thead>
+          <tbody>
+            {
+              semanticRoles.map((r) => (
+                <tr>
+                  <td>
+                    <code>{r.token}</code>
+                  </td>
+                  <td>{r.value}</td>
+                  <td>{r.role}</td>
+                </tr>
+              ))
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Contrast -->
+    <section class="sg__section" aria-labelledby="sg-contrast">
+      <h2 id="sg-contrast" class="u-h3">Colour contrast (WCAG 2.2)</h2>
+      <div class="sg__tablewrap">
+        <table class="sg__table">
+          <thead>
+            <tr>
+              <th scope="col">Pairing</th>
+              <th scope="col">Sample</th>
+              <th scope="col">Ratio</th>
+              <th scope="col">Grade</th>
+            </tr>
+          </thead>
+          <tbody>
+            {
+              pairings.map((p) => (
+                <tr>
+                  <td>
+                    {p.label}
+                    <span class="u-caption sg__pair-detail">
+                      {p.fgName} on {p.bgName}
+                      {p.large ? ' · large' : ''}
+                    </span>
+                  </td>
+                  <td>
+                    <span
+                      class="sg__contrast-sample"
+                      style={`color: ${p.fg}; background: ${p.bg};`}
+                    >
+                      Aa
+                    </span>
+                  </td>
+                  <td>{p.ratio}:1</td>
+                  <td>
+                    <span
+                      class={`sg__grade sg__grade--${p.level === 'Fail' ? 'fail' : 'pass'}`}
+                    >
+                      {p.level}
+                    </span>
+                  </td>
+                </tr>
+              ))
+            }
+          </tbody>
+        </table>
+      </div>
+      <p class="u-caption sg__note">
+        One NGO pairing sits below AA by design: the green <code>#007F0E</code> "Learn more" links
+        inside the dark program cards land on deep teal <code>#0E3E40</code> at 2.27:1. That green
+        is the confirmed source-design colour (node 5990:3672), so per the client's colour-contrast
+        direction it ships as designed and the gap is tracked in
+        <code>docs/a11y-known-issues.md</code> rather than recoloured here.
+      </p>
+    </section>
+
+    <!-- Type scale -->
+    <section class="sg__section" aria-labelledby="sg-type">
+      <h2 id="sg-type" class="u-h3">Type scale</h2>
+      <p class="u-body sg__note">
+        Arial throughout — a system font: zero web-font load, no FOUT.
+      </p>
+      <ul role="list" class="sg__type">
+        {
+          typeScale.map((t) => (
+            <li class="sg__type-row">
+              <p class="u-caption sg__type-meta">
+                {t.name} · {t.spec}
+              </p>
+              <p class={t.cls}>{t.sample}</p>
+            </li>
+          ))
+        }
+      </ul>
+    </section>
+
+    <!-- Spacing -->
+    <section class="sg__section" aria-labelledby="sg-spacing">
+      <h2 id="sg-spacing" class="u-h3">Spacing scale</h2>
+      <p class="u-caption sg__note">
+        Snapped to the Consultancy Home audit; re-confirmed per screen during NGO page builds.
+      </p>
+      <ul role="list" class="sg__spacing">
+        {
+          spacing.map((s) => (
+            <li class="sg__spacing-row">
+              <code class="sg__spacing-name">--space-{s}</code>
+              <span
+                class="sg__spacing-bar"
+                style={`inline-size: var(--space-${s});`}
+                aria-hidden="true"
+              />
+            </li>
+          ))
+        }
+      </ul>
+    </section>
+
+    <!-- Buttons -->
+    <section class="sg__section" aria-labelledby="sg-buttons">
+      <h2 id="sg-buttons" class="u-h3">Buttons</h2>
+      <div class="sg__buttons">
+        <Button variant="primary" href="#sg-buttons">Get Involved</Button>
+        <Button variant="secondary" href="#sg-buttons">Donate</Button>
+        <Button variant="primary">Subscribe</Button>
+      </div>
+      <div class="sg__buttons surface-inverse" data-surface="inverse">
+        <Button variant="primary" href="#sg-buttons">Primary on dark</Button>
+        <Button variant="secondary" href="#sg-buttons">Learn more</Button>
+      </div>
+    </section>
+
+    <!-- Shell -->
+    <section class="sg__section" aria-labelledby="sg-shell">
+      <h2 id="sg-shell" class="u-h3">Shell components</h2>
+      <p class="u-body sg__note">
+        The <strong>NGO site header</strong> (top, a solid white bar — distinct from Consultancy's
+        floating pill) and the <strong>shared footer</strong> (bottom, themed onto NGO's deep-teal
+        inverse surface) are rendered by <code>BaseLayout</code> on every
+        <code>/ngo/*</code> route. The footer exercises the NGO inverse-surface text-role swap.
+      </p>
+    </section>
+  </div>
+</BaseLayout>
+
+<style>
+  .sg {
+    padding-block: var(--space-3xl);
+    display: grid;
+    gap: var(--space-4xl);
+  }
+  .sg__intro {
+    display: grid;
+    gap: var(--space-sm);
+    max-width: 72ch;
+  }
+  .sg__lead {
+    color: var(--color-text-muted);
+  }
+  .sg__section {
+    display: grid;
+    gap: var(--space-lg);
+  }
+  .sg__note {
+    color: var(--color-text-muted);
+    max-width: 72ch;
+  }
+
+  /* Swatches */
+  .sg__swatches {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: var(--space-lg);
+  }
+  .sg__swatch {
+    display: grid;
+    gap: var(--space-2xs);
+  }
+  .sg__chip {
+    display: block;
+    block-size: 72px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-black-08);
+  }
+  .sg__swatch-name {
+    font-weight: var(--font-weight-bold);
+  }
+  .sg__swatch-code {
+    color: var(--color-text-muted);
+    font-size: var(--type-body-size);
+  }
+
+  /* Tables */
+  .sg__tablewrap {
+    overflow-x: auto;
+  }
+  .sg__table {
+    inline-size: 100%;
+    border-collapse: collapse;
+    text-align: start;
+  }
+  .sg__table th,
+  .sg__table td {
+    padding: var(--space-sm) var(--space-md);
+    border-bottom: 1px solid var(--color-border-subtle);
+    vertical-align: top;
+    text-align: start;
+    font-size: var(--type-body-size);
+    line-height: var(--type-body-line);
+  }
+  .sg__table th {
+    font-weight: var(--font-weight-bold);
+    white-space: nowrap;
+  }
+  .sg__pair-detail {
+    display: block;
+  }
+  .sg__contrast-sample {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: 3.25rem;
+    block-size: 2.5rem;
+    /* Rendered at large-text size (24px bold): each live pairing passes the large threshold
+       (3:1), so the demo sample itself stays accessible. */
+    font-size: 1.5rem;
+    line-height: 1;
+    border-radius: var(--radius-sm);
+    font-weight: var(--font-weight-bold);
+    border: 1px solid var(--color-black-08);
+  }
+  .sg__grade {
+    display: inline-block;
+    padding: 2px var(--space-xs);
+    border-radius: var(--radius-pill);
+    font-weight: var(--font-weight-bold);
+    font-size: var(--type-body-size);
+  }
+  .sg__grade--pass {
+    background: var(--color-feedback-success);
+    color: var(--color-white);
+  }
+  .sg__grade--fail {
+    background: var(--color-accent-warm);
+    color: var(--color-white);
+  }
+
+  /* Type specimens */
+  .sg__type {
+    display: grid;
+    gap: var(--space-2xl);
+  }
+  .sg__type-row {
+    display: grid;
+    gap: var(--space-xs);
+    border-top: 1px solid var(--color-border-subtle);
+    padding-top: var(--space-md);
+  }
+  .sg__type-meta {
+    color: var(--color-text-muted);
+  }
+
+  /* Spacing */
+  .sg__spacing {
+    display: grid;
+    gap: var(--space-sm);
+  }
+  .sg__spacing-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-lg);
+  }
+  .sg__spacing-name {
+    inline-size: 10ch;
+    flex: none;
+    color: var(--color-text-muted);
+  }
+  .sg__spacing-bar {
+    display: block;
+    block-size: 16px;
+    background: var(--color-action-primary);
+    border-radius: var(--radius-sm);
+  }
+
+  /* Buttons */
+  .sg__buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-md);
+    align-items: center;
+    padding: var(--space-lg);
+    border-radius: var(--radius-lg);
+  }
+  .sg__buttons.surface-inverse {
+    border: 1px solid var(--color-border-subtle);
+  }
+</style>

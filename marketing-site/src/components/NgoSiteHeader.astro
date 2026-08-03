@@ -1,0 +1,194 @@
+---
+/**
+ * NgoSiteHeader — the NGO masthead. A solid, full-bleed WHITE bar (not the Consultancy
+ * floating "glass" pill), confirmed against NGO Home's node.json (5990:3672):
+ *   - header node 7417:7717 → inner Container 7417:7718 fill `#ffffff`, 1440×102, full width,
+ *     no translucency/blur/rounded-pill — a plain white bar. (Consultancy's SiteHeader is
+ *     `rgb(255 255 255 / .85)` + `backdrop-filter: blur(6px)` + `border-radius`, a genuinely
+ *     different chrome — hence a separate component rather than a themed SiteHeader.)
+ *   - nav 7417:7718 → NGO · About us · Programs · Resources · Contact (see `ngoPrimaryNav`).
+ *   - actions → search icon + two `GIEVA Button`s: "Donate" (secondary: green fill 5% / border
+ *     10% / green label) and "Get Involved" (primary: solid green / white label).
+ * The FOOTER, by contrast, IS the shared component instance in both designs (same
+ * "oo-footer → Footer"), so NGO reuses SiteFooter themed via [data-brand='ngo'] tokens.
+ *
+ * Zero-JS baseline (WORKFLOW.md §1.5): every link/control is a real, keyboard-reachable
+ * element. No NGO mobile frame exists in the design, so the mobile collapse is a native
+ * <details>/<summary> disclosure (works with no script), mirroring SiteHeader. Desktop and
+ * disclosure copies of the nav/actions are duplicated but only one is ever in the a11y tree at
+ * a time. Active state uses aria-current="page" (native), not a visual-only cue.
+ */
+import { ngoPrimaryNav, isActive } from '@lib/nav';
+import Button from '@components/Button.astro';
+import SiteSearch from '@components/SiteSearch.astro';
+import BrandLockup from '@components/BrandLockup.astro';
+
+const current = Astro.url.pathname;
+---
+
+<header class="ngo-header">
+  <div class="ngo-header__bar container">
+    <BrandLockup href="/ngo" size="sm" ink="default" destination="NGO home page" />
+
+    <nav class="ngo-nav ngo-nav--desktop" aria-label="Primary" data-search-anchor>
+      <ul role="list" class="ngo-nav__list">
+        {
+          ngoPrimaryNav.map((item) => (
+            <li>
+              <a
+                class="ngo-nav__link"
+                href={item.href}
+                aria-current={isActive(current, item.href) ? 'page' : undefined}
+              >
+                {item.label}
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </nav>
+
+    <div class="ngo-header__actions ngo-header__actions--desktop">
+      <SiteSearch />
+      <Button variant="secondary" href="/ngo/donate">Donate</Button>
+      <Button variant="primary" href="/ngo/get-involved">Get Involved</Button>
+    </div>
+
+    <details class="ngo-header__menu">
+      <summary class="ngo-header__menu-toggle">
+        <span class="visually-hidden">Open menu</span>
+        <svg
+          width="20"
+          height="14"
+          viewBox="0 0 20 14"
+          fill="none"
+          aria-hidden="true"
+          focusable="false"
+        >
+          <path d="M0 1h20M0 7h20M0 13h20" stroke="currentColor" stroke-width="2"></path>
+        </svg>
+      </summary>
+
+      <div class="ngo-header__menu-panel">
+        <nav class="ngo-nav" aria-label="Primary">
+          <ul role="list" class="ngo-nav__list">
+            {
+              ngoPrimaryNav.map((item) => (
+                <li>
+                  <a
+                    class="ngo-nav__link"
+                    href={item.href}
+                    aria-current={isActive(current, item.href) ? 'page' : undefined}
+                  >
+                    {item.label}
+                  </a>
+                </li>
+              ))
+            }
+          </ul>
+        </nav>
+        <div class="ngo-header__actions">
+          <Button variant="secondary" href="/ngo/donate">Donate</Button>
+          <Button variant="primary" href="/ngo/get-involved">Get Involved</Button>
+        </div>
+      </div>
+    </details>
+  </div>
+</header>
+
+<style>
+  .ngo-header {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: var(--color-surface-default);
+    border-bottom: 1px solid var(--color-border-subtle);
+  }
+  .ngo-header__bar {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-lg);
+    padding-block: var(--space-2xs);
+  }
+  /* Lockup styling — including its `flex: none` — lives in BrandLockup.astro (`size="sm"`). */
+
+  .ngo-nav__list {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-md);
+  }
+  .ngo-nav__link {
+    display: inline-flex;
+    align-items: center;
+    color: var(--color-text-default);
+    text-decoration: none;
+    font-size: var(--type-body-lg-size);
+    line-height: var(--type-body-lg-line);
+    padding-block: var(--space-3xs);
+  }
+  .ngo-nav__link:hover {
+    color: var(--color-cta);
+  }
+  .ngo-nav__link[aria-current='page'] {
+    color: var(--color-cta);
+    font-weight: var(--font-weight-bold);
+  }
+
+  .ngo-header__actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    flex: none;
+  }
+  .ngo-header__menu {
+    display: none;
+  }
+  .ngo-header__menu-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: 2.5rem;
+    block-size: 2.5rem;
+    color: var(--color-text-default);
+    cursor: pointer;
+    list-style: none;
+  }
+  .ngo-header__menu-toggle::-webkit-details-marker {
+    display: none;
+  }
+  .ngo-header__menu[open] .ngo-header__menu-toggle {
+    color: var(--color-action-primary);
+  }
+  .ngo-header__menu-panel {
+    position: absolute;
+    inset-inline: 0;
+    top: calc(100% + var(--space-2xs));
+    display: grid;
+    gap: var(--space-md);
+    padding: var(--space-md);
+    border-radius: var(--radius-lg);
+    background: var(--color-surface-default);
+    box-shadow: 0 12px 32px rgb(0 0 0 / 0.12);
+  }
+  .ngo-header__menu-panel .ngo-nav__list {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .ngo-header__menu-panel .ngo-header__actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  @media (max-width: 900px) {
+    .ngo-nav--desktop,
+    .ngo-header__actions--desktop {
+      display: none;
+    }
+    .ngo-header__menu {
+      display: block;
+    }
+  }
+</style>

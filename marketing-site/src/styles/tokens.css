@@ -46,18 +46,41 @@
   --color-outrageous-orange: #ff5a3e; /* warm accent */
   --color-chartreuse-yellow: #e1ff01; /* bright accent — dark-surface only */
   --color-aqua: #00f5f1; /* bright accent — dark-surface only */
-  --color-green: #007f0e; /* success — also the eyebrow/kicker colour throughout Home */
-  --color-orange: #e65320; /* warning — also the site's real action/accent colour (see header comment) */
+  --color-green: #007f0e; /* NGO primary action; on Consultancy, the eyebrow/kicker colour */
+  --color-orange: #e65320; /* warning — also Consultancy's real action/accent colour (see header comment) */
+  --color-deep-teal: #0e3e40; /* NGO dark surface — footer, program cards, testimonial, CTA (5990:3672) */
   --color-white: #ffffff;
   --color-black: #000000;
   /* Alpha overlays (kept as rgba so they composite over any surface). */
   --color-white-10: rgb(255 255 255 / 0.1); /* hairline on dark */
   --color-white-25: rgb(255 255 255 / 0.25); /* border on dark */
+  /* Figma expresses the footer's group labels and legal links as white at `opacity/50` rather
+     than as a solid tint (I8210:7883;8210:7768 et al). Over --color-violet that composites to
+     #898399 — 5.25:1, AA for normal text (see --color-text-on-inverse-faint). */
+  --color-white-50: rgb(255 255 255 / 0.5); /* faint label ink on dark */
   --color-black-08: rgb(0 0 0 / 0.08); /* hairline on light */
-  --color-orange-10: rgb(230 83 32 / 0.1); /* secondary-button fill/border (Home node.json) */
+  --color-black-12: rgb(0 0 0 / 0.12); /* slightly stronger hairline on light (NGO borders) */
+  --color-orange-10: rgb(
+    230 83 32 / 0.1
+  ); /* Consultancy secondary-button fill/border (Home node.json) */
+  --color-green-10: rgb(
+    0 127 14 / 0.1
+  ); /* NGO secondary-button fill/border (5990:3672 — Donate: fill 5%, stroke 10%) */
 
   /* Typography primitives — Arial, a system font: zero web-font load, no FOUT (TOKENS.md §4). */
   --font-family-base: Arial, Helvetica, sans-serif;
+  /* Brand logotype only (the GIEVA wordmark). --font-open-sans is provided by Astro's Fonts
+     API (astro.config.mjs) and already carries its own fallback stack; the extra --font-family-base
+     is a belt-and-braces fallback if the webfont var is ever absent. */
+  --font-family-brand: var(--font-open-sans), var(--font-family-base);
+  /* Condensed face for the dark-card titles (see --type-card-title below). Arial has no
+     condensed axis, so `font-stretch: condensed` cannot synthesise this — it has to come from a
+     separate family. Arial Narrow ships with Windows/macOS/Office; the two metric-compatible
+     clones cover most Linux installs. Where none is present (many Android devices) this falls
+     back to regular Arial: the title stays correct in size, weight and colour and only loses the
+     condensing, which beats shipping a webfont for one style (TOKENS.md §4 — zero web fonts). */
+  --font-family-narrow:
+    'Arial Narrow', 'Liberation Sans Narrow', 'Nimbus Sans Narrow', var(--font-family-base);
 
   --font-size-hero: 64px; /* Home H1 (5898:5918) — not in the original TOKENS.md audit */
   --font-size-display: 110px;
@@ -66,19 +89,28 @@
   --font-size-h3: 40px;
   --font-size-lead: 24px;
   --font-size-underline: 18px;
+  --font-size-card-title: 30px; /* dark-card titles — Figma style "GIEVA.org/Semantic/Heading 1" */
   --font-size-body: 14px;
+  --font-size-legal: 12px; /* footer legal links — Figma style "GIEVA.org/Arial/Regular" */
 
   --line-height-hero: 72px;
   --line-height-display: 120px;
   --line-height-h2: 56px;
   --line-height-title: 52px;
-  --line-height-h3: 48px;
+  /* 46px, not 48. Every ingested frame that uses 40px type stores `lineHeightPx: 45.99609375`
+     (40px × 114.99%, i.e. authored as a percentage) — Consultancy Partners/Services and all six
+     sub-pages, and NGO's Program page, so it is not a per-brand or per-page value. The original
+     audit recorded 48 and the styleguides' specimens repeated it; corrected against node.json. */
+  --line-height-h3: 46px;
   --line-height-lead: 32px;
   --line-height-underline: 24px;
+  --line-height-card-title: 36px;
   --line-height-body: 20px;
   --line-height-caption: 21px;
+  --line-height-legal: 16px;
 
   --font-weight-regular: 400;
+  --font-weight-semibold: 600; /* GIEVA logotype (design: Open Sans SemiBold) */
   --font-weight-bold: 700;
 
   --letter-spacing-display: -3.3px;
@@ -88,6 +120,10 @@
   --letter-spacing-lead: -1.2px;
   --letter-spacing-tight: -0.16px; /* was -0.14; Home's 18px/14px-bold instances read -0.1599...px */
   --letter-spacing-narrow: -0.14px; /* the true "narrow" style (TOKENS.md §4) — footer group labels */
+  --letter-spacing-card-title: -0.3px;
+  /* The only POSITIVE tracking in the system — the 12px legal style tracks open, not tight
+     (Figma style "GIEVA.org/Arial/Regular": letter spacing/0_24). */
+  --letter-spacing-wide: 0.24px;
   --letter-spacing-none: 0;
 
   /* Spacing — SNAPPED to Home's node.json (5891:4663): every distinct padding/gap value
@@ -114,7 +150,9 @@
   --radius-pill: 999px;
 
   /* Layout — content max-width + gutter read off Home's section frames: every full-width
-     section pads 64px each side around a 1312px content column at the 1440px design width. */
+     section pads 64px each side around a 1312px content column at the 1440px design width.
+     `--container-max` is the content column itself (border-box excludes the gutter) — see
+     `.container` in base.css, which adds the gutter back on top of it. */
   --container-max: 1312px;
   --container-gutter: var(--space-3xl);
 
@@ -135,6 +173,17 @@
   --type-hero-line: var(--line-height-hero);
   --type-hero-weight: var(--font-weight-bold);
   --type-hero-tracking: var(--letter-spacing-display);
+
+  /* Sub-page hero headline — 64/56/700/−0.26. Shares the hero's 64px size but takes the h2
+     line-height and tracking rather than the hero role's own 72/−3.3. Originally recorded in
+     services.astro as a "one-off combination… for a single page's title"; that was wrong.
+     The same metrics are confirmed on every Consultancy sub-page hero — /services (8119:7174),
+     SAT (8119:8722), ACT (8119:8171), TOEFL (8119:8977), IELTS (8119:9179), GRE (8119:9387)
+     and Professional Development (8145:8502) — so it is a real, named role, not a page quirk. */
+  --type-page-title-size: var(--font-size-hero);
+  --type-page-title-line: var(--line-height-h2);
+  --type-page-title-weight: var(--font-weight-bold);
+  --type-page-title-tracking: var(--letter-spacing-h2);
 
   --type-display-size: var(--font-size-display);
   --type-display-line: var(--line-height-display);
@@ -160,6 +209,16 @@
   --type-h3-weight: var(--font-weight-bold);
   --type-h3-tracking: var(--letter-spacing-h3);
 
+  /* Title inside the dark cards — Consultancy's service cards and NGO's program cards, which
+     are the same Figma style ("GIEVA.org/Semantic/Heading 1": Arial Narrow 30/36, tracking −0.3).
+     The only role that carries a family of its own: it is the sole condensed style in the system,
+     so the family belongs to the role rather than to a global default. */
+  --type-card-title-family: var(--font-family-narrow);
+  --type-card-title-size: var(--font-size-card-title);
+  --type-card-title-line: var(--line-height-card-title);
+  --type-card-title-weight: var(--font-weight-regular);
+  --type-card-title-tracking: var(--letter-spacing-card-title);
+
   --type-title-size: var(--font-size-title);
   --type-title-line: var(--line-height-title);
   --type-title-weight: var(--font-weight-regular);
@@ -176,6 +235,25 @@
   --type-body-tracking: var(--letter-spacing-none);
 
   --type-body-tight-tracking: var(--letter-spacing-narrow);
+
+  /* Micro group-label above each footer link column (NEWSLETTER, CONSULTANCY, NGO, CONTACT) —
+     Figma style "GIEVA.org/Arial/Narrow" (14/20/400, tracking −0.14). The second role to carry
+     a family of its own, for the same reason as --type-card-title: the condensing is what makes
+     it *this* style, and `--letter-spacing-narrow` was only ever half of it (the tracking was
+     captured in the original audit, the family was not — the labels rendered in regular Arial
+     and read visibly wider than the design until this role existed). */
+  --type-label-family: var(--font-family-narrow);
+  --type-label-size: var(--font-size-body);
+  --type-label-line: var(--line-height-body);
+  --type-label-weight: var(--font-weight-regular);
+  --type-label-tracking: var(--letter-spacing-narrow);
+
+  /* Footer legal links (Terms, Privacy) — Figma style "GIEVA.org/Arial/Regular" (12/16/400,
+     tracking +0.24). The smallest step in the system and the only one that tracks open. */
+  --type-legal-size: var(--font-size-legal);
+  --type-legal-line: var(--line-height-legal);
+  --type-legal-weight: var(--font-weight-regular);
+  --type-legal-tracking: var(--letter-spacing-wide);
 
   --type-caption-size: var(--font-size-body);
   --type-caption-line: var(--line-height-caption);
@@ -217,6 +295,12 @@
   --color-text-muted: var(--color-mid-gray);
   --color-text-inverse: var(--color-white);
   --color-text-on-inverse-muted: var(--color-periwinkle);
+  /* A THIRD step below `-muted`, not a replacement for it: the footer's group labels and legal
+     links are the quietest text on any dark surface. Kept as its own role because
+     `-on-inverse-muted` is aliased to `--color-text-muted` for every `.surface-inverse` block
+     (§3 below), so redefining that would drag unrelated inverse sections down with it.
+     5.25:1 over --color-violet — AA for normal text, below AAA. */
+  --color-text-on-inverse-faint: var(--color-white-50);
 
   --color-link: var(--color-electric-violet);
   --color-link-hover: var(--color-action-hover);
@@ -225,6 +309,21 @@
   --color-accent-warm: var(--color-orange);
   --color-accent-bright: var(--color-chartreuse-yellow); /* dark-surface only (TOKENS.md §3) */
   --color-accent-bright-alt: var(--color-aqua); /* dark-surface only */
+
+  /* Eyebrow (all-caps kicker) vs heading-accent (bold-italic emphasis span). Consultancy pairs
+     a GREEN kicker with an ORANGE emphasis; NGO inverts it (orange kicker, green emphasis).
+     Kept as two roles so `.u-eyebrow`/`.u-accent-em` render each brand correctly. */
+  --color-eyebrow: var(--color-feedback-success); /* green kicker (WHO WE ARE, CORE TEAM…) */
+  --color-heading-accent: var(--color-accent-warm); /* orange emphasis (Global, Excellence.) */
+
+  /* CTA role — the button/control fill (Button + footer newsletter submit). On Consultancy the
+     CTA colour and the warm eyebrow accent coincide (both #E65320), so this equals accent-warm
+     and nothing renders differently. NGO splits them (green CTAs, orange eyebrows), which is why
+     the shell consumes --color-cta here rather than --color-accent-warm directly. */
+  --color-cta: var(--color-accent-warm);
+  --color-cta-contrast: var(--color-white);
+  --color-cta-soft: var(--color-orange-10); /* secondary-button tint fill/border */
+  --color-cta-hover: var(--color-action-hover);
 
   --color-border-subtle: var(--color-periwinkle);
   --color-border-on-inverse: var(--color-white-25);
@@ -246,5 +345,99 @@
   --color-link-hover: var(--color-aqua);
   --color-focus-ring: var(--color-accent-bright);
   /* Outline controls flip to light ink so they stay legible on the dark surface. */
+  --color-action-outline: var(--color-text-inverse);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   3b. BRAND THEME — NGO. Value-set for the semantic colour roles.
+   Every value below is read off the NGO Home node.json (5990:3672) — header/footer/hero/
+   sections audited fill-by-fill (Phase 0B), NOT the shared full-workspace token export
+   (Consultancy + NGO share one flat namespace, so the export can't be brand-split; fetch is
+   the canonical source per the client). Provisional values (no confirmed instance on Home yet)
+   are flagged for per-screen confirmation during the page builds, exactly as Consultancy did.
+
+   Key divergence from Consultancy captured here: NGO's action/CTA colour is green
+   (`--color-green` #007F0E — every Get Involved / Donate / Learn more / Subscribe control),
+   while the warm eyebrow/kicker accent is orange (`--color-orange` #E65320 — every WHO WE ARE /
+   OUR PROGRAMS / GET INVOLVED label). Consultancy uses one colour (orange) for both; NGO splits
+   them, so `--color-cta` (buttons) and `--color-accent-warm` (eyebrows) resolve differently.
+   ───────────────────────────────────────────────────────────────────────────── */
+[data-brand='ngo'] {
+  --color-action-primary: var(--color-green); /* #007F0E — confirmed brand primary */
+  --color-action-primary-contrast: var(--color-white); /* white label on the green fill */
+  --color-action-hover: #006b0c; /* darkened green — provisional, confirm on a real hover state */
+  --color-action-outline: var(
+    --color-green
+  ); /* outline/secondary control ink (Donate border+ink) */
+
+  --color-surface-default: var(--color-white); /* #FFFFFF — header + page background */
+  --color-surface-muted: #f4f8f4; /* provisional faint green-tint for alternating sections */
+  --color-surface-inverse: var(
+    --color-deep-teal
+  ); /* #0E3E40 — footer/program cards/testimonial/CTA */
+
+  --color-text-default: var(
+    --color-violet
+  ); /* #120633 — headings + hero subhead (near-black ink) */
+  --color-text-muted: var(
+    --color-mid-gray
+  ); /* Home surfaces no distinct muted grey; neutral secondary, confirm */
+  --color-text-inverse: var(--color-white);
+  --color-text-on-inverse-muted: var(
+    --color-white
+  ); /* NGO inverse text is all white (footer headings included) */
+  /* Deliberately NOT the 50%-white the Consultancy footer uses. The shared SiteFooter reads this
+     role, but NGO's own frames show solid white for the same labels (see -muted above), and there
+     is no NGO footer node to justify dimming them — so NGO keeps white until one says otherwise. */
+  --color-text-on-inverse-faint: var(--color-white);
+
+  --color-link: var(--color-green);
+  --color-link-hover: var(--color-action-hover);
+
+  /* CTA (buttons/controls) = green; warm accent (eyebrows) = orange — the NGO split. */
+  --color-cta: var(--color-green);
+  --color-cta-contrast: var(--color-white);
+  --color-cta-soft: var(
+    --color-green-10
+  ); /* Donate: green fill 5% / border 10% → single soft tint */
+  --color-cta-hover: var(--color-action-hover);
+
+  --color-accent-warm: var(--color-orange); /* #E65320 — eyebrow/kicker labels only on NGO */
+  /* NGO Home surfaces no chartreuse/aqua-style bright dark accents; default to the green primary
+     so any reference resolves sensibly. Confirm per-screen if a real bright accent appears. */
+  --color-accent-bright: var(--color-green);
+  --color-accent-bright-alt: var(--color-green);
+
+  /* NGO INVERTS the Consultancy pairing (confirmed against 5990:3672 text runs): the all-caps
+     kicker is ORANGE (#E65320) and the bold-italic heading emphasis span is GREEN (#007F0E) —
+     the opposite of Consultancy. */
+  --color-eyebrow: var(--color-accent-warm); /* orange kicker (WHO WE ARE, OUR PROGRAMS…) */
+  --color-heading-accent: var(
+    --color-cta
+  ); /* green emphasis (One Youth…, Real Impact, With Us) */
+
+  --color-border-subtle: var(
+    --color-black-12
+  ); /* neutral hairline on light — confirm per-screen */
+  --color-border-on-inverse: var(--color-white-25);
+
+  --color-feedback-success: var(--color-green);
+  --color-feedback-warning: var(--color-orange);
+
+  --color-focus-ring: var(--color-green);
+}
+
+/* On NGO's dark teal surfaces, flip text roles so nested components stay readable. Mirrors the
+   Consultancy block above. Note: `--color-link`/CTA stays GREEN on the dark surface here (the
+   design's "Learn more" links inside the dark program cards are green #007F0E, a confirmed
+   source colour), even though green-on-teal is below AA — tracked in docs/a11y-known-issues.md
+   rather than recoloured (CLAUDE.md non-negotiable #2 colour-contrast exception). */
+[data-brand='ngo'] .surface-inverse,
+[data-brand='ngo'] [data-surface='inverse'] {
+  --color-text-default: var(--color-text-inverse);
+  --color-text-muted: var(--color-text-on-inverse-muted);
+  --color-border-subtle: var(--color-border-on-inverse);
+  --color-link: var(--color-cta); /* green, per design (low-contrast, tracked) */
+  --color-focus-ring: var(--color-white); /* light ring stays visible on the dark surface */
   --color-action-outline: var(--color-text-inverse);
 }

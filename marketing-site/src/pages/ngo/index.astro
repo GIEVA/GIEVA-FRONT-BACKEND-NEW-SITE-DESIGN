@@ -1,0 +1,814 @@
+---
+/**
+ * Home (/ngo) — NGO. Built against the committed Figma node 5990:3672
+ * (design/figma/fTqnnV20l9htP7vFJrOsvn/5990-3672/), see docs/ngo-build-plan.md.
+ *
+ * Shares the Consultancy Home skeleton (hero + partners marquee, who-we-are + stats band,
+ * card grid, testimonial, CTA) but re-themed via [data-brand='ngo'] tokens and with NGO's own
+ * content/section set: a 2×2 programs grid, a video "success stories" block, a single-card
+ * testimonial, and a recent-news row. Copy is transcribed from the node.json text runs; the
+ * bold-italic accent phrases live in characterStyleOverrides and render GREEN on NGO (the
+ * inverse of Consultancy's orange — see tokens.css --color-heading-accent).
+ *
+ * The shell (NgoSiteHeader + SiteFooter) is finalized against this frame here; the only shell
+ * token correction Home surfaced was the eyebrow↔accent colour inversion (tokens.css/base.css).
+ */
+import BaseLayout from '@layouts/BaseLayout.astro';
+import Button from '@components/Button.astro';
+import PartnersMarquee from '@components/PartnersMarquee.astro';
+import { Image } from 'astro:assets';
+// Both homes share the same real partner set (node 12023:32440); the NGO-specific glob was
+// removed as its per-logo identities were unverified placeholders.
+import { partnerLogos } from '@lib/home-images';
+import { ngoHeroRing, boatPhoto, testimonialPortrait } from '@lib/ngo-home-images';
+
+const stats = [
+  { value: '10,000+', label: 'Lives Changed' },
+  { value: '30+', label: 'Global Partners' },
+  { value: '12+', label: 'Years Active' },
+  { value: '98%', label: 'Success Rate' },
+];
+
+const programs = [
+  {
+    title: 'STEP',
+    description:
+      "Strategic Transformative Education Program — leadership pathways for tomorrow's changemakers.",
+    href: '/ngo/program',
+  },
+  {
+    title: 'CHOICES',
+    description:
+      'STEM innovation club challenging young minds to create solutions for real-world problems.',
+    href: '/ngo/program',
+  },
+  {
+    title: 'GVP',
+    description:
+      'GIEVA Volunteer Project — connecting young Nigerians with meaningful community service.',
+    href: '/ngo/program',
+  },
+  {
+    title: 'PARTNERSHIP PROGRAMS',
+    description:
+      'Holistic Education Advising and Learning Services — personalized coaching and global opportunities.',
+    href: '/ngo/program',
+  },
+];
+
+const testimonial = {
+  quote:
+    "The GIEVA team walked me through every step of my TOEFL registration. They even helped me pick test centres I didn't know existed. I got my scores in record time and reported them to my target schools the same week.",
+  name: 'Tolulope Ogunwale',
+  role: 'TOEFL CLIENT',
+  detail: 'Admitted to University of Michigan',
+};
+
+const news = Array.from({ length: 3 }, () => ({
+  tag: 'Publication',
+  title: 'PSPBA Hosts Plateau Peace Architecture Forum PPAF 2025',
+  date: '17th October 2025',
+  href: '/ngo/resources',
+}));
+
+const ctaLinks = [
+  { label: 'Volunteer', href: '/ngo/get-involved' },
+  { label: 'Donate', href: '/ngo/donate' },
+  { label: 'Other Partnership Opportunities', href: '/ngo/partners' },
+];
+---
+
+<BaseLayout
+  title="GIEVA NGO — Transforming Lives, One Youth at a Time"
+  description="Four flagship programs, 30+ global partners, and 18 years of impact across Nigeria. Join GIEVA as a donor, volunteer, or partner."
+  brand="ngo"
+>
+  <!-- ── Hero ─────────────────────────────────────────────────────────────────── -->
+  <section class="hero">
+    <div class="container hero__grid">
+      <div class="hero__content">
+        <span class="hero__badge">NGO</span>
+        <h1 class="u-hero hero__heading">
+          Transforming Lives,<br /><em class="u-accent-em">One Youth at a Time.</em>
+        </h1>
+        <p class="u-body-lg hero__lead">
+          Four flagship programs, 30+ global partners, and 18 years of impact across Nigeria.
+          Join us — as a donor, volunteer, or partner.
+        </p>
+        <div class="hero__actions">
+          <Button variant="primary" href="/ngo/get-involved">Get Involved</Button>
+          <Button variant="secondary" href="/ngo/donate">Donate</Button>
+        </div>
+      </div>
+
+      <div class="hero__visual">
+        <Image src={ngoHeroRing} alt="" width={818} height={818} class="hero__ring" />
+        <a class="hero__cross-link" href="/"> Explore Consultancy </a>
+      </div>
+    </div>
+
+    <PartnersMarquee logos={partnerLogos} />
+  </section>
+
+  <!-- ── Who We Are ───────────────────────────────────────────────────────────── -->
+  <section class="section who">
+    <div class="container who__grid">
+      <div class="who__intro">
+        <p class="u-eyebrow">Who We Are</p>
+        <h2 class="u-section-title">
+          Global Integrated Education Volunteers Association (GIEVA)
+        </h2>
+      </div>
+      <div class="who__body">
+        <p class="u-body-lg">
+          Global Integrated Education Volunteers Association (GIEVA) was registered in 2006 as
+          a nonprofit organization to improve access to quality education and global learning
+          opportunities among young Nigerians. Over the years, GIEVA has grown to serve over
+          1,000 young Nigerians annually, with a strong focus on inclusive education, digital
+          empowerment, and youth development.
+        </p>
+        <Button variant="secondary" href="/ngo/about">Learn more about us</Button>
+      </div>
+    </div>
+
+    <div class="container">
+      <div class="who__photo-wrap">
+        <Image src={boatPhoto} alt="" width={1312} height={670} class="who__photo" />
+        <ul role="list" class="who__stats">
+          {
+            stats.map((stat, i) => (
+              <li class="who__stat" data-divider={i > 0 ? '' : undefined}>
+                <p class="u-h2 who__stat-value">{stat.value}</p>
+                <p class="who__stat-label">{stat.label}</p>
+              </li>
+            ))
+          }
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Our Programs ─────────────────────────────────────────────────────────── -->
+  <section class="section programs">
+    <div class="container">
+      <div class="programs__intro">
+        <p class="u-eyebrow">Our Programs</p>
+        <h2 class="u-section-title">
+          Initiatives Built for <em class="u-accent-em">Real Impact</em>
+        </h2>
+        <p class="u-body-lg">
+          Community-centered, measurable, and designed for long-term change across Nigeria.
+        </p>
+      </div>
+
+      <ul role="list" class="programs__grid">
+        {
+          programs.map((program) => (
+            <li class="programs__card surface-inverse" data-surface="inverse">
+              <div class="programs__card-head">
+                <h3 class="programs__card-title">{program.title}</h3>
+                <span class="programs__divider" aria-hidden="true" />
+                <p class="u-body-lg programs__card-desc">{program.description}</p>
+              </div>
+              <Button variant="link" href={program.href}>
+                Learn more
+              </Button>
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+  </section>
+
+  <!-- ── Success Stories ──────────────────────────────────────────────────────── -->
+  <section class="section success">
+    <div class="container">
+      <div class="success__intro">
+        <p class="u-eyebrow">Success Stories</p>
+        <h2 class="u-section-title">
+          Real-Life Stories of <em class="u-accent-em">Impacts made</em>
+        </h2>
+        <p class="u-body-lg">
+          Community-centered, measurable, and designed for long-term change across Nigeria.
+        </p>
+      </div>
+
+      <a class="success__video" href="/ngo/resources">
+        <Image src={boatPhoto} alt="" width={1312} height={688} class="success__video-img" />
+        <span class="success__play" aria-hidden="true">
+          <svg width="26" height="30" viewBox="0 0 26 30" fill="none" focusable="false">
+            <path
+              d="M25 13.27a2 2 0 0 1 0 3.46L3 29.4a2 2 0 0 1-3-1.73V2.33A2 2 0 0 1 3 .6l22 12.67Z"
+              fill="currentColor"></path>
+          </svg>
+        </span>
+        <span class="visually-hidden">Watch our success stories</span>
+      </a>
+
+      <figure class="testimonial surface-inverse" data-surface="inverse">
+        <Image
+          src={testimonialPortrait}
+          alt=""
+          width={437}
+          height={508}
+          class="testimonial__photo"
+        />
+        <div class="testimonial__body">
+          <blockquote class="testimonial__quote">
+            <span class="testimonial__mark" aria-hidden="true">&ldquo;</span>
+            <p>{testimonial.quote}</p>
+          </blockquote>
+          <div class="testimonial__attribution">
+            <span class="testimonial__divider" aria-hidden="true"></span>
+            <figcaption>
+              <p class="testimonial__name">{testimonial.name}</p>
+              <p class="testimonial__role">
+                <span>{testimonial.role}</span>
+                <span>{testimonial.detail}</span>
+              </p>
+            </figcaption>
+            <Button variant="link" href="/ngo/resources">View case study</Button>
+          </div>
+        </div>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ── Recent News ──────────────────────────────────────────────────────────── -->
+  <section class="section news">
+    <div class="container">
+      <div class="news__panel">
+        <div class="news__intro">
+          <p class="u-eyebrow">Recent News</p>
+          <h2 class="u-section-title">
+            Keep Up <em class="u-accent-em">With Us</em>
+          </h2>
+          <p class="u-body-lg">
+            Community-centered, measurable, and designed for long-term change across Nigeria.
+          </p>
+        </div>
+
+        <ul role="list" class="news__grid">
+          {
+            news.map((item) => (
+              <li class="news__card">
+                <a class="news__card-link" href={item.href}>
+                  <span class="news__media">
+                    <Image src={boatPhoto} alt="" width={395} height={320} class="news__img" />
+                    <span class="news__tag">{item.tag}</span>
+                  </span>
+                  <span class="news__card-body">
+                    <span class="news__title">{item.title}</span>
+                    <span class="news__date">{item.date}</span>
+                  </span>
+                </a>
+              </li>
+            ))
+          }
+        </ul>
+
+        <div class="news__more">
+          <Button variant="primary" href="/ngo/resources">See all news</Button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── CTA ──────────────────────────────────────────────────────────────────── -->
+  <section class="section cta">
+    <div class="container">
+      <div class="cta__card">
+        <Image src={boatPhoto} alt="" width={656} height={676} class="cta__photo" />
+        <div class="cta__panel surface-inverse" data-surface="inverse">
+          <div class="cta__text">
+            <p class="u-eyebrow">Get Involved</p>
+            <h2 class="u-section-title">
+              Ready to Join the <em class="u-accent-em">Movement?</em>
+            </h2>
+            <p class="u-body-lg">
+              Volunteer, donate, or partner — every form of support transforms a young
+              Nigerian's future.
+            </p>
+          </div>
+          <ul role="list" class="cta__links">
+            {
+              ctaLinks.map((link) => (
+                <li>
+                  <a class="cta__link" href={link.href}>
+                    <span>{link.label}</span>
+                    <svg
+                      class="cta__link-arrow"
+                      width="15"
+                      height="13"
+                      viewBox="0 0 15 13"
+                      fill="none"
+                      aria-hidden="true"
+                      focusable="false"
+                    >
+                      <path
+                        d="M8.5 1L14 6.5M14 6.5L8.5 12M14 6.5H1"
+                        stroke="currentColor"
+                        stroke-width="1.6"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                    </svg>
+                  </a>
+                </li>
+              ))
+            }
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  /* ── Shared section rhythm ──────────────────────────────────────────────── */
+  .section {
+    padding-block: var(--space-6xl);
+  }
+
+  /* ── Hero ───────────────────────────────────────────────────────────────── */
+  .hero {
+    position: relative;
+    background-image: repeating-linear-gradient(
+      to right,
+      rgb(0 0 0 / 0.02) 0,
+      rgb(0 0 0 / 0.02) 1px,
+      transparent 1px,
+      transparent 60px
+    );
+  }
+  .hero {
+    overflow: hidden;
+  }
+  .hero__grid {
+    display: grid;
+    grid-template-columns: minmax(0, 600px) 1fr;
+    align-items: center;
+    gap: var(--space-md);
+    padding-block: var(--space-5xl) var(--space-2xl);
+  }
+  .hero__content {
+    display: grid;
+    gap: var(--space-lg);
+  }
+  .hero__badge {
+    display: inline-block;
+    width: fit-content;
+    padding: var(--space-3xs) var(--space-md);
+    border: 1px solid var(--color-periwinkle);
+    border-radius: var(--radius-sm);
+    font-size: var(--type-body-size);
+    color: var(--color-mine-shaft);
+    text-transform: uppercase;
+    letter-spacing: var(--type-eyebrow-tracking);
+  }
+  .hero__heading {
+    color: var(--color-text-default);
+    max-width: 16ch;
+  }
+  .hero__lead {
+    color: var(--color-text-default);
+    max-width: 48ch;
+  }
+  .hero__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-md);
+  }
+
+  .hero__visual {
+    position: relative;
+  }
+  .hero__ring {
+    width: 115%;
+    max-width: none;
+    height: auto;
+    margin-inline-end: calc(-1 * var(--container-gutter));
+  }
+  .hero__cross-link {
+    /* Persistent cross-site switcher: fixed to the viewport's bottom-right so it stays
+       reachable as the page scrolls. Mirrors the Consultancy home's Explore-NGO button. */
+    position: fixed;
+    right: var(--space-lg);
+    bottom: var(--space-lg);
+    z-index: 45; /* above page content, below the sticky header (50) and skip link (100) */
+    display: inline-flex;
+    align-items: center;
+    padding: var(--space-xs) var(--space-lg);
+    border-radius: var(--radius-sm);
+    background: #f5baa6;
+    border: 1px solid var(--color-accent-warm);
+    color: var(--color-accent-warm);
+    font-weight: var(--font-weight-bold);
+    font-size: var(--type-body-lg-size);
+    text-decoration: none;
+    box-shadow: 0 2px 12px rgb(88 28 255 / 0.18); /* legibility when overlapping content */
+  }
+  .hero__cross-link:hover {
+    background: var(--color-accent-warm);
+    color: var(--color-white);
+  }
+
+  /* ── Who We Are ─────────────────────────────────────────────────────────── */
+  .who__grid {
+    display: grid;
+    grid-template-columns: minmax(0, 640px) 1fr;
+    gap: var(--space-xl);
+    margin-bottom: var(--space-4xl);
+  }
+  .who__intro,
+  .who__body {
+    display: grid;
+    gap: var(--space-sm);
+    align-content: start;
+  }
+  .who__intro h2 {
+    color: var(--color-text-default);
+  }
+  .who__body p {
+    color: var(--color-text-default);
+    margin-bottom: var(--space-sm);
+  }
+  .who__body :global(.btn) {
+    justify-self: start;
+  }
+
+  .who__photo-wrap {
+    position: relative;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+  }
+  .who__photo {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+  .who__stats {
+    position: absolute;
+    inset-inline: 0;
+    bottom: 0;
+    display: flex;
+    padding: var(--space-xl);
+    background: linear-gradient(to top, rgb(0 0 0 / 0.8), transparent);
+  }
+  .who__stat {
+    flex: 1;
+    text-align: center;
+    padding-inline: var(--space-md);
+  }
+  .who__stat[data-divider] {
+    border-inline-start: 1px solid var(--color-white-25);
+  }
+  .who__stat-value {
+    color: var(--color-white);
+  }
+  .who__stat-label {
+    color: var(--color-white);
+    font-size: var(--type-body-lg-size);
+    line-height: var(--type-body-lg-line);
+    font-weight: var(--font-weight-bold);
+  }
+
+  /* ── Our Programs ──────────────────────────────────────────────────────── */
+  .programs__intro {
+    display: grid;
+    gap: var(--space-sm);
+    max-width: 42rem;
+    margin-inline: auto;
+    margin-bottom: var(--space-4xl);
+    text-align: center;
+  }
+  .programs__intro h2 {
+    color: var(--color-text-default);
+  }
+  .programs__intro p.u-body-lg {
+    color: var(--color-text-default);
+  }
+  .programs__grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-xl);
+  }
+  .programs__card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-xl);
+    padding: var(--space-2xl);
+    border-radius: var(--radius-md);
+    text-align: center;
+  }
+  .programs__card-head {
+    display: grid;
+    gap: var(--space-md);
+    justify-items: center;
+    width: 100%;
+  }
+  .programs__card-title {
+    font-family: var(--type-card-title-family);
+    font-weight: var(--type-card-title-weight);
+    font-size: var(--type-card-title-size);
+    line-height: var(--type-card-title-line);
+    letter-spacing: var(--type-card-title-tracking);
+    color: var(--color-text-inverse);
+  }
+  .programs__divider {
+    display: block;
+    width: 100%;
+    height: 1px;
+    background: var(--color-border-on-inverse);
+  }
+  .programs__card-desc {
+    color: var(--color-text-inverse);
+  }
+
+  /* ── Success Stories ───────────────────────────────────────────────────── */
+  .success__intro {
+    display: grid;
+    gap: var(--space-sm);
+    max-width: 42rem;
+    margin-bottom: var(--space-4xl);
+  }
+  .success__intro h2 {
+    color: var(--color-text-default);
+  }
+  .success__intro p.u-body-lg {
+    color: var(--color-text-default);
+  }
+  .success__video {
+    position: relative;
+    display: block;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    margin-bottom: var(--space-6xl);
+  }
+  .success__video-img {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1312 / 688;
+    object-fit: cover;
+    display: block;
+  }
+  .success__play {
+    position: absolute;
+    inset: 0;
+    margin: auto;
+    inline-size: 5rem;
+    block-size: 5rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: rgb(255 255 255 / 0.9);
+    color: var(--color-surface-inverse);
+  }
+  .success__video:hover .success__play {
+    background: var(--color-white);
+  }
+
+  .testimonial {
+    display: grid;
+    grid-template-columns: minmax(0, 437px) 1fr;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+  }
+  .testimonial__photo {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .testimonial__body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3xl);
+    padding: var(--space-3xl);
+  }
+  .testimonial__quote {
+    display: grid;
+    gap: var(--space-sm);
+    color: var(--color-text-inverse);
+  }
+  .testimonial__mark {
+    font-size: 4rem;
+    line-height: 1;
+    font-weight: var(--font-weight-bold);
+  }
+  .testimonial__quote p {
+    font-size: var(--type-lead-size);
+    line-height: var(--type-lead-line);
+    letter-spacing: var(--letter-spacing-h2);
+  }
+  .testimonial__attribution {
+    display: grid;
+    gap: var(--space-lg);
+  }
+  .testimonial__divider {
+    display: block;
+    height: 1px;
+    background: var(--color-border-on-inverse);
+  }
+  .testimonial__name {
+    font-weight: var(--font-weight-bold);
+    font-size: var(--type-body-lg-size);
+    color: var(--color-text-inverse);
+  }
+  .testimonial__role {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+    margin-top: var(--space-2xs);
+    font-size: var(--type-body-lg-size);
+    color: var(--color-text-inverse);
+  }
+  .testimonial__attribution :global(.btn) {
+    justify-self: start;
+  }
+
+  /* ── Recent News ───────────────────────────────────────────────────────── */
+  .news__panel {
+    display: grid;
+    gap: var(--space-4xl);
+  }
+  .news__intro {
+    display: grid;
+    gap: var(--space-sm);
+    align-content: start;
+  }
+  .news__intro h2 {
+    color: var(--color-text-default);
+  }
+  .news__intro p.u-body-lg {
+    color: var(--color-text-default);
+  }
+  .news__grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-2xl);
+  }
+  .news__card {
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    background: var(--color-surface-default);
+    box-shadow: 0 1px 2px rgb(0 0 0 / 0.06);
+  }
+  .news__card-link {
+    display: grid;
+    text-decoration: none;
+    color: inherit;
+    height: 100%;
+  }
+  .news__media {
+    position: relative;
+    display: block;
+  }
+  .news__img {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 395 / 320;
+    object-fit: cover;
+    display: block;
+  }
+  .news__tag {
+    position: absolute;
+    top: var(--space-md);
+    left: var(--space-md);
+    display: inline-block;
+    padding: var(--space-3xs) var(--space-md);
+    border-radius: var(--radius-pill);
+    background: var(--color-white);
+    color: var(--color-accent-warm);
+    font-size: var(--type-body-size);
+    font-weight: var(--font-weight-bold);
+    letter-spacing: var(--type-eyebrow-tracking);
+  }
+  .news__card-body {
+    display: grid;
+    gap: var(--space-lg);
+    padding: var(--space-lg);
+  }
+  .news__title {
+    font-weight: var(--font-weight-bold);
+    font-size: var(--type-lead-size);
+    line-height: var(--type-lead-line);
+    letter-spacing: var(--letter-spacing-lead);
+    color: var(--color-text-default);
+  }
+  .news__date {
+    font-size: var(--type-body-size);
+    color: var(--color-text-default);
+  }
+  .news__card-link:hover .news__title {
+    text-decoration: underline;
+  }
+  .news__more {
+    display: flex;
+    justify-content: center;
+  }
+
+  /* ── CTA ────────────────────────────────────────────────────────────────── */
+  .cta__card {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+  }
+  .cta__photo {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .cta__panel {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3xl);
+    padding: var(--space-3xl);
+  }
+  .cta__text {
+    display: grid;
+    gap: var(--space-md);
+  }
+  .cta__text h2 {
+    color: var(--color-text-inverse);
+  }
+  .cta__text p.u-body-lg {
+    color: var(--color-text-inverse);
+  }
+  .cta__links {
+    display: grid;
+    border-bottom: 1px solid var(--color-border-on-inverse);
+  }
+  .cta__link {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding-block: var(--space-md);
+    border-top: 1px solid var(--color-border-on-inverse);
+    color: var(--color-text-inverse);
+    font-size: var(--type-body-lg-size);
+    text-decoration: none;
+    width: fit-content;
+  }
+  .cta__link:hover {
+    text-decoration: underline;
+  }
+  .cta__link-arrow {
+    flex: none;
+  }
+
+  /* ── Responsive ─────────────────────────────────────────────────────────── */
+  @media (max-width: 1024px) {
+    .who__grid {
+      grid-template-columns: 1fr;
+    }
+    .programs__grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+    .news__grid {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+  @media (max-width: 900px) {
+    .hero__grid {
+      grid-template-columns: 1fr;
+    }
+    .hero__heading,
+    .hero__lead {
+      max-width: none;
+    }
+    .hero__visual {
+      max-width: 26rem;
+      margin-inline: auto;
+    }
+    .testimonial {
+      grid-template-columns: 1fr;
+    }
+    .testimonial__photo {
+      aspect-ratio: 16 / 10;
+    }
+    .cta__card {
+      grid-template-columns: 1fr;
+    }
+  }
+  @media (max-width: 640px) {
+    .programs__grid,
+    .news__grid {
+      grid-template-columns: 1fr;
+    }
+    .who__stats {
+      flex-wrap: wrap;
+      gap: var(--space-md);
+    }
+    .who__stat {
+      flex: 1 1 40%;
+    }
+    .who__stat[data-divider] {
+      border-inline-start: 0;
+    }
+  }
+</style>

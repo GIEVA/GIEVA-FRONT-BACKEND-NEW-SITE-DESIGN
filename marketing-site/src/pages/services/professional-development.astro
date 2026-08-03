@@ -1,0 +1,51 @@
+---
+/**
+ * Professional Development (/services/professional-development) — node 8145:8502.
+ *
+ * Its own page file rather than an entry in `[slug].astro`, because it is not a test-prep riff:
+ * two sections instead of one, the Services family's 24px block gap instead of 16px, and its own
+ * hero title ("Professional Development", not "Test Registration"). It assembles from the same
+ * three shared components as every other sub-page.
+ *
+ * The nav lists "Teacher Training" and "Technology Training" as separate entries, but the design
+ * has one page holding both — so those two links point at `#teacher-training` and
+ * `#technology-training` here (the ids come from `ServiceSection.id`).
+ *
+ * Content, including the placeholder HEALS copy filling both sections, is in
+ * `@lib/profdev-content`; see that file for the audit.
+ */
+import BaseLayout from '@layouts/BaseLayout.astro';
+import SubPageHero from '@components/SubPageHero.astro';
+import ServiceDetailSection from '@components/ServiceDetailSection.astro';
+import CtaSection from '@components/CtaSection.astro';
+import { cta, heroTitle, metaDescription, metaTitle, sections } from '@lib/profdev-content';
+---
+
+<BaseLayout title={metaTitle} description={metaDescription} brand="consultancy">
+  <SubPageHero title={heroTitle} />
+
+  <section class="section profdev-body">
+    <div class="container profdev-body__list">
+      {sections.map((section) => <ServiceDetailSection {...section} />)}
+
+      <CtaSection
+        titleLead="Ready to "
+        titleAccent="Register?"
+        body={cta.body}
+        primary={{ label: cta.primaryLabel, href: '/book-consultancy' }}
+        secondary={{ label: 'Talk to a Counsellor', href: '/book-consultancy' }}
+      />
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  /* Same page rhythm as /services: 120px above, below, and between blocks. */
+  .profdev-body {
+    padding-block: var(--space-6xl);
+  }
+  .profdev-body__list {
+    display: grid;
+    gap: var(--space-6xl);
+  }
+</style>

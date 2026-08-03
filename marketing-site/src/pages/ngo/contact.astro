@@ -1,0 +1,480 @@
+---
+/**
+ * Contact us (/ngo/contact) — NGO. Built against the committed Figma node 7461:5854
+ * (design/figma/fTqnnV20l9htP7vFJrOsvn/7461-5854/), confirmed "CONTACT US PAGE NGO" by frame
+ * name — no collision to resolve. See docs/ngo-build-plan.md Phase 5. The last of the five NGO
+ * pages; the frame is the shortest (1440×2660): a white page-header over one ~1560px content
+ * block, then the shared footer.
+ *
+ * SHAPE, confirmed section-by-section against this page's own node.json (never a whole-file
+ * read):
+ *   1. White page header — breadcrumb "HOME / PROGRAMS" + "Contact Us" h1 (node 7958:30382),
+ *      same shape as About/Partners/Program's headers. The breadcrumb text is another
+ *      duplication artifact (this time from the Program frame, not About) — reproduced verbatim
+ *      per exact-replica-first, same precedent as Partners' "HOME / ABOUT".
+ *   2. Contact info (node 7461:6164) — NOT present on any prior NGO page, so built fresh rather
+ *      than reused: a two-column, icon-led block — HEAD OFFICE / LAGOS BRANCH OFFICE / JOS
+ *      BRANCH OFFICE addresses on the left, PHONE / EMAIL / OFFICE HOURS on the right. Every
+ *      micro-label ("HEAD OFFICE" etc.) sits inside a Figma frame with `opacity: 0.5` over its
+ *      raw black (#000000) fill — not a distinct colour token — so the rendered value is flat
+ *      black composited at 50% over the white surface, sampled from `frame.png` and confirmed
+ *      via `node.json` opacity as `#7F7F7F`. Icons (location pin, call, mail, clock) are the
+ *      confirmed green `#007F0E` stroke glyphs from the node tree; the call/clock glyphs weren't
+ *      captured by the original ingestion (nested one level deeper than the "icon"-tagged
+ *      nodes), so their SVGs were pulled individually via Framelink and committed alongside the
+ *      rest of this page's `assets/` — not a re-fetch of the page.
+ *   3. "Send us a Message" — the deep-teal inverse form panel (node 7461:5938). Structurally the
+ *      SAME 7-field labelled `<form>` as NGO Program's "Contact Us Now" panel (fixed 387px
+ *      right-aligned label column, 122px gap, white-underline inputs, centred submit, muted
+ *      teal-blue `#69A4B8` labels, green `.u-accent-em` heading accent) — confirmed against this
+ *      page's own node.json rather than assumed: same field count, same label pixel colour, same
+ *      heading-accent direction (not inverted). The only real deltas from Program's panel are the
+ *      heading/subheading copy and three of the seven field labels being genuine ("What is your
+ *      full name?" / "What is your email address?" / "Phone Number") rather than all seven
+ *      reading the "What is your name?" placeholder — the last four still do, reproduced verbatim.
+ *
+ * The whole page is one 120px (`--space-6xl`) vertical rhythm — header→info-block and
+ * info-block→form-panel are both exactly 120px in the source (header's own paddingBottom 120,
+ * content's itemSpacing 120) — so, like Program, it's authored as a single `.container` grid with
+ * `row-gap: var(--space-6xl)` rather than per-section double-padding.
+ *
+ * Copy transcribed from the node.json text runs, not eyeballed. Recurring-trap sweep: no hidden
+ * `visible:false` runs found on this page; no manual grid-anchor reordering (both info columns
+ * and all form rows are document-order); no low-opacity-stroke dividers (the form panel has none
+ * — Program's pattern, not Partners'); frame.png pixel-compared throughout, including for the
+ * label opacity discovery above (the JSON's raw fill alone reads pure black, matching neither the
+ * rendered grey nor any existing colour token — opacity was the missing piece).
+ *
+ * Heading order: h1 "Contact Us" → h2 "Send us a Message". Nothing else on the page is a
+ * heading — the office/phone/email/hours micro-labels are visual field-group labels, not section
+ * headings (same precedent as the form `<label>`s themselves), so promoting them would only add
+ * heading-order noise without a real content hierarchy to justify it.
+ */
+import BaseLayout from '@layouts/BaseLayout.astro';
+import Button from '@components/Button.astro';
+
+const offices = [
+  {
+    label: 'HEAD OFFICE',
+    address:
+      'Lagos State House 3rd Floor Suite 329 Plot 78 Ralph Shodeinde Street CBD Abuja, Nigeria',
+  },
+  {
+    label: 'LAGOS BRANCH OFFICE',
+    address:
+      '561 Agege Motor Road, Off Jacob Taiwo Street, Ladipo Bus Stop, Oshodi, Lagos, Nigeria.',
+  },
+  {
+    label: 'JOS BRANCH OFFICE',
+    address:
+      'ECWA Production Building (Room 9), 10 Kano/Beach Road, Jos Plateau State, Nigeria.',
+  },
+];
+
+const phones = ['+2347035250399', '+2347035250344', '+2348137533954'];
+const officeHours = ['Monday - Thursday 9:00 AM - 4:00 PM', 'Friday 9:00 AM - 2:00 PM'];
+const site = 'www.gieva.org';
+
+interface ContactField {
+  id: string;
+  label: string;
+  type: 'text' | 'email' | 'tel';
+  autocomplete?: string;
+}
+
+// Seven fields (node 7461:5944): the first three are genuine, the last four all read the
+// "What is your name?" placeholder in the source — reproduced verbatim, each wired to a
+// uniquely-id'd input so the label→input association stays valid.
+const contactFields: ContactField[] = [
+  {
+    id: 'contact-full-name',
+    label: 'What is your full name?',
+    type: 'text',
+    autocomplete: 'name',
+  },
+  {
+    id: 'contact-email',
+    label: 'What is your email address?',
+    type: 'email',
+    autocomplete: 'email',
+  },
+  { id: 'contact-phone', label: 'Phone Number', type: 'tel', autocomplete: 'tel' },
+  { id: 'contact-4', label: 'What is your name?', type: 'text' },
+  { id: 'contact-5', label: 'What is your name?', type: 'text' },
+  { id: 'contact-6', label: 'What is your name?', type: 'text' },
+  { id: 'contact-7', label: 'What is your name?', type: 'text' },
+];
+---
+
+<BaseLayout
+  title="Contact Us — GIEVA NGO"
+  description="Reach GIEVA's head office, Lagos and Jos branch offices, phone lines, and email — or send us a message about how we can impact lives together."
+  brand="ngo"
+>
+  <div class="container contact">
+    <!-- ── Page header ────────────────────────────────────────────────────────── -->
+    <header class="contact__header">
+      <p class="contact-breadcrumb">HOME / PROGRAMS</p>
+      <h1 class="u-section-title contact-title">Contact Us</h1>
+    </header>
+
+    <!-- ── Contact info ───────────────────────────────────────────────────────── -->
+    <section class="contact-info">
+      <div class="contact-info__col">
+        {
+          offices.map((office) => (
+            <div class="contact-info__group">
+              <p class="contact-info__label">{office.label}</p>
+              <p class="contact-info__row">
+                <svg
+                  class="contact-info__icon"
+                  width="16"
+                  height="20"
+                  viewBox="0 0 16 20"
+                  fill="none"
+                  aria-hidden="true"
+                  focusable="false"
+                >
+                  <path
+                    d="M13.3346 10.6663C13.3346 13.6119 8.0013 18.6663 8.0013 18.6663C8.0013 18.6663 2.66797 13.6119 2.66797 10.6663C2.66797 7.72082 5.05578 5.33301 8.0013 5.33301C10.9468 5.33301 13.3346 7.72082 13.3346 10.6663Z"
+                    stroke="currentColor"
+                    stroke-width="1.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                  <path
+                    d="M7.9987 11.3333C8.3669 11.3333 8.66536 11.0349 8.66536 10.6667C8.66536 10.2985 8.3669 10 7.9987 10C7.6305 10 7.33203 10.2985 7.33203 10.6667C7.33203 11.0349 7.6305 11.3333 7.9987 11.3333Z"
+                    fill="currentColor"
+                  />
+                </svg>
+                <span>{office.address}</span>
+              </p>
+            </div>
+          ))
+        }
+      </div>
+
+      <div class="contact-info__col">
+        <div class="contact-info__group">
+          <p class="contact-info__label">PHONE</p>
+          <p class="contact-info__row">
+            <svg
+              class="contact-info__icon"
+              width="16"
+              height="16"
+              viewBox="0 0 16 16"
+              fill="none"
+              aria-hidden="true"
+              focusable="false"
+            >
+              <path
+                d="M6.1055 3.80815L5.83707 3.20417C5.66155 2.80925 5.57379 2.61179 5.44254 2.46067C5.27805 2.27129 5.06364 2.13196 4.82378 2.05857C4.63239 2 4.4163 2 3.98414 2C3.35194 2 3.03584 2 2.77048 2.12153C2.45791 2.26468 2.17562 2.57552 2.06315 2.9004C1.96767 3.17619 1.99502 3.45962 2.04972 4.02647C2.63194 10.0601 5.93988 13.368 11.9735 13.9503C12.5404 14.005 12.8238 14.0323 13.0996 13.9368C13.4245 13.8244 13.7353 13.5421 13.8785 13.2295C14 12.9642 14 12.648 14 12.0158C14 11.5837 14 11.3676 13.9414 11.1762C13.868 10.9364 13.7287 10.722 13.5393 10.5574C13.3882 10.4262 13.1908 10.3384 12.7958 10.1629L12.1918 9.89451C11.7642 9.70444 11.5503 9.60937 11.333 9.58871C11.125 9.56891 10.9154 9.59811 10.7207 9.67391C10.5173 9.75311 10.3376 9.90291 9.97797 10.2026C9.6201 10.5008 9.44117 10.6499 9.2225 10.7298C9.02864 10.8006 8.77237 10.8268 8.56824 10.7968C8.3379 10.7628 8.16157 10.6686 7.80884 10.4801C6.7115 9.89364 6.10635 9.28851 5.51991 8.19117C5.33143 7.83844 5.23718 7.66211 5.20324 7.43177C5.17316 7.22764 5.19938 6.97137 5.2702 6.77751C5.35008 6.55885 5.49921 6.37991 5.79746 6.022C6.09708 5.66245 6.24689 5.48268 6.3261 5.27927C6.4019 5.08463 6.43108 4.87493 6.4113 4.66699C6.39063 4.44968 6.29558 4.23584 6.1055 3.80815Z"
+                stroke="currentColor"
+                stroke-linecap="round"></path>
+            </svg>
+            <span class="contact-info__phones">
+              {
+                phones.map((phone) => (
+                  <a class="contact-info__link" href={`tel:${phone}`}>
+                    {phone}
+                  </a>
+                ))
+              }
+            </span>
+          </p>
+        </div>
+
+        <div class="contact-info__group">
+          <p class="contact-info__label">EMAIL</p>
+          <p class="contact-info__row">
+            <svg
+              class="contact-info__icon"
+              width="16"
+              height="16"
+              viewBox="0 0 16 16"
+              fill="none"
+              aria-hidden="true"
+              focusable="false"
+            >
+              <path
+                d="M1.33203 4L5.94071 6.61131C7.63976 7.574 8.35763 7.574 10.0567 6.61131L14.6654 4"
+                stroke="currentColor"
+                stroke-linejoin="round"></path>
+              <path
+                d="M1.34254 8.98341C1.38612 11.0271 1.40792 12.0489 2.162 12.8059C2.91608 13.5629 3.96558 13.5892 6.06458 13.6419C7.35823 13.6745 8.63916 13.6745 9.93283 13.6419C12.0318 13.5892 13.0813 13.5629 13.8354 12.8059C14.5895 12.0489 14.6113 11.0271 14.6548 8.98341C14.6689 8.32628 14.6689 7.67308 14.6548 7.01594C14.6113 4.97225 14.5895 3.9504 13.8354 3.19345C13.0813 2.4365 12.0318 2.41013 9.93283 2.35739C8.63916 2.32488 7.35823 2.32488 6.06458 2.35738C3.96558 2.41012 2.91608 2.43648 2.162 3.19344C1.40791 3.9504 1.38612 4.97224 1.34254 7.01594C1.32852 7.67308 1.32853 8.32628 1.34254 8.98341Z"
+                stroke="currentColor"
+                stroke-linejoin="round"></path>
+            </svg>
+            <a class="contact-info__link" href={`https://${site}`}>{site}</a>
+          </p>
+        </div>
+
+        <div class="contact-info__group">
+          <p class="contact-info__label">OFFICE HOURS</p>
+          {
+            officeHours.map((hours) => (
+              <p class="contact-info__row">
+                <svg
+                  class="contact-info__icon"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 16 16"
+                  fill="none"
+                  aria-hidden="true"
+                  focusable="false"
+                >
+                  <path
+                    d="M8 5.33301V7.99967L9 8.99967"
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                  <path
+                    d="M13.0316 10.9689C14.1225 11.558 14.668 11.8526 14.668 12.3333C14.668 12.814 14.1225 13.1086 13.0316 13.6977L12.2887 14.0989C11.4509 14.5513 11.032 14.7775 10.8306 14.613C10.3373 14.2102 11.1058 13.1707 11.2948 12.8024C11.4864 12.4293 11.483 12.2306 11.2948 11.8642C11.1058 11.4959 10.3373 10.4564 10.8306 10.0536C11.032 9.88911 11.4509 10.1153 12.2887 10.5677L13.0316 10.9689Z"
+                    stroke="currentColor"
+                  />
+                  <path
+                    d="M8.68276 14.6317C8.4579 14.6546 8.22963 14.6663 7.9987 14.6663C4.3168 14.6663 1.33203 11.6815 1.33203 7.99967C1.33203 4.31777 4.3168 1.33301 7.9987 1.33301C11.6806 1.33301 14.6654 4.31777 14.6654 7.99967C14.6654 8.45627 14.6194 8.90221 14.532 9.33301"
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                  />
+                </svg>
+                <span>{hours}</span>
+              </p>
+            ))
+          }
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Send us a Message ─────────────────────────────────────────────────── -->
+    <section class="contact-form surface-inverse" data-surface="inverse">
+      <div class="contact-form__header">
+        <h2 class="u-section-title">
+          Send us a <em class="u-accent-em">Message</em>
+        </h2>
+        <p class="u-body-lg">
+          Answer Interview questions to help us know how we can impact lives together
+        </p>
+      </div>
+
+      <form class="contact-form__body">
+        <div class="contact-form__fields">
+          {
+            contactFields.map((field) => (
+              <>
+                <label class="contact-form__label u-body-lg" for={field.id}>
+                  {field.label}
+                </label>
+                <div class="contact-form__control">
+                  <input
+                    id={field.id}
+                    class="contact-form__input u-body-lg"
+                    type={field.type}
+                    name={field.id}
+                    placeholder="Your Answer"
+                    autocomplete={field.autocomplete}
+                    required
+                  />
+                </div>
+              </>
+            ))
+          }
+        </div>
+        <div class="contact-form__submit">
+          <Button variant="primary" type="submit">Send Message</Button>
+        </div>
+      </form>
+    </section>
+  </div>
+</BaseLayout>
+
+<style>
+  /* ── Page flow ────────────────────────────────────────────────────────────────
+     Every gap in the source (header paddingBottom 120, content itemSpacing 120, content
+     paddingBottom 120) is the same --space-6xl step, so — as with Program — the whole page is
+     one grid with a uniform row-gap rather than per-section double-padding. */
+  .contact {
+    display: grid;
+    padding-top: var(--space-6xl);
+    padding-bottom: var(--space-6xl);
+    row-gap: var(--space-6xl);
+  }
+
+  /* ── Page header (white) ─────────────────────────────────────────────────────
+     node 7958:30382 itemSpacing 40 between breadcrumb and title, same shape as
+     About/Partners/Program's headers. */
+  .contact-breadcrumb {
+    margin: 0 0 40px; /* one-off gap, not a scale step */
+    font-family: var(--font-family-base);
+    font-size: var(--font-size-underline);
+    line-height: var(--line-height-underline);
+    letter-spacing: var(--letter-spacing-none);
+    font-weight: var(--font-weight-bold);
+    color: var(--color-eyebrow); /* NGO eyebrow = orange #E65320 */
+  }
+  .contact-title {
+    margin: 0;
+    color: var(--color-mine-shaft); /* neutral #292929, not NGO's violet default ink */
+  }
+
+  /* ── Contact info ─────────────────────────────────────────────────────────────
+     node 7461:6164: two 636px columns, 40px gap. Each column is a 24px-gap vertical stack of
+     label+row groups (node itemSpacing 24); within a group, label→row(s) are 16px apart. */
+  .contact-info {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-xl);
+  }
+  .contact-info__col {
+    display: grid;
+    gap: var(--space-md);
+  }
+  .contact-info__group {
+    display: grid;
+    gap: var(--space-sm);
+  }
+  /* All-caps micro-label ("HEAD OFFICE", "PHONE"…): node text fill is flat black, but every
+     label sits inside a frame with opacity 0.5 — not a distinct colour token. Flattened against
+     the white surface (measured off frame.png) that's #7F7F7F, a genuine new colour-contrast gap
+     (issue N17, docs/a11y-known-issues.md) — not a translation guess. */
+  .contact-info__label {
+    margin: 0;
+    font-family: var(--font-family-base);
+    font-size: var(--font-size-body);
+    line-height: 20px; /* node lineHeightPx 20 — one-off, u-caption's 21px doesn't match */
+    letter-spacing: var(--letter-spacing-narrow);
+    font-weight: var(--font-weight-regular);
+    text-transform: uppercase;
+    color: #7f7f7f;
+  }
+  .contact-info__row {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-2xs);
+    margin: 0;
+    font-size: var(--type-body-lg-size);
+    line-height: var(--type-body-lg-line);
+    letter-spacing: var(--type-body-lg-tracking);
+    color: #000; /* node fill #000000 — not NGO's violet default ink */
+  }
+  /* Icons are the confirmed green stroke glyphs (node fill/stroke #007F0E on every pin/call/
+     mail/clock instance) — decorative and redundant with the adjoining text. */
+  .contact-info__icon {
+    flex: none;
+    margin-top: 0.2em;
+    color: var(--color-cta);
+  }
+  .contact-info__phones {
+    display: flex;
+    flex-wrap: wrap;
+    column-gap: var(--space-2xs);
+    row-gap: var(--space-3xs);
+  }
+  .contact-info__link {
+    color: inherit;
+    text-decoration: none;
+  }
+  .contact-info__link:hover {
+    text-decoration: underline;
+  }
+  .contact-info__link:focus-visible {
+    outline: 3px solid var(--color-focus-ring);
+    outline-offset: 2px;
+  }
+
+  /* ── Send us a Message ────────────────────────────────────────────────────────
+     Deep-teal inverse panel (#0E3E40), 12px radius, 64px padding + 64px gap between header /
+     fields / submit — identical shape to Program's "Contact Us Now" panel. */
+  .contact-form {
+    padding: var(--space-3xl);
+    border-radius: var(--radius-md);
+    display: grid;
+    gap: var(--space-3xl);
+  }
+  .contact-form__header {
+    display: grid;
+    gap: var(--space-sm);
+    justify-items: center;
+    text-align: center;
+  }
+  .contact-form__header h2 {
+    margin: 0;
+  }
+  .contact-form__body {
+    display: grid;
+    gap: var(--space-3xl);
+  }
+  /* Fixed 387px label column, RIGHT-aligned text, 122px gap to a filling input — same one-off
+     values as the NGO Partners/Program forms. Rows are 16px apart. */
+  .contact-form__fields {
+    display: grid;
+    grid-template-columns: 387px minmax(0, 1fr);
+    column-gap: 122px;
+    row-gap: var(--space-sm);
+    align-items: center;
+  }
+  /* Muted teal-blue labels #69A4B8 (node fill) — same colour as Program's Contact panel, not
+     Partners' green. */
+  .contact-form__label {
+    color: #69a4b8;
+    text-align: right;
+  }
+  .contact-form__control {
+    display: flex;
+  }
+  .contact-form__input {
+    width: 100%;
+    background: transparent;
+    border: 0;
+    border-bottom: 2px solid var(--color-white);
+    padding-block: var(--space-2xs);
+    color: var(--color-text-inverse);
+    font-family: var(--font-family-base);
+  }
+  .contact-form__input::placeholder {
+    color: var(--color-text-inverse);
+    opacity: 1;
+  }
+  .contact-form__input:focus-visible {
+    outline: 3px solid var(--color-focus-ring);
+    outline-offset: 4px;
+  }
+  .contact-form__submit {
+    display: flex;
+    justify-content: center;
+  }
+
+  /* ── Responsive ───────────────────────────────────────────────────────────────
+     No tablet/mobile NGO Contact frame exists in the design; these are our authored,
+     content-preserving reflows (same approach as the other NGO pages). */
+  @media (max-width: 1024px) {
+    .contact-form__fields {
+      grid-template-columns: 220px minmax(0, 1fr);
+      column-gap: var(--space-3xl);
+    }
+  }
+  @media (max-width: 900px) {
+    .contact-info {
+      grid-template-columns: 1fr;
+      gap: var(--space-2xl);
+    }
+  }
+  @media (max-width: 640px) {
+    .contact-form {
+      padding: var(--space-lg);
+      gap: var(--space-2xl);
+    }
+    .contact-form__body {
+      gap: var(--space-2xl);
+    }
+    .contact-form__fields {
+      grid-template-columns: 1fr;
+      row-gap: var(--space-3xs);
+    }
+    .contact-form__label {
+      text-align: left;
+      margin-top: var(--space-sm);
+    }
+  }
+</style>

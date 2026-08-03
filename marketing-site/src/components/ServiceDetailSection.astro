@@ -1,76 +1,73 @@
 ---
 /**
- * ServiceDetailSection — the repeating "title + about/covers + cost" block that makes up
- * the Consultancy Services page (node 8119:7174). Services is the ★ reusable template page
- * (docs/consultancy-build-plan.md), so this is extracted as its own component rather than
- * inlined 5×: any future sub-page riffing off the same shape reuses it directly.
+ * ServiceDetailSection — one titled service section: a title/subtitle header above a
+ * 2-column grid of heading+body blocks. The single repeating unit behind every Consultancy
+ * services page: `/services` (8119:7174) instantiates it 5×, Professional Development
+ * (8145:8502) 2×, and each test-registration sub-page once.
  *
- * Typography confirmed identical across all 5 sections in node.json (title 40/700, subtitle
- * `--type-body-lg`, sub-headings `--type-lead`, body/list `--type-body-lg`) — see
- * services.astro's header comment for the full audit.
+ * Geometry confirmed across all seven ingested nodes, not eyeballed:
+ *   - Section container: 1312px wide, 80px between the header and each grid row
+ *     (`--space-4xl`) — identical on every page.
+ *   - Grid: two 636px columns with a 40px gutter (676 − 636), i.e. `--space-xl`.
+ *   - Header: 16px between title and subtitle (`--space-sm`).
+ *   - Blocks: heading→body gap is 24px on the Services family and 16px on the test-prep
+ *     family — the `density` prop, see `SectionDensity` in @lib/service-section for why
+ *     that is a family variant rather than a per-page number.
+ *   - A list with a trailing note keeps them 8px apart (`--space-2xs`), per TOEFL 8119:8996.
+ *
+ * Typography (identical on every page): title `--type-h3` 40/46/700/0 in `--color-violet`;
+ * block headings `--type-lead` 24/32/700/−1.2 in `--color-text-default` (NOT violet — a real
+ * per-node distinction); body, lists and subtitle `--type-body-lg` 18/24/400/−0.16.
+ *
+ * This was previously hardcoded to about/covers/cost with a deliberately empty fourth cell.
+ * The sub-pages showed the block roles are arbitrary, so it now takes `blocks[]`; a 3-block
+ * section still leaves that fourth cell empty, so `/services` renders unchanged.
  */
-import type { ServiceDetail } from '@lib/services-content';
+import type { SectionDensity, ServiceSection } from '@lib/service-section';
+import RichLine from '@components/RichLine.astro';
 
-type Props = ServiceDetail;
+interface Props extends ServiceSection {
+  density?: SectionDensity;
+}
 
-const {
-  title,
-  subtitle,
-  aboutHeading,
-  aboutLead,
-  aboutBody,
-  coversHeading,
-  coversItems,
-  costHeading,
-  costHighlight,
-  costBody,
-} = Astro.props;
+const { id, title, subtitle, blocks, density = 'default' } = Astro.props;
 ---
 
-<div class="service-detail">
+<div class:list={['service-detail', `service-detail--${density}`]} id={id}>
   <div class="service-detail__header">
     <h2 class="u-h3">{title}</h2>
-    <p class="u-body-lg">{subtitle}</p>
+    {subtitle && <p class="u-body-lg">{subtitle}</p>}
   </div>
 
-  <div class="service-detail__row">
-    <div class="service-detail__block">
-      <h3 class="u-lead service-detail__heading">{aboutHeading}</h3>
-      <p class="u-body-lg">
-        {
-          aboutLead ? (
-            <Fragment>
-              <em class="service-detail__lead">{aboutLead}</em> {aboutBody}
-            </Fragment>
-          ) : (
-            aboutBody
-          )
-        }
-      </p>
-    </div>
-    <div class="service-detail__block">
-      <h3 class="u-lead service-detail__heading">{coversHeading}</h3>
-      <ul role="list" class="u-body-lg service-detail__list">
-        {coversItems.map((item) => <li>{item}</li>)}
-      </ul>
-    </div>
-  </div>
+  <div class="service-detail__grid">
+    {
+      blocks.map((block) => (
+        <div class="service-detail__block">
+          <h3 class="u-lead service-detail__heading">{block.heading}</h3>
 
-  <div class="service-detail__row">
-    <div class="service-detail__block">
-      <h3 class="u-lead service-detail__heading">{costHeading}</h3>
-      <p class="u-body-lg">
-        {
-          costHighlight ? (
-            <Fragment>
-              <em class="service-detail__cost-highlight">{costHighlight}</em> {costBody}
-            </Fragment>
+          {block.items ? (
+            <div class="service-detail__listing">
+              <ul role="list" class="u-body-lg service-detail__list">
+                {block.items.map((item) => (
+                  <li>
+                    <RichLine runs={item} />
+                  </li>
+                ))}
+              </ul>
+              {block.note && <p class="u-body-lg">{block.note}</p>}
+            </div>
           ) : (
-            costBody
-          )
-        }
-      </p>
-    </div>
+            <div class="u-body-lg service-detail__prose">
+              {(block.body ?? []).map((paragraph) => (
+                <p>
+                  <RichLine runs={paragraph} />
+                </p>
+              ))}
+            </div>
+          )}
+        </div>
+      ))
+    }
   </div>
 </div>
 
@@ -78,37 +75,71 @@ const {
   .service-detail {
     display: grid;
     gap: var(--space-4xl);
+    /* The nav links Study Abroad entries to these sections by id (@lib/nav), and `.site-header`
+       is `position: sticky; top: 0` — without this the anchored title lands underneath it.
+       Sized to the header's own height plus a little breathing room. */
+    scroll-margin-top: calc(var(--space-6xl) + var(--space-md));
   }
   .service-detail__header {
     display: grid;
     gap: var(--space-sm);
     color: var(--color-violet);
   }
-  .service-detail__row {
+  .service-detail__grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: var(--space-xl);
+    column-gap: var(--space-xl);
+    row-gap: var(--space-4xl);
   }
   .service-detail__block {
     display: grid;
-    gap: var(--space-md);
+    gap: var(--block-gap);
     align-content: start;
+  }
+  .service-detail--default {
+    --block-gap: var(--space-md);
+  }
+  .service-detail--compact {
+    --block-gap: var(--space-sm);
+  }
+  .service-detail__listing {
+    display: grid;
+    gap: var(--space-2xs);
   }
   .service-detail__heading {
     color: var(--color-text-default);
   }
+  /* Paragraphs butt straight together — `paragraphSpacing: 0` in the source (see ServiceBlock).
+     A plain block container, not a grid, so the block's own gap doesn't push them apart. */
+  .service-detail__prose > p {
+    margin: 0;
+  }
   .service-detail__list {
     color: var(--color-text-default);
   }
-  .service-detail__lead,
-  .service-detail__cost-highlight {
-    font-style: italic;
-    font-weight: var(--font-weight-bold);
-    color: var(--color-accent-warm);
+  /* Bullets, restored. base.css strips markers from every `ul[role='list']`, but the source
+     frames mark these lists `UNORDERED` and do render a glyph — measured off SAT's frame.png
+     (8119:8741), the dot's ink sits 11.5–15px from the text node's left edge and the text
+     starts at 28px, with wrapped lines aligning to that same 28px (a hanging indent).
+     Drawn with ::before rather than list-style so the marker can be placed to the measurement
+     instead of at the browser's default offset. */
+  .service-detail__list > li {
+    position: relative;
+    /* 27px, not 28: the design's *ink* starts at 28px and Arial's left side bearing adds ~1px,
+       so the glyph box sits at 27. Verified ink-to-ink against both frames, not assumed. */
+    padding-left: 27px;
   }
+  .service-detail__list > li::before {
+    content: '•';
+    position: absolute;
+    left: 10px;
+    color: var(--color-text-default);
+  }
+  /* `.service-detail__highlight` is styled in RichLine.astro, which renders the <em> — Astro's
+     scoped CSS only reaches elements in the component's own template. */
 
   @media (max-width: 1024px) {
-    .service-detail__row {
+    .service-detail__grid {
       grid-template-columns: 1fr;
     }
   }

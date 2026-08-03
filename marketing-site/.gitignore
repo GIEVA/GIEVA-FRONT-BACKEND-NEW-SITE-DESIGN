@@ -28,3 +28,6 @@ raw-tokens/
 
 # ...but DO commit our curated, GIEVA-only source of truth:
 !design/tokens/gieva.source.tokens.json
+
+# Local bun lockfile — CI uses npm/package-lock.json (see WORKFLOW.md §5a)
+bun.lock

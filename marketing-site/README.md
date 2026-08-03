@@ -38,6 +38,8 @@ Node ≥ 22.12.0 (required by Astro 7). Install dependencies with `npm ci`.
 | `npm run test:a11y`               | Build, serve, and run a11y + visual-regression tests |
 | `npm run test:update-snapshots`   | Regenerate visual-regression baselines               |
 | `npm run lhci`                    | Lighthouse budgets against the built site            |
+| `npm run verify:quick`            | Inner loop: check + lint only (~seconds)             |
+| `npm run verify:local`            | Pre-commit gate: everything except screenshot diffs  |
 | `npm run verify`                  | Everything: check + lint + format + build + tests    |
 
 ## Quality gates

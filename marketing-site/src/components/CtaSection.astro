@@ -1,0 +1,137 @@
+---
+/**
+ * CtaSection — the closing call-to-action band: eyebrow, two-line heading, body copy, and a
+ * primary/secondary button pair on a violet card. The canonical implementation of the Figma
+ * CTA component that every Consultancy page instantiates at the foot of the page — Home
+ * (5899:6291), /services, /about, and /team. All four previously carried their own copy of
+ * this markup and CSS; this component is the one place to tune it.
+ *
+ * Content was hardcoded while the heading string in all four original node.json files was
+ * byte-for-byte identical (design/figma/…/{5891-4663, 8119-7174, 8181-8314, 8187-8979}), with
+ * a note to add props the moment a page needed different copy. The test-registration sub-pages
+ * are that moment: every one of them reads "Ready to <em>Register?</em>" over its own body copy
+ * and its own primary button label ("Register for the SAT/ACT/TOEFL/IELTS/GRE"). So the copy is
+ * now props whose **defaults are exactly the original four pages' text** — those pages pass
+ * nothing and render unchanged.
+ *
+ * Confirmed per page via `characterStyleOverrides`: the accent run on the sub-pages is the word
+ * "Register?" alone, the same bold-italic accent-warm treatment as "First Step?" here.
+ * The secondary button reads "Talk to a Councellor" on all six sub-page frames. That is a
+ * misspelling in the design, corrected here to "Counsellor" on client instruction — the double-l
+ * British form the design's own body copy already uses ("a quick word with a counsellor settles
+ * it", "visa counselling"). Worth fixing in Figma so the two stop disagreeing.
+ *
+ * Confirmed against node.json, not eyeballed:
+ *   - Heading text is `'Ready to Take\u2028Your\xa0First Step?'`. **U+2028 is a forced line
+ *     break** (Figma's shift+enter), so "Ready to Take" and "Your First Step?" are separate
+ *     lines by design, not by wrapping — reproduced as `<br />`. **U+00A0 binds "Your" to
+ *     "First"**, so the second line can never split mid-phrase; reproduced as `&nbsp;`, which
+ *     is why `Your&nbsp;<em>` sits on one source line with no gap before the tag. Same
+ *     convention as the hero heading in index.astro.
+ *   - The accent run is "First Step?" only — bold-italic `#E65320`, confirmed via
+ *     `characterStyleOverrides` (override table entry "9"), i.e. `<em class="u-accent-em">`.
+ *   - **Neither button carries an arrow.** The primary instance sets `showArrowRight: false`
+ *     and the secondary instance has no `ArrowRight` child node at all. Home used to render
+ *     both with arrows while the other three did not — the drift this component removes.
+ *   - Button labels come from the button instances' own text nodes, not from the paragraph:
+ *     the source paragraph ends with a pasted "Book Free ConsultationView All Services"
+ *     fragment duplicating the two buttons, an evident copy/paste slip, trimmed here (the same
+ *     call already documented in index.astro and team.astro).
+ *
+ * Renders the card only, not a section wrapper — placement differs per page (Home, /about and
+ * /team wrap it in `<section class="section cta"><div class="container">`, while /services
+ * drops it into the existing `.services-body__list` flow), so the wrapper stays with the page.
+ */
+import Button from '@components/Button.astro';
+
+interface Props {
+  eyebrow?: string;
+  /**
+   * The plain-text run before the accent run. U+2028 marks a forced line break (Figma's
+   * shift+enter) and is rendered as `<br />`; U+00A0 binds words that must not split.
+   */
+  titleLead?: string;
+  /** The bold-italic accent-warm run closing the heading. */
+  titleAccent?: string;
+  body?: string;
+  primary?: { label: string; href: string };
+  secondary?: { label: string; href: string };
+}
+
+const {
+  eyebrow = 'Get in Touch',
+  titleLead = 'Ready to Take\u2028Your\u00a0',
+  titleAccent = 'First Step?',
+  body = 'Book a free consultation with a GIEVA counselor today. No commitment, no pressure — just clarity on your path forward.',
+  primary = { label: 'Book Consultancy', href: '/book-consultancy' },
+  secondary = { label: 'View all Services', href: '/services' },
+} = Astro.props;
+
+const titleLines = titleLead.split('\u2028');
+---
+
+<div class="cta__card surface-inverse" data-surface="inverse">
+  <div class="cta__text">
+    <div class="cta__lockup">
+      <p class="u-eyebrow">{eyebrow}</p>
+      <h2 class="u-section-title">
+        {
+          titleLines.map((line, i) => (
+            <Fragment>
+              {i > 0 && <br />}
+              {line}
+            </Fragment>
+          ))
+        }<em class="u-accent-em">{titleAccent}</em>
+      </h2>
+    </div>
+    <p class="u-body-lg">{body}</p>
+  </div>
+  <div class="cta__actions">
+    <Button variant="primary" href={primary.href} arrow={false}>{primary.label}</Button>
+    <Button variant="secondary" href={secondary.href} arrow={false}>{secondary.label}</Button>
+  </div>
+</div>
+
+<style>
+  .cta__card {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2xl);
+    padding: var(--space-3xl);
+    border-radius: var(--radius-md);
+  }
+  /* The text column is two groups, not three evenly-spaced children: the source nests the
+     eyebrow and heading in one auto-layout frame ("Continue", 16px gap) and sets 32px between
+     that frame and the body paragraph. Confirmed identical on Home (5891:4663), /services,
+     /about and all six sub-pages. A flat 16px gap here pulled the body 16px too close. */
+  .cta__text {
+    display: grid;
+    gap: var(--space-lg);
+    max-width: 34rem;
+  }
+  .cta__lockup {
+    display: grid;
+    gap: var(--space-sm);
+  }
+  .cta__actions {
+    display: flex;
+    gap: var(--space-md);
+    flex-wrap: wrap;
+  }
+
+  @media (max-width: 640px) {
+    .cta__card {
+      justify-content: center;
+      text-align: center;
+    }
+    .cta__text {
+      max-width: none;
+    }
+    .cta__actions {
+      justify-content: center;
+    }
+  }
+</style>

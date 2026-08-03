@@ -3,6 +3,10 @@
  * SocialIcon — simple, recognisable glyphs for the footer's social row (Home node.json
  * "oo-social-links → List"). Hand-authored rather than sliced from the flattened Figma
  * export so each icon stays an individually labelled, accessible link.
+ *
+ * Rendered at 24px, the size Figma gives the row (I8210:7883;8210:7826 → `size-[24px]`). These
+ * previously shipped at 18px inside a 32px bordered circle; the design has no ring, so the
+ * glyph itself now carries the whole visual — and, at 24px, the whole 2.5.8 target as well.
  */
 interface Props {
   name: 'Instagram' | 'Facebook' | 'X (Twitter)' | 'LinkedIn' | 'YouTube';
@@ -14,8 +18,8 @@ const { name } = Astro.props;
 {
   name === 'Instagram' && (
     <svg
-      width="18"
-      height="18"
+      width="24"
+      height="24"
       viewBox="0 0 24 24"
       fill="none"
       aria-hidden="true"
@@ -38,8 +42,8 @@ const { name } = Astro.props;
 {
   name === 'Facebook' && (
     <svg
-      width="18"
-      height="18"
+      width="24"
+      height="24"
       viewBox="0 0 24 24"
       fill="none"
       aria-hidden="true"
@@ -57,8 +61,8 @@ const { name } = Astro.props;
 {
   name === 'X (Twitter)' && (
     <svg
-      width="18"
-      height="18"
+      width="24"
+      height="24"
       viewBox="0 0 24 24"
       fill="none"
       aria-hidden="true"
@@ -76,8 +80,8 @@ const { name } = Astro.props;
 {
   name === 'LinkedIn' && (
     <svg
-      width="18"
-      height="18"
+      width="24"
+      height="24"
       viewBox="0 0 24 24"
       fill="none"
       aria-hidden="true"
@@ -105,8 +109,8 @@ const { name } = Astro.props;
 {
   name === 'YouTube' && (
     <svg
-      width="18"
-      height="18"
+      width="24"
+      height="24"
       viewBox="0 0 24 24"
       fill="none"
       aria-hidden="true"

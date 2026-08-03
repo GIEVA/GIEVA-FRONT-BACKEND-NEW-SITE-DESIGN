@@ -8,28 +8,27 @@
  * source `node.json` — confirmed real (not a transcription slip), matching the same
  * not-yet-personalised placeholder pattern Home's build plan documented for its Core Team /
  * testimonials sections. Kept as-is.
+ *
+ * The section shape itself now lives in `@lib/service-section` (`ServiceSection`), shared with
+ * the test-registration sub-pages and Professional Development. This file previously declared
+ * its own fixed about/covers/cost interface; the sub-pages proved the block roles vary per
+ * page, so the three blocks below are just the first three entries of a generic `blocks[]`.
  */
-export interface ServiceDetail {
-  id: string;
-  title: string;
-  subtitle: string;
-  aboutHeading: string;
-  /** Bold-italic accent-warm hook sentence leading the "about" copy (HEALS-content only). */
-  aboutLead?: string;
-  aboutBody: string;
-  coversHeading: string;
-  coversItems: string[];
-  costHeading: string;
-  /** Bold-italic accent-warm run at the start of the cost copy (e.g. a dollar amount). */
-  costHighlight?: string;
-  costBody: string;
-}
+import { accent, type ServiceSection } from '@lib/service-section';
 
 export const heroTitle = 'Study Abroad';
 
-const healsAboutLead = "Studying abroad shouldn't come down to who you know.";
-const healsAboutBody =
-  "Holistic Education Advising and Learning Services (HEALS) is GIEVA's end-to-end advising service for Nigerian students aiming for university overseas. We help you choose the right schools, build a competitive application, clear admissions and visas, and arrive ready for day one. It's made for students with the potential to go far but not always the guidance or networks to get there — and for the families backing them.";
+/**
+ * Three separate paragraphs in the source, not one flowing block: the text node's `characters`
+ * carry two hard newlines and the node measures exactly 7 lines (168px / 24px), which only adds
+ * up if the accent sentence and "It's made for students…" each start a fresh line. An earlier
+ * pass ran all three together behind a single leading `<em>`; corrected against node.json.
+ */
+const healsAbout = [
+  [accent("Studying abroad shouldn't come down to who you know.")],
+  "Holistic Education Advising and Learning Services (HEALS) is GIEVA's end-to-end advising service for Nigerian students aiming for university overseas. We help you choose the right schools, build a competitive application, clear admissions and visas, and arrive ready for day one.",
+  "It's made for students with the potential to go far but not always the guidance or networks to get there — and for the families backing them.",
+];
 const healsCovers = [
   'One-to-one advising and mentoring',
   'School selection matched to your goals and budget',
@@ -48,70 +47,66 @@ const culturalCovers = [
   'Resources for dealing with culture shock and homesickness',
 ];
 
-export const services: ServiceDetail[] = [
+/**
+ * The HEALS block trio — reused verbatim by "Admission Processing" in this page's own frame,
+ * and by both of Professional Development's sections (8145:8502). Exported so that page shares
+ * this one definition rather than re-transcribing identical copy.
+ */
+export const healsBlocks = [
   {
-    id: 'heals',
-    title: 'HEALS',
-    subtitle: 'From first step to first day on campus.',
-    aboutHeading: 'What is HEALS about',
-    aboutLead: healsAboutLead,
-    aboutBody: healsAboutBody,
-    coversHeading: 'What HEALS covers',
-    coversItems: healsCovers,
-    costHeading: 'What it costs',
-    costHighlight: '$100',
-    costBody: 'Membership Application Fee, admin charges included.',
+    heading: 'What is HEALS about',
+    body: healsAbout,
   },
+  { heading: 'What HEALS covers', items: healsCovers },
   {
-    id: 'admission-processing',
-    title: 'Admission Processing',
-    subtitle: 'From first step to first day on campus.',
-    aboutHeading: 'What is HEALS about',
-    aboutLead: healsAboutLead,
-    aboutBody: healsAboutBody,
-    coversHeading: 'What HEALS covers',
-    coversItems: healsCovers,
-    costHeading: 'What it costs',
-    costHighlight: '$100',
-    costBody: 'Membership Application Fee, admin charges included.',
+    heading: 'What it costs',
+    body: [[accent('$100'), ' Membership Application Fee, admin charges included.']],
   },
+];
+
+/** The cultural-integration block trio, reused verbatim by "Tuition & Acceptance Fee Payments". */
+const culturalBlocks = [
+  { heading: 'Adapting to Life Abroad', body: [culturalAbout] },
+  { heading: 'Cultural support services', items: culturalCovers },
+  { heading: 'Integration Program Fees', body: ['Included in membership; no extra costs.'] },
+];
+
+const subtitle = 'From first step to first day on campus.';
+
+export const services: ServiceSection[] = [
+  { id: 'heals', title: 'HEALS', subtitle, blocks: healsBlocks },
+  { id: 'admission-processing', title: 'Admission Processing', subtitle, blocks: healsBlocks },
   {
     id: 'scholarship-advising',
     title: 'Scholarship Advising',
-    subtitle: 'From first step to first day on campus.',
-    aboutHeading: 'Financial Aid for Prospective Students',
-    aboutBody:
-      'Navigating the financial aspect of studying abroad can be daunting. HEALS provides comprehensive support to identify scholarships and grants that align with your academic profile and financial needs. We assist you in crafting compelling scholarship applications that highlight your unique strengths and achievements.',
-    coversHeading: 'What we offer in scholarships',
-    coversItems: [
-      'Personalized scholarship search',
-      'Guidance on application requirements and deadlines',
-      'Tips for writing impactful scholarship essays',
-      'Access to exclusive scholarship opportunities through partner institutions',
+    subtitle,
+    blocks: [
+      {
+        heading: 'Financial Aid for Prospective Students',
+        body: [
+          'Navigating the financial aspect of studying abroad can be daunting. HEALS provides comprehensive support to identify scholarships and grants that align with your academic profile and financial needs. We assist you in crafting compelling scholarship applications that highlight your unique strengths and achievements.',
+        ],
+      },
+      {
+        heading: 'What we offer in scholarships',
+        items: [
+          'Personalized scholarship search',
+          'Guidance on application requirements and deadlines',
+          'Tips for writing impactful scholarship essays',
+          'Access to exclusive scholarship opportunities through partner institutions',
+        ],
+      },
+      {
+        heading: 'Cost of Services',
+        body: ['No additional fees for scholarship advising; included in membership.'],
+      },
     ],
-    costHeading: 'Cost of Services',
-    costBody: 'No additional fees for scholarship advising; included in membership.',
   },
-  {
-    id: 'career-guidance',
-    title: 'Career Guidance',
-    subtitle: 'From first step to first day on campus.',
-    aboutHeading: 'Adapting to Life Abroad',
-    aboutBody: culturalAbout,
-    coversHeading: 'Cultural support services',
-    coversItems: culturalCovers,
-    costHeading: 'Integration Program Fees',
-    costBody: 'Included in membership; no extra costs.',
-  },
+  { id: 'career-guidance', title: 'Career Guidance', subtitle, blocks: culturalBlocks },
   {
     id: 'tuition-acceptance-fee-payments',
     title: 'Tuition & Acceptance Fee Payments',
-    subtitle: 'From first step to first day on campus.',
-    aboutHeading: 'Adapting to Life Abroad',
-    aboutBody: culturalAbout,
-    coversHeading: 'Cultural support services',
-    coversItems: culturalCovers,
-    costHeading: 'Integration Program Fees',
-    costBody: 'Included in membership; no extra costs.',
+    subtitle,
+    blocks: culturalBlocks,
   },
 ];

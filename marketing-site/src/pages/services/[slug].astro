@@ -1,0 +1,54 @@
+---
+/**
+ * Test-registration sub-pages — /services/{sat,act,toefl,ielts,gre}.
+ *
+ * One route rather than five page files: the five Figma frames (8119:8722, 8119:8171,
+ * 8119:8977, 8119:9179, 8119:9387) are the same layout with different copy — same hero photo
+ * and hero title, same single section, same 2-column block grid, same CTA shape. Everything
+ * that varies lives in `@lib/testprep-content`; see that file for the per-frame audit.
+ *
+ * `density="compact"` sets the 16px heading→body gap the test-prep family uses, against the
+ * Services family's 24px — see `SectionDensity` in @lib/service-section for why that is a
+ * family variant and why SAT (the lone 24px frame) is normalised to 16px with the rest.
+ */
+import BaseLayout from '@layouts/BaseLayout.astro';
+import SubPageHero from '@components/SubPageHero.astro';
+import ServiceDetailSection from '@components/ServiceDetailSection.astro';
+import CtaSection from '@components/CtaSection.astro';
+import { heroTitle, testPrepPages } from '@lib/testprep-content';
+
+export function getStaticPaths() {
+  return testPrepPages.map((page) => ({ params: { slug: page.slug }, props: { page } }));
+}
+
+const { page } = Astro.props;
+---
+
+<BaseLayout title={page.metaTitle} description={page.metaDescription} brand="consultancy">
+  <SubPageHero title={heroTitle} />
+
+  <section class="section testprep-body">
+    <div class="container testprep-body__list">
+      <ServiceDetailSection {...page.section} density="compact" />
+
+      <CtaSection
+        titleLead="Ready to "
+        titleAccent="Register?"
+        body={page.cta.body}
+        primary={{ label: page.cta.primaryLabel, href: '/book-consultancy' }}
+        secondary={{ label: 'Talk to a Counsellor', href: '/book-consultancy' }}
+      />
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  /* Same page rhythm as /services: 120px above and below, 120px between section and CTA. */
+  .testprep-body {
+    padding-block: var(--space-6xl);
+  }
+  .testprep-body__list {
+    display: grid;
+    gap: var(--space-6xl);
+  }
+</style>
