@@ -1,0 +1,285 @@
+{
+  "vectors": [
+    {
+      "id": "5990:3677",
+      "name": "logo image",
+      "kind": "icon",
+      "file": "icon-5990-3677.svg"
+    },
+    {
+      "id": "7440:10329",
+      "name": "LOGO",
+      "kind": "icon",
+      "file": "icon-7440-10329.svg"
+    },
+    {
+      "id": "7440:10339",
+      "name": "oo-social-links → List",
+      "kind": "icon",
+      "file": "icon-7440-10339.svg"
+    },
+    {
+      "id": "7460:5851",
+      "name": "mail-01",
+      "kind": "icon",
+      "file": "icon-7460-5851.svg"
+    },
+    {
+      "id": "7958:30405",
+      "name": "Link - Visit YouTube to search for more videos → SVG",
+      "kind": "icon",
+      "file": "icon-7958-30405.svg"
+    },
+    {
+      "id": "I5990:3705;5995:7314",
+      "name": "ArrowRight",
+      "kind": "icon",
+      "file": "icon-I5990-3705;5995-7314.svg"
+    },
+    {
+      "id": "I7440:10326;4547:22453",
+      "name": "ng-icon",
+      "kind": "icon",
+      "file": "icon-I7440-10326;4547-22453.svg"
+    }
+  ],
+  "fills": [
+    {
+      "imageRef": "001727843f59d62538367f7e8d9d319c19156e08",
+      "sourceNode": "6016:4055",
+      "name": "Partner_Rise_St_James.png",
+      "file": "fill-001727843f59d62538367f7e8d9d319c19156e08.png"
+    },
+    {
+      "imageRef": "00ad5c68fbedfa3fbd355a4492a26fd7a460da46",
+      "sourceNode": "6016:4017",
+      "name": "Partner_Beyond_Plastics.png",
+      "file": "fill-00ad5c68fbedfa3fbd355a4492a26fd7a460da46.png"
+    },
+    {
+      "imageRef": "0d7179153b891da488ecf263af503b66a711f720",
+      "sourceNode": "6016:4051",
+      "name": "Partner_PADI.png",
+      "file": "fill-0d7179153b891da488ecf263af503b66a711f720.png"
+    },
+    {
+      "imageRef": "1221ced60b27305f1832e41b0e3cb6514d662121",
+      "sourceNode": "6016:4043",
+      "name": "Partner_Ocean_Unite.png",
+      "file": "fill-1221ced60b27305f1832e41b0e3cb6514d662121.png"
+    },
+    {
+      "imageRef": "1711411eb178ff82abae85c7417d176887ad6f07",
+      "sourceNode": "6016:4110",
+      "name": "Partner_Oxygen_Project.png",
+      "file": "fill-1711411eb178ff82abae85c7417d176887ad6f07.png"
+    },
+    {
+      "imageRef": "1b7a0e392d6a66bac168f6ea36709999188c9362",
+      "sourceNode": "6016:4015",
+      "name": "Partner_Avaaz.png",
+      "file": "fill-1b7a0e392d6a66bac168f6ea36709999188c9362.png"
+    },
+    {
+      "imageRef": "1c82ce306d234b6e0167a6dcccce2ef17b03e1c9",
+      "sourceNode": "6016:4065",
+      "name": "Partner_West_Virginia_Rivers.png",
+      "file": "fill-1c82ce306d234b6e0167a6dcccce2ef17b03e1c9.png"
+    },
+    {
+      "imageRef": "2c6f1f73f49cc84d7155bfd5bb90fa85aeb8febf",
+      "sourceNode": "6016:4013",
+      "name": "Partner_Antarctic_and_Southern_Ocean_Coalition.png",
+      "file": "fill-2c6f1f73f49cc84d7155bfd5bb90fa85aeb8febf.png"
+    },
+    {
+      "imageRef": "3172f31ce44b7c8cfb0a897f5d748407dc9e6cbc",
+      "sourceNode": "5990:3678",
+      "name": "Gemini_Generated_Image_uvhg9uuvhg9uuvhg 1",
+      "file": "fill-3172f31ce44b7c8cfb0a897f5d748407dc9e6cbc.png"
+    },
+    {
+      "imageRef": "31eb755b19bad7dbf7e6ad75e52300c553c144ee",
+      "sourceNode": "6016:4031",
+      "name": "Partner_Marine_Conservation_Institute.png",
+      "file": "fill-31eb755b19bad7dbf7e6ad75e52300c553c144ee.png"
+    },
+    {
+      "imageRef": "34f74b23211e70cd5fbe87d4aedfbf2327780727",
+      "sourceNode": "6016:4047",
+      "name": "Partner_Oxygen_Project.png",
+      "file": "fill-34f74b23211e70cd5fbe87d4aedfbf2327780727.png"
+    },
+    {
+      "imageRef": "3c0ce2251a3ee98f8efb4e9701b41bdc1d57330d",
+      "sourceNode": "6016:4025",
+      "name": "Partner_Fair_Seas.png",
+      "file": "fill-3c0ce2251a3ee98f8efb4e9701b41bdc1d57330d.png"
+    },
+    {
+      "imageRef": "484ab2db8073c436bdc960be9fb48e4947d7575f",
+      "sourceNode": "6016:4027",
+      "name": "Partner_Greenpeace.png",
+      "file": "fill-484ab2db8073c436bdc960be9fb48e4947d7575f.png"
+    },
+    {
+      "imageRef": "4eebccba0adfb3dd26fc6e2fd817cd248d8f7133",
+      "sourceNode": "5990:4304",
+      "name": "Photo",
+      "file": "fill-4eebccba0adfb3dd26fc6e2fd817cd248d8f7133.jpg"
+    },
+    {
+      "imageRef": "542d0dbf9d6cd7400f1d9955c9f0fd680e39d03b",
+      "sourceNode": "6016:4037",
+      "name": "Partner_National_Ocean_Protection_Coalition.png",
+      "file": "fill-542d0dbf9d6cd7400f1d9955c9f0fd680e39d03b.png"
+    },
+    {
+      "imageRef": "553bca0eb2159b501206035664309f7b10da252e",
+      "sourceNode": "6016:4071",
+      "name": "Partner_Whale_and_Dolphin_Conservation.png",
+      "file": "fill-553bca0eb2159b501206035664309f7b10da252e.png"
+    },
+    {
+      "imageRef": "5600dfe7dc3f83d71dd08f5d499169165021b91e",
+      "sourceNode": "6016:4019",
+      "name": "Partner_Blue_Marine_Foundation__1_.png",
+      "file": "fill-5600dfe7dc3f83d71dd08f5d499169165021b91e.png"
+    },
+    {
+      "imageRef": "57bc337a45817d7f4c0b4d2de51de705a3bbf58e",
+      "sourceNode": "6016:4061",
+      "name": "Partner_SOA_Sustainable_Ocean_Alliance.png",
+      "file": "fill-57bc337a45817d7f4c0b4d2de51de705a3bbf58e.png"
+    },
+    {
+      "imageRef": "5dc1952131411c02e6982521b2aef393e435fd0e",
+      "sourceNode": "6016:4059",
+      "name": "Partner_Seaspiracy.png",
+      "file": "fill-5dc1952131411c02e6982521b2aef393e435fd0e.png"
+    },
+    {
+      "imageRef": "66ed74021cc9e027c1d33bec0ef3cbc1d906c450",
+      "sourceNode": "6016:4011",
+      "name": "Partner_AOSIS.png",
+      "file": "fill-66ed74021cc9e027c1d33bec0ef3cbc1d906c450.png"
+    },
+    {
+      "imageRef": "67f12e052a43cd582138082ce1cb3765d1341b14",
+      "sourceNode": "6016:4033",
+      "name": "Partner_Mission_Blue.png",
+      "file": "fill-67f12e052a43cd582138082ce1cb3765d1341b14.png"
+    },
+    {
+      "imageRef": "68d14fef755d9d8c157f737b493b735681611e77",
+      "sourceNode": "6016:4057",
+      "name": "Partner_Seas_at_Risk.png",
+      "file": "fill-68d14fef755d9d8c157f737b493b735681611e77.png"
+    },
+    {
+      "imageRef": "69feb176b9ef654724ed314515764a33edb6b11b",
+      "sourceNode": "6016:4049",
+      "name": "Partner_Pacific_Remote_Islands_Coalition.png",
+      "file": "fill-69feb176b9ef654724ed314515764a33edb6b11b.png"
+    },
+    {
+      "imageRef": "6a57a3cd49e56a0bf111144fcfa56840cb721e69",
+      "sourceNode": "6016:4053",
+      "name": "Partner_PEW_Charitable_Trusts.png",
+      "file": "fill-6a57a3cd49e56a0bf111144fcfa56840cb721e69.png"
+    },
+    {
+      "imageRef": "6f8a7c0b5c7f388be79281dbda870bd90489a0fa",
+      "sourceNode": "6016:4045",
+      "name": "Partner_Oceana.png",
+      "file": "fill-6f8a7c0b5c7f388be79281dbda870bd90489a0fa.png"
+    },
+    {
+      "imageRef": "720d5ace477f84dfb360ba392c976642a03f58df",
+      "sourceNode": "6016:4063",
+      "name": "Partner_Surfrider_Foundation.png",
+      "file": "fill-720d5ace477f84dfb360ba392c976642a03f58df.png"
+    },
+    {
+      "imageRef": "7c342aac12cfb4a4ebd0957dde14b39bb63f6f3a",
+      "sourceNode": "6016:4108",
+      "name": "Partner_Oceana.png",
+      "file": "fill-7c342aac12cfb4a4ebd0957dde14b39bb63f6f3a.png"
+    },
+    {
+      "imageRef": "8108addc2bb6ce97610dae38d4f1280c1e0332e7",
+      "sourceNode": "7102:33498",
+      "name": "DG",
+      "file": "fill-8108addc2bb6ce97610dae38d4f1280c1e0332e7.jpg"
+    },
+    {
+      "imageRef": "a85f6562b812df9cbfa2bd78943c09e4c03a0665",
+      "sourceNode": "6016:4041",
+      "name": "Partner_Ocean___Climate_Platform.png",
+      "file": "fill-a85f6562b812df9cbfa2bd78943c09e4c03a0665.png"
+    },
+    {
+      "imageRef": "bce98144021b7188b9e5664e1af5e384d4d6cea5",
+      "sourceNode": "6016:4069",
+      "name": "Partner_WYSS_Foundation.png",
+      "file": "fill-bce98144021b7188b9e5664e1af5e384d4d6cea5.png"
+    },
+    {
+      "imageRef": "cc0e9b4d34ce8cceba1eb7b50885ffb60739a481",
+      "sourceNode": "6016:4021",
+      "name": "Partner_Break_Free_From_Plastic.png",
+      "file": "fill-cc0e9b4d34ce8cceba1eb7b50885ffb60739a481.png"
+    },
+    {
+      "imageRef": "cdafcd3da9667b396fb1272bec7d7a6436691797",
+      "sourceNode": "6016:4106",
+      "name": "Partner_Ocean_Unite.png",
+      "file": "fill-cdafcd3da9667b396fb1272bec7d7a6436691797.png"
+    },
+    {
+      "imageRef": "d6dc3488479dc32d63b22b93ee3efd1685a535ed",
+      "sourceNode": "6016:4035",
+      "name": "Partner_Moms_Clean_Air_Force.png",
+      "file": "fill-d6dc3488479dc32d63b22b93ee3efd1685a535ed.png"
+    },
+    {
+      "imageRef": "d962e57cde35fc4a2405e6ae6287f09eba91ca38",
+      "sourceNode": "6016:4067",
+      "name": "Partner_Wildlife_Conservation_Society.png",
+      "file": "fill-d962e57cde35fc4a2405e6ae6287f09eba91ca38.png"
+    },
+    {
+      "imageRef": "e18666c437ed60d9bd1956a6bc1072d8df5948f2",
+      "sourceNode": "6016:4029",
+      "name": "Partner_High_Seas_Alliance.png",
+      "file": "fill-e18666c437ed60d9bd1956a6bc1072d8df5948f2.png"
+    },
+    {
+      "imageRef": "e74b67784ab2649390d7e429ee72957993dfcec6",
+      "sourceNode": "6016:4039",
+      "name": "Partner_Northern_Chumash_Tribal_Council.png",
+      "file": "fill-e74b67784ab2649390d7e429ee72957993dfcec6.png"
+    },
+    {
+      "imageRef": "f3a7349855962d4e2610740e58413696d7226fdc",
+      "sourceNode": "6016:4023",
+      "name": "Partner_DeepSea_Conservation_Coalition.png",
+      "file": "fill-f3a7349855962d4e2610740e58413696d7226fdc.png"
+    },
+    {
+      "imageRef": "f4b4515ed8e0a8af0c55783fa3d0b58b71777c38",
+      "sourceNode": "6016:4112",
+      "name": "Partner_Pacific_Remote_Islands_Coalition.png",
+      "file": "fill-f4b4515ed8e0a8af0c55783fa3d0b58b71777c38.png"
+    },
+    {
+      "imageRef": "fc70477a2ccb278d2a9a759a816b4337741cebae",
+      "sourceNode": "6016:4114",
+      "name": "Partner_PADI.png",
+      "file": "fill-fc70477a2ccb278d2a9a759a816b4337741cebae.png"
+    }
+  ],
+  "notes": [
+    "WebP skipped (install `sharp` to enable re-encoding)"
+  ]
+}

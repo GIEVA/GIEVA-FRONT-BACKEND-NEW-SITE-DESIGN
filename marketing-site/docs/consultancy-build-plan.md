@@ -41,6 +41,21 @@ Statuses: `pending` → `ingested` (node.json + frame.png + assets committed) �
 | Partners               | `/partners`            | `7385-5219`   | verified |
 | Consultancy Services ★ | `/services` (template) | `8119-7174`   | verified |
 
+### Service sub-pages (Phase 6)
+
+| Page                     | Route                                | Figma node-id | Status |
+| ------------------------ | ------------------------------------ | ------------- | ------ |
+| SAT                      | `/services/sat`                      | `8119-8722`   | built  |
+| ACT                      | `/services/act`                      | `8119-8171`   | built  |
+| TOEFL                    | `/services/toefl`                    | `8119-8977`   | built  |
+| IELTS                    | `/services/ielts`                    | `8119-9179`   | built  |
+| GRE                      | `/services/gre`                      | `8119-9387`   | built  |
+| Professional Development | `/services/professional-development` | `8145-8502`   | built  |
+
+`built`, not `verified`: everything except the CI visual-regression baselines has passed
+(`npm run verify:local`, the a11y gate, and per-frame parity measurement). Baselines must be
+generated in the pinned container — see the hand-off note at the end of this file.
+
 ★ **Reusable template.** Other sub-pages beyond these five are riffs off the Consultancy
 Services page, so build it component-first — a content-driven template — so the riffs are
 near-free later.
@@ -545,6 +560,100 @@ Playwright container. The Consultancy site's **page-assembly phase is complete**
 gaps are deliberate, tracked deferrals (7 open colour-contrast issues in
 `docs/a11y-known-issues.md`, all confirmed source-design colours per client direction) rather
 than unbuilt content.
+
+#### Phase 6 — session status (service sub-pages: SAT, ACT, TOEFL, IELTS, GRE, Prof. Dev.)
+
+Six frames ingested and built. The five test-registration frames are **one layout with different
+copy**, so they are one route (`src/pages/services/[slug].astro`) over `@lib/testprep-content`;
+Professional Development is its own page (two sections, Services-family spacing).
+
+**Shared components extracted or generalised** — the sub-pages proved these are one Figma unit:
+
+- `SubPageHero.astro` — all seven sub-page heroes carry the _same_ photo (identical `imageRef`,
+  byte-identical export) and the same 25% black scrim; only the title varies, and it names the
+  _category_ ("Test Registration"), not the page.
+- `ServiceDetailSection.astro` — generalised from a hardcoded about/covers/cost triad to a
+  generic `blocks[]`. The sub-pages' block headings are arbitrary (SAT reads "Good to know"
+  where TOEFL reads "What it costs"; GRE reads "What it measures"), so only the _layout_ is
+  shared. A 3-block section still leaves the grid's fourth cell empty, exactly as `/services`
+  did with a hand-authored empty container.
+- `RichLine.astro` + `RichText` — styled runs can appear anywhere in a line, not just at the
+  start: accent-warm prices _close_ ACT/IELTS bullets, and IELTS's test-type bullets open with a
+  **weight-only bold** run (no colour change) that is a genuinely different treatment.
+- `CtaSection.astro` — now takes props. Its own header said to add them "the moment a page needs
+  different copy"; the sub-pages all read "Ready to _Register?_" over their own body and primary
+  label. Defaults are the original four pages' text, so those render unchanged (verified
+  byte-identical).
+- `--type-page-title` (64/56/700/−0.26) — `services.astro` recorded this as "a one-off
+  combination… for a single page's title". It is on all seven sub-page heroes, so it is now a
+  named role.
+
+**Four real parity bugs found in already-`verified` work, and fixed** (this is what the targeted
+pre-build design pass was for):
+
+1. **Bullet glyphs were missing site-wide.** `base.css` strips markers from every
+   `ul[role='list']`, but the source frames mark these lists `UNORDERED` and _do_ render a dot.
+   Restored via `::before` and measured ink-to-ink off the frames (dot at 11.5–15px, text at
+   28px, hanging indent) — rendered output now matches within half a pixel.
+2. **`--line-height-h3` was 48px; every frame says 46px** (`45.99609375` = 40px × 114.99%,
+   authored as a percentage). Confirmed across Consultancy Partners/Services + all six
+   sub-pages **and** NGO's Program page, so it is not per-brand. Both styleguides' specimens
+   repeated the wrong figure and were corrected too.
+3. **The CTA body sat 16px too close to its heading.** The source nests eyebrow + heading in one
+   frame at 16px and sets **32px** between that group and the body; we used a flat 16px. Confirmed
+   identical on Home, `/services`, `/about` and all six sub-pages.
+4. **`/services`' HEALS "about" ran three paragraphs together.** The source text node carries two
+   hard newlines and measures exactly 7 lines (168px / 24px) — the accent sentence and "It's made
+   for students…" each start a fresh line. Now matches the frame line for line.
+
+**Needs client sign-off — deliberate deviations, all reproducible from the frames:**
+
+- **SAT's block spacing was normalised from 24px to 16px.** The test-registration family is
+  consistently 16px (ACT, TOEFL, IELTS, GRE); SAT alone is 24px, and is also the only one with no
+  cost block and with its subtitle hidden — it reads as the first frame drawn, before the pattern
+  settled. If SAT's 24px is intentional, `density` on `ServiceDetailSection` already supports it.
+- **"Talk to a Councellor"** is misspelled on all six frames' secondary CTA button. **Corrected
+  here to "Counsellor"** on client instruction — the double-l British form the design's own body
+  copy already uses ("a quick word with a counsellor settles it", "visa counselling"), so the
+  frames were internally inconsistent. This is a deliberate, approved departure from
+  exact-replica; **the Figma frames still need the same fix** so the two stop disagreeing.
+- **"What is X about"** carries a double space on ACT/TOEFL/IELTS/GRE (SAT's is single). HTML
+  collapses whitespace so it renders identically; written single-spaced.
+- **Both Professional Development sections are HEALS placeholder copy**, byte-identical to
+  `/services`' HEALS section, and its CTA is SAT's copy verbatim. Only the two section titles are
+  real. Same not-yet-personalised pattern already documented for Admission Processing / Tuition.
+- **CTA buttons have no link targets in the design.** They point at `/book-consultancy`, matching
+  the existing site-wide CTA — a route that does not exist yet, one of several pre-existing
+  placeholder hrefs (`/contact`, `/login`, `/feedback`, `/privacy`, `/terms`).
+- **The nav's five Study Abroad links now point at sections of `/services`**
+  (`/services#heals`, `#admission-processing`, `#scholarship-advising`, `#career-guidance`,
+  `#tuition-acceptance-fee-payments`) instead of 404ing on pages that were never designed —
+  the design has no separate frame for any of them. Three consequences worth knowing:
+  - The last id is `tuition-acceptance-fee-payments`, following the section's title in the
+    design; the old slug (`/services/tuition-acceptance-fee`) did not match it.
+  - `isActive` (@lib/nav) now rejects any href containing `#`, so none of the five ever get
+    `aria-current="page"`. They do point at the current page when you are on `/services`, but
+    five simultaneous "current page" announcements would bury the real signal on the parent
+    "Services" item.
+  - `.service-detail` carries `scroll-margin-top` because `.site-header` is `position: sticky`;
+    without it an anchored section title lands underneath the header. Verified: the title comes
+    to rest at y=144 against a header bottom edge of y=90.
+- The two Professional Development links were likewise repointed, to `#teacher-training` /
+  `#technology-training`, because the design has one page holding both sections.
+- **Nav trade-off, accepted:** the Services dropdown now mixes real routes (test registration,
+  Professional Development) with in-page anchors (Study Abroad). That is honest to the design —
+  those five genuinely are not separate pages — but two of its three columns navigate
+  differently from the first. Revisit if the client ever commissions frames for them.
+
+**Observed, not changed — a shell-level parity gap worth a decision.** In every frame the site
+header (98px) is drawn _over_ the hero photo; in our build it sits above it in normal flow (90px),
+pushing all page content down and making each page ~90px taller than its frame. This is a Phase 0
+shell decision that predates these pages and affects all 18 routes, so it was left alone rather
+than changed unilaterally.
+
+**Remaining per-frame deltas on SAT, both explained:** the section measures 590px against the
+frame's 630px — 16px from the deliberate density normalisation above, and 24px from a **trailing
+newline in the source text node** that renders a phantom empty line in Figma but nothing in HTML.
 
 **Flagged for whoever picks this up next — three real candidates, not yet prioritised:**
 

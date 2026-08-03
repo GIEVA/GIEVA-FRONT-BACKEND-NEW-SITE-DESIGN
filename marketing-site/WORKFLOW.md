@@ -127,6 +127,9 @@ template across brands** or diverge (see §9).
 
 - **Only after parity sign-off.** Subtle motion using motion tokens, all gated behind
   `prefers-reduced-motion`. Kept in separate, clearly-scoped commits.
+- Candidate effects are logged in **`docs/enhancement-backlog.md`** as they surface during parity
+  work — captured with their mechanism, their parity dependency, and the gates they must clear,
+  so nothing is either lost or built early.
 
 ### Phase 5 — Lived-experience accessibility pass
 
@@ -145,6 +148,55 @@ template across brands** or diverge (see §9).
 
 **Definition of done for any piece of UI:** matches the design (visual regression green) +
 passes automated a11y + keyboard-operable + works with JS disabled (baseline) + reviewed.
+
+### 5a. Testing cadence — when to run what (effective 2026-07-24; tier 1 revised 2026-07-27)
+
+The gates above are **tiered by _when_ they run**, not run wholesale on every edit. This keeps
+the fast checks fast and puts the environment-specific ones where they're reproducible.
+
+1. **Inner loop — while iterating on a component.** `npm run verify:quick`
+   (= `check` + `lint`, a couple of seconds), plus the a11y spec _scoped to the routes you
+   touched_ — `npx playwright test tests/a11y.spec.ts -g "team"` — and at most the single other
+   relevant spec by path. Never the whole suite per edit: it's slow and mostly re-checks
+   untouched routes.
+
+   Keep the scoped a11y run even when working locally with a browser open. It is the only check
+   in this tier that finds what looking at the page structurally cannot — heading order, missing
+   labels, focus traps, `aria-current` semantics — and it costs ~5s. Everything else in the inner
+   loop is about defects the eye can't see either (type errors, unused imports).
+
+   **Parity, by contrast, is eyeballed locally — do not run the screenshot suite to check it.**
+   Render the page (`npm run dev`) or screenshot the specific component and look at it against
+   the Figma frame. Local screenshot _diffing_ is pure noise (see tier 3), but local screenshot
+   _looking_ is the highest-value parity check there is, and it's how the design-sourced detail
+   that automation misses gets caught — e.g. the team card's progressive backdrop blur, which no
+   assertion in this repo would have flagged as absent.
+
+2. **Pre-commit gate — before every non-trivial commit.** `npm run verify:local`
+   (= check + lint + format:check + build + `playwright test --ignore-snapshots`). This runs the
+   full a11y + functional suite but **skips screenshot diffing**, because visual baselines are
+   Chromium-build-specific and only reproducible in CI's pinned container (README "Visual
+   regression — baselines are environment-specific"). a11y and parity are client non-negotiables
+   (§2) and a regression is cheapest to fix next to the change that caused it — so this gate runs
+   **continuously, at commit time, never deferred to ship.** A colour-contrast failure traced to
+   a confirmed design colour follows the "known a11y gaps" workflow (CLAUDE.md) instead of
+   blocking; every other failure blocks the commit.
+3. **Pre-ship / CI — owned by GitHub Actions, not local runs.** The pinned Playwright container
+   (`.github/workflows/ci.yml`) runs the **complete** suite _including_ visual regression, plus
+   the Lighthouse budgets. This is the authoritative "exact-replica" + performance verdict.
+   Don't burn local cycles re-running visual/Lighthouse; when a baseline legitimately changes,
+   regenerate it in the container (README "Visual regression") and commit the PNGs.
+
+`npm run verify` runs the same steps as `verify:local` but **with** screenshot diffing, so it
+only passes inside the pinned container — use it there; use `verify:local` on your own machine.
+Rule of thumb: **a11y runs at commit time; visual-regression + Lighthouse run at push/CI.**
+Deferring the a11y gate to "the very end" is explicitly rejected — it's a build-time gate, not a
+final audit (§2; CLAUDE.md non-negotiable #2).
+
+**Known-failing spec (as of 2026-07-27):** the two `tests/search.spec.ts` cases fail on a clean
+tree — reproduced by stashing all changes, rebuilding, and re-running, so they are not a
+regression from any in-flight work. Don't chase them when they surface in a `verify:local` run,
+and don't treat that run as red because of them; they need their own fix.
 
 ---
 

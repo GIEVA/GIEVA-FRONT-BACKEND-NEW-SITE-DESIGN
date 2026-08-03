@@ -1,0 +1,51 @@
+{
+  "vectors": [
+    {
+      "id": "7956:30084",
+      "name": "LOGO",
+      "kind": "icon",
+      "file": "icon-7956-30084.svg"
+    },
+    {
+      "id": "7956:30132",
+      "name": "mail-01",
+      "kind": "icon",
+      "file": "icon-7956-30132.svg"
+    },
+    {
+      "id": "7956:30146",
+      "name": "oo-social-links → List",
+      "kind": "icon",
+      "file": "icon-7956-30146.svg"
+    },
+    {
+      "id": "I7463:5847;5995:7319",
+      "name": "ArrowRight",
+      "kind": "icon",
+      "file": "icon-I7463-5847;5995-7319.svg"
+    },
+    {
+      "id": "I7956:30124;4547:22453",
+      "name": "ng-icon",
+      "kind": "icon",
+      "file": "icon-I7956-30124;4547-22453.svg"
+    }
+  ],
+  "fills": [
+    {
+      "imageRef": "1b88c3421e7fc8e23254d3017cf3bb4685cff584",
+      "sourceNode": "7463:5840",
+      "name": "BG",
+      "file": "fill-1b88c3421e7fc8e23254d3017cf3bb4685cff584.png"
+    },
+    {
+      "imageRef": "3172f31ce44b7c8cfb0a897f5d748407dc9e6cbc",
+      "sourceNode": "I7956:30084;5857:4414",
+      "name": "Gemini_Generated_Image_uvhg9uuvhg9uuvhg 1",
+      "file": "fill-3172f31ce44b7c8cfb0a897f5d748407dc9e6cbc.png"
+    }
+  ],
+  "notes": [
+    "WebP skipped (install `sharp` to enable re-encoding)"
+  ]
+}

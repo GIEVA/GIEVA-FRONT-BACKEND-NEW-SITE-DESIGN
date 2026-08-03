@@ -1,0 +1,45 @@
+---
+/**
+ * RichLine — renders one line of service copy (a paragraph or a list item) from its `RichText`
+ * runs, so a styled run can sit anywhere in the line rather than only at the start.
+ *
+ * The two emphases map to different elements because they mean different things in the source
+ * (see `TextRun` in @lib/service-section): `accent` is the bold-italic accent-warm run, styled
+ * by the consuming component via `.service-detail__highlight`; `strong` is a plain bold lead-in
+ * that carries no colour change, so it is a bare `<strong>` and inherits the body colour.
+ */
+import type { RichText } from '@lib/service-section';
+
+interface Props {
+  runs: RichText;
+}
+
+const { runs } = Astro.props;
+// A bare string is the shorthand for a single unstyled run — see `RichText`.
+const parts = typeof runs === 'string' ? [runs] : runs;
+---
+
+{
+  parts.map((run) =>
+    typeof run === 'string' ? (
+      run
+    ) : run.emphasis === 'accent' ? (
+      <em class="service-detail__highlight">{run.text}</em>
+    ) : (
+      <strong>{run.text}</strong>
+    ),
+  )
+}
+
+<style>
+  /* Bold-italic accent-warm, distinct from the global `.u-accent-em` (italic only, no weight
+     change). Lives here rather than in ServiceDetailSection because Astro's scoped CSS only
+     reaches elements in the component that renders them — and this <em> is rendered here.
+     The class name is what tests/a11y.spec.ts and docs/a11y-known-issues.md issue 6 match on:
+     at 18px bold on white this run measures 3.73:1, a tracked design-sourced contrast gap. */
+  .service-detail__highlight {
+    font-style: italic;
+    font-weight: var(--font-weight-bold);
+    color: var(--color-accent-warm);
+  }
+</style>

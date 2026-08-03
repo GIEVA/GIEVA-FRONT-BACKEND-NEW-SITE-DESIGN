@@ -1,9 +1,24 @@
 ---
 /**
- * SiteFooter — the shared site footer: brand + newsletter signup, Consultancy/NGO link
- * columns, contact details, and a bottom bar (legal links + social icons). Matches Home's
- * "oo-footer → Footer" instance (I8210:7883 in node.json) — inverse surface, so the token
- * text-role swap (tokens.css §3) is exercised across the shell.
+ * SiteFooter — the shared site footer: brand lockup + newsletter signup, Consultancy/NGO link
+ * columns, contact details, and a bottom bar (legal links + social icons). Rendered once in
+ * BaseLayout, so every Consultancy and NGO page gets the same instance; the only per-brand
+ * variation is `homeHref` plus whatever the `data-brand` theme resolves the tokens to.
+ *
+ * Geometry throughout is from Figma "oo-footer → Footer" (8210:7883, 1440-wide frame) — an
+ * inverse surface, so the token text-role swap (tokens.css §3) is exercised across the shell.
+ * Numbers that are NOT scale steps (19px item gap, the 128/25/5px insets, 424px column) are
+ * written literally with the node they came from, rather than rounded to the nearest token:
+ * rounding them is what pulled the previous pass out of parity.
+ *
+ * Three deliberate departures from the frame, all agreed with the client:
+ *   1. The newsletter field rests at the design's 280px, but 280px leaves the <input> room for
+ *      only ~18 characters, so a real address scrolls out of sight as it is typed. In use the
+ *      field grows into the 128px of empty inset beside it (~32 characters, nothing else moves),
+ *      and it fills its column outright once the grid reflows. See `.site-footer__newsletter`.
+ *   2. The placeholder is dimmed. At the frame's full-strength violet it is indistinguishable
+ *      from a typed value, so the field reads as already filled. See `::placeholder`.
+ *   3. No copyright line. The frame has none, and the previous build had invented one.
  *
  * The newsletter is a real <form> (progressively enhanceable later) rather than a JS-only
  * widget — it degrades honestly instead of pretending to work; there's no subscription
@@ -11,15 +26,20 @@
  * exists.
  */
 import { footerColumns } from '@lib/nav';
-import { Image } from 'astro:assets';
-import { logoMark } from '@lib/home-images';
+import BrandLockup from '@components/BrandLockup.astro';
 import SocialIcon from '@components/SocialIcon.astro';
 
-const year = new Date().getFullYear();
+interface Props {
+  /** Where the footer brand/logo links. Consultancy → "/", NGO → "/ngo". */
+  homeHref?: string;
+}
+const { homeHref = '/' } = Astro.props;
 
 const contact = {
+  /* Unpunctuated exactly as the design sets it (I8210:7883;8210:7804;4547:22458) — the commas
+     the previous pass added changed the line breaks as well as the reading. */
   address:
-    'Lagos State House, 3rd Floor, Suite 329, Plot 78 Ralph Shodeinde Street, CBD, Abuja, Nigeria',
+    'Lagos State House 3rd Floor Suite 329 Plot 78 Ralph Shodeinde Street CBD Abuja, Nigeria',
   phone: '+2347035250399',
   site: 'www.gieva.org',
 };
@@ -38,144 +58,136 @@ const social: {
 
 <div class="site-footer surface-inverse" data-surface="inverse">
   <div class="container site-footer__inner">
-    <div class="site-footer__top">
-      <a class="site-footer__brand" href="/">
-        <Image src={logoMark} alt="" width={40} height={40} class="site-footer__logo" />
-        <span class="site-footer__wordmark"
-          >GIEVA<span class="site-footer__tld">.org</span></span
-        >
-        <span class="visually-hidden"> — go to home page</span>
-      </a>
+    <BrandLockup href={homeHref} size="lg" ink="inverse" />
 
-      <div class="site-footer__columns">
-        <div class="site-footer__col">
-          <p class="u-body-tight site-footer__heading">Newsletter</p>
-          <p class="u-body-lg">Sign Up to our Newsletter to get the latest news and offers.</p>
-          <form class="site-footer__newsletter">
-            <label class="visually-hidden" for="newsletter-email">Email address</label>
-            <input
-              id="newsletter-email"
-              class="site-footer__newsletter-input"
-              type="email"
-              name="email"
-              placeholder="Enter Email Address"
-              required
-            />
-            <button class="site-footer__newsletter-submit" type="submit">
-              <span class="visually-hidden">Subscribe</span>
-              <svg
-                width="15"
-                height="13"
-                viewBox="0 0 15 13"
-                fill="none"
-                aria-hidden="true"
-                focusable="false"
-              >
-                <path
-                  d="M8.5 1L14 6.5M14 6.5L8.5 12M14 6.5H1"
-                  stroke="currentColor"
-                  stroke-width="1.6"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"></path>
-              </svg>
-            </button>
-          </form>
-        </div>
+    <div class="site-footer__columns">
+      <div class="site-footer__col site-footer__col--newsletter">
+        <p class="u-label site-footer__heading">Newsletter</p>
+        <p class="u-body-lg site-footer__newsletter-copy">
+          Sign Up to our Newsletter to get the latest news and offers.
+        </p>
+        <form class="site-footer__newsletter">
+          <label class="visually-hidden" for="newsletter-email">Email address</label>
+          <input
+            id="newsletter-email"
+            class="site-footer__newsletter-input"
+            type="email"
+            name="email"
+            placeholder="Enter Email Address"
+            required
+          />
+          <button class="site-footer__newsletter-submit" type="submit">
+            <span class="visually-hidden">Subscribe</span>
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 15 13"
+              fill="none"
+              aria-hidden="true"
+              focusable="false"
+            >
+              <path
+                d="M8.5 1L14 6.5M14 6.5L8.5 12M14 6.5H1"
+                stroke="currentColor"
+                stroke-width="1.6"
+                stroke-linecap="round"
+                stroke-linejoin="round"></path>
+            </svg>
+          </button>
+        </form>
+      </div>
 
-        {
-          footerColumns.map((col) => (
-            <nav class="site-footer__col" aria-label={col.heading}>
-              <p class="u-body-tight site-footer__heading">{col.heading}</p>
-              <ul role="list" class="site-footer__list">
-                {col.items.map((item) => (
-                  <li>
-                    <a class="site-footer__link" href={item.href}>
-                      {item.label}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </nav>
-          ))
-        }
+      {
+        footerColumns.map((col) => (
+          <nav class="site-footer__col" aria-label={col.heading}>
+            <p class="u-label site-footer__heading">{col.heading}</p>
+            <ul role="list" class="site-footer__list">
+              {col.items.map((item) => (
+                <li>
+                  <a class="u-body-lg site-footer__link" href={item.href}>
+                    {item.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        ))
+      }
 
-        <div class="site-footer__col">
-          <p class="u-body-tight site-footer__heading">Contact</p>
-          <ul role="list" class="site-footer__contact">
-            <li>
-              <svg
-                class="site-footer__contact-icon"
-                width="16"
-                height="20"
-                viewBox="0 0 16 20"
-                fill="none"
-                aria-hidden="true"
-                focusable="false"
-              >
-                <path
-                  d="M8 19s7-6.6 7-11.5S12.4 1 8 1 1 3.4 1 7.5 8 19 8 19Z"
-                  stroke="currentColor"
-                  stroke-width="1.5"
-                  stroke-linejoin="round"></path>
-                <circle cx="8" cy="7.5" r="2.5" stroke="currentColor" stroke-width="1.5"
-                ></circle>
-              </svg>
-              <span class="u-body-lg">{contact.address}</span>
-            </li>
-            <li>
-              <svg
-                class="site-footer__contact-icon"
-                width="16"
-                height="16"
-                viewBox="0 0 16 16"
-                fill="none"
-                aria-hidden="true"
-                focusable="false"
-              >
-                <path
-                  d="M2 3c0-.6.4-1 1-1h2.2c.5 0 .9.3 1 .8l.7 3a1 1 0 0 1-.3 1L5 8.4a9 9 0 0 0 4 4l1.6-1.6a1 1 0 0 1 1-.3l3 .7c.5.1.8.5.8 1V14c0 .6-.4 1-1 1h-1C6.4 15 2 10.6 2 5V3Z"
-                  stroke="currentColor"
-                  stroke-width="1.4"
-                  stroke-linejoin="round"></path>
-              </svg>
-              <a class="u-body-lg site-footer__contact-link" href={`tel:${contact.phone}`}
-                >{contact.phone}</a
-              >
-            </li>
-            <li>
-              <svg
-                class="site-footer__contact-icon"
-                width="16"
-                height="16"
-                viewBox="0 0 16 16"
-                fill="none"
-                aria-hidden="true"
-                focusable="false"
-              >
-                <path
-                  d="M1.33203 4L5.94071 6.61131C7.63976 7.574 8.35763 7.574 10.0567 6.61131L14.6654 4"
-                  stroke="currentColor"
-                  stroke-linejoin="round"></path>
-                <path
-                  d="M1.34254 8.9839C1.38612 11.0276 1.40792 12.0494 2.162 12.8064C2.91608 13.5634 3.96558 13.5897 6.06458 13.6424C7.35823 13.675 8.63916 13.675 9.93283 13.6424C12.0318 13.5897 13.0813 13.5634 13.8354 12.8064C14.5895 12.0494 14.6113 11.0276 14.6548 8.9839C14.6689 8.32676 14.6689 7.67356 14.6548 7.01643C14.6113 4.97274 14.5895 3.95089 13.8354 3.19394C13.0813 2.43698 12.0318 2.41062 9.93283 2.35788C8.63916 2.32537 7.35823 2.32537 6.06458 2.35787C3.96558 2.4106 2.91608 2.43697 2.162 3.19393C1.40791 3.95088 1.38612 4.97273 1.34254 7.01643C1.32852 7.67356 1.32853 8.32676 1.34254 8.9839Z"
-                  stroke="currentColor"
-                  stroke-linejoin="round"></path>
-              </svg>
-              <a class="u-body-lg site-footer__contact-link" href={`https://${contact.site}`}
-                >{contact.site}</a
-              >
-            </li>
-          </ul>
-        </div>
+      <div class="site-footer__col">
+        <p class="u-label site-footer__heading">Contact</p>
+        <ul role="list" class="site-footer__contact">
+          <li class="site-footer__contact-item site-footer__contact-item--block">
+            <svg
+              class="site-footer__contact-icon"
+              width="16"
+              height="16"
+              viewBox="0 0 16 16"
+              fill="none"
+              aria-hidden="true"
+              focusable="false"
+            >
+              <path
+                d="M8 14.5s5.5-5.2 5.5-8.5a5.5 5.5 0 1 0-11 0c0 3.3 5.5 8.5 5.5 8.5Z"
+                stroke="currentColor"
+                stroke-width="1.2"
+                stroke-linejoin="round"></path>
+              <circle cx="8" cy="6" r="2" stroke="currentColor" stroke-width="1.2"></circle>
+            </svg>
+            <span class="u-body-lg">{contact.address}</span>
+          </li>
+          <li class="site-footer__contact-item">
+            <svg
+              class="site-footer__contact-icon"
+              width="16"
+              height="16"
+              viewBox="0 0 16 16"
+              fill="none"
+              aria-hidden="true"
+              focusable="false"
+            >
+              <path
+                d="M2 3c0-.6.4-1 1-1h2.2c.5 0 .9.3 1 .8l.7 3a1 1 0 0 1-.3 1L5 8.4a9 9 0 0 0 4 4l1.6-1.6a1 1 0 0 1 1-.3l3 .7c.5.1.8.5.8 1V14c0 .6-.4 1-1 1h-1C6.4 15 2 10.6 2 5V3Z"
+                stroke="currentColor"
+                stroke-width="1.2"
+                stroke-linejoin="round"></path>
+            </svg>
+            <a class="u-body-lg site-footer__contact-link" href={`tel:${contact.phone}`}
+              >{contact.phone}</a
+            >
+          </li>
+          <li class="site-footer__contact-item">
+            <svg
+              class="site-footer__contact-icon"
+              width="16"
+              height="16"
+              viewBox="0 0 16 16"
+              fill="none"
+              aria-hidden="true"
+              focusable="false"
+            >
+              <path
+                d="M1.33203 4L5.94071 6.61131C7.63976 7.574 8.35763 7.574 10.0567 6.61131L14.6654 4"
+                stroke="currentColor"
+                stroke-linejoin="round"></path>
+              <path
+                d="M1.34254 8.9839C1.38612 11.0276 1.40792 12.0494 2.162 12.8064C2.91608 13.5634 3.96558 13.5897 6.06458 13.6424C7.35823 13.675 8.63916 13.675 9.93283 13.6424C12.0318 13.5897 13.0813 13.5634 13.8354 12.8064C14.5895 12.0494 14.6113 11.0276 14.6548 8.9839C14.6689 8.32676 14.6689 7.67356 14.6548 7.01643C14.6113 4.97274 14.5895 3.95089 13.8354 3.19394C13.0813 2.43698 12.0318 2.41062 9.93283 2.35788C8.63916 2.32537 7.35823 2.32537 6.06458 2.35787C3.96558 2.4106 2.91608 2.43697 2.162 3.19393C1.40791 3.95088 1.38612 4.97273 1.34254 7.01643C1.32852 7.67356 1.32853 8.32676 1.34254 8.9839Z"
+                stroke="currentColor"
+                stroke-linejoin="round"></path>
+            </svg>
+            <a class="u-body-lg site-footer__contact-link" href={`https://${contact.site}`}
+              >{contact.site}</a
+            >
+          </li>
+        </ul>
       </div>
     </div>
 
     <div class="site-footer__bottom">
       <ul role="list" class="site-footer__legal-list">
-        <li><a class="site-footer__legal-link" href="/terms">Terms</a></li>
-        <li><a class="site-footer__legal-link" href="/privacy">Privacy</a></li>
+        <li><a class="u-legal site-footer__legal-link" href="/terms">Terms</a></li>
+        <li><a class="u-legal site-footer__legal-link" href="/privacy">Privacy</a></li>
       </ul>
-      <p class="u-caption site-footer__copyright">© {year} GIEVA. All rights reserved.</p>
       <ul role="list" class="site-footer__social">
         {
           social.map((s) => (
@@ -194,61 +206,86 @@ const social: {
 
 <style>
   .site-footer {
-    padding-block: var(--space-4xl) var(--space-lg);
+    /* Top: the frame stacks 80px (`pt`) + 40px (the container's `py`) above the lockup.
+       Bottom: 44px of trailing spacer + the footer's own 24px padding, below the rule. Both are
+       composites of two frames, so neither lands on a single scale step — hence the literals. */
+    padding-block: var(--space-6xl) 68px;
   }
   .site-footer__inner {
     display: grid;
-    gap: var(--space-3xl);
+    /* lockup → columns 40px; columns → bottom bar 104px (the columns' own 64px bottom padding
+       plus the container's 40px `py`). */
+    grid-template-rows: auto auto auto;
+    row-gap: var(--space-xl);
   }
-  .site-footer__top {
-    display: grid;
-    gap: var(--space-2xl);
-  }
-  .site-footer__brand {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-3xs);
-    text-decoration: none;
-    width: fit-content;
-  }
-  .site-footer__logo {
-    border-radius: 50%;
-  }
-  .site-footer__wordmark {
-    font-weight: var(--font-weight-bold);
-    font-size: 2rem;
-    line-height: 1;
-    color: var(--color-text-inverse);
-  }
-  .site-footer__tld {
-    color: var(--color-feedback-success);
-    font-weight: var(--font-weight-regular);
-  }
-
   .site-footer__columns {
+    /* 424px = the newsletter column's 280px content + its 128px right inset + the 8px gutter
+       every column carries in the frame. Because the track is fixed, `width: 100%` on the form
+       resolves to exactly the design's 280px — and the form widens on its own when the grid
+       reflows below, which is the point of departure (1) in the header comment. */
     display: grid;
-    grid-template-columns: 1.6fr repeat(3, 1fr);
-    gap: var(--space-2xl);
+    grid-template-columns: 424px 1fr 1fr 360px;
+    margin-bottom: var(--space-3xl);
   }
   .site-footer__col {
     display: grid;
-    gap: var(--space-sm);
+    /* `minmax(0, 1fr)`, not the implicit `auto` track: an auto track sizes to its widest child's
+       max-content and then OVERFLOWS a definite column rather than shrinking. The <input>'s
+       intrinsic `size=20` width is wider than the 280px the newsletter column allows, so the
+       auto track pushed the form ~66px past its column. Capping the minimum at 0 lets the
+       track take the column's width and the form shrink into it. */
+    grid-template-columns: minmax(0, 1fr);
+    /* `--item-spacing/19` — the frame's own step, between every heading and list and between
+       every list item. It is not on our spacing scale and rounding it to 16 or 24 visibly
+       changes the columns' rhythm. */
+    gap: 19px;
     align-content: start;
+    padding-inline: var(--space-2xs); /* the 8px gutter each column carries in the frame */
+  }
+  .site-footer__col--newsletter {
+    gap: var(--space-md); /* this column alone steps 24px, not 19px */
+    padding-inline-end: calc(var(--space-3xl) * 2 + var(--space-2xs)); /* 128px + the gutter */
+    --newsletter-grow: calc(
+      var(--space-3xl) * 2
+    ); /* == that 128px inset — see the form below */
   }
   .site-footer__heading {
-    color: var(--color-text-on-inverse-muted);
+    color: var(--color-text-on-inverse-faint);
     text-transform: uppercase;
   }
 
+  .site-footer__newsletter-copy {
+    /* The frame sets the copy nowrap with a manual break after "get the"; capping at the form's
+       width reproduces that break without hard-coding a <br>. */
+    max-width: 280px;
+  }
   .site-footer__newsletter {
     display: flex;
     align-items: center;
-    gap: var(--space-xs);
-    padding: var(--space-3xs);
-    padding-inline-start: var(--space-sm);
+    gap: var(--space-lg); /* 32px */
+    width: 100%;
+    padding: 5px 5px 5px 25px;
+    border: 1px solid var(--color-white);
     border-radius: var(--radius-md);
     background: var(--color-white);
-    max-width: 28rem;
+    transition: width 150ms ease;
+  }
+  /* At the design width the field is 280px, which leaves the <input> ~170px — about 18
+     characters, so a real address scrolls out of sight while it is being typed. Rather than
+     widen the resting state (which would break parity), the field grows into the 128px of empty
+     inset the frame already leaves to its right: 408px, ~32 characters, and NOTHING else moves,
+     because the growth only consumes space the design left blank. It stops 8px short of the
+     CONSULTANCY column, which is the ceiling here — anything wider would cover those links.
+     `:has()` keeps it open after blur so a typed address stays readable; where `:has()` is
+     unsupported the field simply returns to 280px on blur, as it does today. */
+  .site-footer__newsletter:focus-within,
+  .site-footer__newsletter:has(.site-footer__newsletter-input:not(:placeholder-shown)) {
+    width: calc(100% + var(--newsletter-grow, 0px));
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .site-footer__newsletter {
+      transition: none;
+    }
   }
   .site-footer__newsletter-input {
     flex: 1;
@@ -256,10 +293,22 @@ const social: {
     border: 0;
     font: inherit;
     font-size: var(--type-body-lg-size);
-    color: var(--color-mine-shaft);
+    line-height: var(--type-body-lg-line);
+    letter-spacing: var(--type-body-lg-tracking);
+    color: var(--color-violet);
+  }
+  .site-footer__newsletter-input::placeholder {
+    /* The frame draws the placeholder at full-strength --color-violet, identical to a typed
+       value — which reads as a field that is already filled. Held at the design's hue but
+       dimmed so it reads as a hint (client call, 2026-07-28). Set explicitly rather than left
+       to the UA: Firefox applies its own dimming, so "no opacity" is not a fixed value.
+       0.70 composites to #595170 on white = 7.41:1, still AAA. 0.60 (5.12:1) is the floor —
+       0.55 drops to 4.32:1 and fails AA. */
+    color: var(--color-violet);
+    opacity: 0.7;
   }
   .site-footer__newsletter-input:focus-visible {
-    outline: 3px solid var(--color-electric-violet);
+    outline: 3px solid var(--color-focus-ring);
     outline-offset: 2px;
     border-radius: var(--radius-sm);
   }
@@ -268,23 +317,22 @@ const social: {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    inline-size: 2.625rem;
-    block-size: 2.625rem;
+    inline-size: 46px; /* 13px inset + 20px icon + 13px */
+    block-size: 42px; /* 11px inset + 20px icon + 11px */
     border-radius: var(--radius-sm);
     border: 0;
-    background: var(--color-accent-warm);
-    color: var(--color-text-inverse);
+    background: var(--color-cta);
+    color: var(--color-cta-contrast);
     cursor: pointer;
   }
 
   .site-footer__list {
     display: grid;
-    gap: var(--space-xs);
+    gap: 19px;
   }
   .site-footer__link {
     color: var(--color-text-inverse);
     text-decoration: none;
-    font-size: var(--type-body-lg-size);
   }
   .site-footer__link:hover {
     text-decoration: underline;
@@ -292,16 +340,22 @@ const social: {
 
   .site-footer__contact {
     display: grid;
-    gap: var(--space-md);
+    gap: 19px;
   }
-  .site-footer__contact li {
+  .site-footer__contact-item {
     display: flex;
+    align-items: center; /* phone + site rows are centred on their icon in the frame */
+    gap: var(--space-2xs);
+  }
+  .site-footer__contact-item--block {
+    /* The address runs to three lines, so its icon pins to the first line instead. */
     align-items: start;
-    gap: var(--space-xs);
+  }
+  .site-footer__contact-item--block .site-footer__contact-icon {
+    margin-top: 4px;
   }
   .site-footer__contact-icon {
     flex: none;
-    margin-top: 0.15em;
     color: var(--color-text-inverse);
   }
   .site-footer__contact-link {
@@ -313,50 +367,55 @@ const social: {
   }
 
   .site-footer__bottom {
+    /* The rule closes the footer BENEATH this row (frame: `border-bottom` + 17px of padding on
+       the row itself), rather than separating it from the columns above. */
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
     gap: var(--space-md);
-    padding-top: var(--space-lg);
-    border-top: 1px solid var(--color-border-on-inverse);
+    /* Margin, not padding: the frame's 8px gutter insets the RULE too (it stops at 72/1368,
+       not at the container edge), and a border draws on the padding box. */
+    margin-inline: var(--space-2xs);
+    padding-bottom: 17px;
+    border-bottom: 1px solid var(--color-border-on-inverse);
   }
   .site-footer__legal-list {
     display: flex;
-    gap: var(--space-md);
+    flex-wrap: wrap;
+    gap: var(--line-height-body); /* 20px */
   }
   .site-footer__legal-link {
-    color: var(--color-text-on-inverse-muted);
-    font-size: var(--type-caption-size);
+    color: var(--color-text-on-inverse-faint);
     text-decoration: none;
   }
   .site-footer__legal-link:hover {
     text-decoration: underline;
   }
-  .site-footer__copyright {
-    color: var(--color-text-on-inverse-muted);
-  }
   .site-footer__social {
     display: flex;
-    gap: var(--space-sm);
+    /* 20px between items plus the 8px right inset each one carries in the frame. */
+    gap: calc(var(--line-height-body) + var(--space-2xs));
   }
   .site-footer__social-link {
+    /* No ring: the frame draws these as bare glyphs. At 24px the glyph is its own 2.5.8 target. */
     display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    inline-size: 2rem;
-    block-size: 2rem;
-    border-radius: 50%;
-    border: 1px solid var(--color-border-on-inverse);
     color: var(--color-text-inverse);
   }
 
-  @media (max-width: 900px) {
+  @media (max-width: 1200px) {
     .site-footer__columns {
       grid-template-columns: 1fr 1fr;
+      gap: var(--space-2xl) 0;
+    }
+    .site-footer__col--newsletter {
+      /* Released from the fixed track, the field already fills a much wider column — so there is
+         no inset left to grow into, and none needed. See departure (1). */
+      padding-inline-end: var(--space-2xs);
+      --newsletter-grow: 0px;
     }
   }
-  @media (max-width: 560px) {
+  @media (max-width: 620px) {
     .site-footer__columns {
       grid-template-columns: 1fr;
     }

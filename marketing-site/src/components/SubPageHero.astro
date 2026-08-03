@@ -1,0 +1,84 @@
+---
+/**
+ * SubPageHero — the photo hero that opens every Consultancy sub-page: a full-bleed 1440×670
+ * image under a flat 25% black scrim, with a centred, bottom-aligned page title.
+ *
+ * Confirmed identical across all seven ingested sub-page nodes — /services (8119:7174),
+ * SAT (8119:8722), ACT (8119:8171), TOEFL (8119:8977), IELTS (8119:9179), GRE (8119:9387)
+ * and Professional Development (8145:8502). Every one carries the *same* image (`imageRef`
+ * 55fffb0d…, byte-identical export) and the same `SOLID rgb(0,0,0) @ opacity 0.25` overlay
+ * on the `Photo` frame, so the photo is a constant and only `title` varies.
+ *
+ * Geometry from node.json, not eyeballed: the title container sits at y=494 in a 670px frame
+ * and is 56px tall, so the bottom inset is exactly 670 − 494 − 56 = 120px = `--space-6xl`.
+ * The title itself is `--type-page-title` (64/56/700/−0.26) — see tokens.css for why that is
+ * a named role rather than the one-off it was first recorded as.
+ *
+ * The heading renders as <h1>: this is the page's document title on every route that uses it.
+ */
+import { Image } from 'astro:assets';
+import { servicesHeroPhoto } from '@lib/services-images';
+
+interface Props {
+  /** The hero headline — the *category* name ("Test Registration"), not the page's own. */
+  title: string;
+}
+
+const { title } = Astro.props;
+---
+
+<section class="subpage-hero">
+  <div class="subpage-hero__media">
+    <Image
+      src={servicesHeroPhoto}
+      alt=""
+      width={1440}
+      height={670}
+      class="subpage-hero__photo"
+    />
+    <div class="subpage-hero__scrim" aria-hidden="true"></div>
+  </div>
+  <div class="container subpage-hero__content">
+    <h1 class="u-page-title subpage-hero__heading">{title}</h1>
+  </div>
+</section>
+
+<style>
+  .subpage-hero {
+    position: relative;
+  }
+  .subpage-hero__media {
+    position: relative;
+  }
+  .subpage-hero__photo {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+  .subpage-hero__scrim {
+    position: absolute;
+    inset: 0;
+    background: rgb(0 0 0 / 0.25);
+  }
+  .subpage-hero__content {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    /* 670 − 494 − 56 = 120px, straight off the frame. */
+    padding-bottom: var(--space-6xl);
+  }
+  .subpage-hero__heading {
+    margin: 0;
+    color: var(--color-white);
+    text-align: center;
+  }
+
+  /* ── Responsive (authored by us — no mobile frames exist; flagged for sign-off) ──── */
+  @media (max-width: 640px) {
+    .subpage-hero__heading {
+      font-size: var(--font-size-h3);
+    }
+  }
+</style>

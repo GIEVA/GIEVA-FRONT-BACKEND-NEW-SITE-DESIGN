@@ -1,0 +1,587 @@
+---
+/**
+ * SiteSearch — the masthead's site-wide search: a JS-only progressive enhancement over
+ * Pagefind's static index (generated into /pagefind/ by the `pagefind` build step; the client
+ * loads it lazily on first open). It covers every page of both brands because Pagefind crawls
+ * the built HTML's `data-pagefind-body` regions (BaseLayout's <main>).
+ *
+ * Progressive enhancement (WORKFLOW.md §1.5 / non-negotiable #3): search is an *enhancement*,
+ * not content — all pages stay reachable via nav + footer — so it's legitimately JS-only. To
+ * avoid a dead affordance, the trigger ships `hidden` and the enhancement script reveals it;
+ * no-JS users simply never see it, rather than meeting a button that does nothing.
+ *
+ * Interaction (design 5891:5463 + designer direction): click magnifier → a frosted panel drops
+ * below the nav, spanning the nav group's width (measured from the element the host header tags
+ * `data-search-anchor`); type → results with the query highlighted in context (Pagefind's
+ * <mark> excerpts); magnifier morphs to ✕; ✕ / Escape / outside-click closes and restores focus.
+ *
+ * A11y: results are real <a> links (cmd-click / open-in-new-tab work) in roving Arrow-key focus,
+ * with an aria-live count — a robust "search results" pattern, deliberately NOT a strict
+ * aria-activedescendant combobox, so the links stay real. Full keyboard + visible focus +
+ * prefers-reduced-motion. Rendered once per page (BaseLayout picks one header), so the ids are
+ * unique.
+ */
+---
+
+<div class="site-search" data-site-search>
+  <button
+    type="button"
+    class="site-search__toggle"
+    aria-label="Search the site"
+    aria-expanded="false"
+    aria-controls="site-search-panel"
+    hidden
+  >
+    <svg
+      class="site-search__icon site-search__icon--search"
+      width="20"
+      height="20"
+      viewBox="0 0 20 20"
+      fill="none"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <circle cx="9" cy="9" r="7" stroke="currentColor" stroke-width="1.6"></circle>
+      <path
+        d="M14.5 14.5L19 19"
+        stroke="currentColor"
+        stroke-width="1.6"
+        stroke-linecap="round"></path>
+    </svg>
+    <svg
+      class="site-search__icon site-search__icon--close"
+      width="18"
+      height="18"
+      viewBox="0 0 18 18"
+      fill="none"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path
+        d="M1 1l16 16M17 1L1 17"
+        stroke="currentColor"
+        stroke-width="1.8"
+        stroke-linecap="round"></path>
+    </svg>
+  </button>
+
+  <div class="site-search__panel" id="site-search-panel" hidden>
+    <form class="site-search__form" role="search" novalidate>
+      <svg
+        class="site-search__form-icon"
+        width="20"
+        height="20"
+        viewBox="0 0 20 20"
+        fill="none"
+        aria-hidden="true"
+        focusable="false"
+      >
+        <circle cx="9" cy="9" r="7" stroke="currentColor" stroke-width="1.6"></circle>
+        <path
+          d="M14.5 14.5L19 19"
+          stroke="currentColor"
+          stroke-width="1.6"
+          stroke-linecap="round"></path>
+      </svg>
+      <label class="visually-hidden" for="site-search-input">Search GIEVA</label>
+      <input
+        type="search"
+        id="site-search-input"
+        class="site-search__input"
+        placeholder="Search GIEVA…"
+        autocomplete="off"
+        autocapitalize="none"
+        spellcheck="false"
+        enterkeyhint="search"
+        aria-describedby="site-search-status"
+      />
+    </form>
+
+    <p class="site-search__status" id="site-search-status" role="status" aria-live="polite">
+    </p>
+    <ul class="site-search__results" aria-label="Search results"></ul>
+  </div>
+</div>
+
+<style>
+  .site-search {
+    display: inline-flex;
+    align-items: center;
+    /* ✕ glyph used to mask the input's clear button (stroke colour is irrelevant under a mask —
+       the alpha channel is what masks; the tint comes from background-color). */
+    --search-clear-glyph: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M1.5 1.5l9 9M10.5 1.5l-9 9' stroke='%23000' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E");
+  }
+
+  /* Trigger — matches the header icon-link footprint it replaces. */
+  .site-search__toggle {
+    display: none; /* revealed (→ inline-flex) by the enhancement script; JS-only feature */
+    align-items: center;
+    justify-content: center;
+    inline-size: 2.5rem;
+    block-size: 2.5rem;
+    padding: 0;
+    color: var(--color-text-default);
+    background: none;
+    border: none;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+  }
+  .site-search__toggle:not([hidden]) {
+    display: inline-flex;
+  }
+  .site-search__toggle:hover {
+    color: var(--color-cta);
+  }
+  .site-search[data-open] .site-search__toggle {
+    color: var(--color-cta);
+  }
+  .site-search__icon {
+    transition: opacity var(--motion-fast) var(--easing-standard);
+  }
+  /* Magnifier ↔ ✕ crossfade driven by the open state. */
+  .site-search__icon--close {
+    display: none;
+  }
+  .site-search[data-open] .site-search__icon--search {
+    display: none;
+  }
+  .site-search[data-open] .site-search__icon--close {
+    display: block;
+  }
+
+  /* Panel — drops below the pill; JS sets left/width to align with the nav group. */
+  .site-search__panel {
+    position: absolute;
+    top: 100%;
+    inset-inline-start: 0;
+    margin-top: calc(var(--space-2xs) + 4px);
+    z-index: 60;
+    display: flex;
+    flex-direction: column;
+    padding: var(--space-sm);
+    border-radius: var(--radius-lg);
+    /* Solid white to match the nav dropdown surface (designer direction): plain
+       --color-surface-default with the same Mine Shaft @ 25% hairline the nav menus use.
+       A soft drop shadow keeps the floating search panel legible over any hero behind it. */
+    background: var(--color-surface-default);
+    border: 1px solid rgb(41 41 41 / 0.25);
+    box-shadow: 0 16px 40px rgb(0 0 0 / 0.16);
+  }
+  .site-search__panel[hidden] {
+    display: none;
+  }
+
+  .site-search__form {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2xs);
+    padding: var(--space-2xs) var(--space-xs);
+    border: 1px solid rgb(41 41 41 / 0.2);
+    border-radius: var(--radius-sm);
+    background: var(--color-surface-default);
+  }
+  .site-search__form:focus-within {
+    border-color: var(--color-cta);
+  }
+  .site-search__form-icon {
+    flex: none;
+    color: var(--color-mine-shaft);
+    opacity: 0.6;
+  }
+  .site-search__input {
+    flex: 1 1 auto;
+    min-inline-size: 0;
+    border: none;
+    background: none;
+    padding: var(--space-3xs) 0;
+    font-family: var(--font-family-base);
+    font-size: var(--type-body-lg-size);
+    line-height: var(--type-body-lg-line);
+    color: var(--color-text-default);
+  }
+  .site-search__input:focus {
+    outline: none; /* focus ring lives on the form wrapper via :focus-within */
+  }
+  .site-search__input::placeholder {
+    color: var(--color-mine-shaft);
+    opacity: 0.55;
+  }
+  /* Replace the browser's default (blue/grey) clear affordance with a design-language ✕: a
+     masked glyph tinted with our ink, warming to the CTA colour on hover — matching the rest of
+     the widget. WebKit/Blink only; other engines simply show no clear button (harmless). */
+  .site-search__input::-webkit-search-cancel-button {
+    -webkit-appearance: none;
+    appearance: none;
+    inline-size: 1rem;
+    block-size: 1rem;
+    margin-inline-start: var(--space-2xs);
+    cursor: pointer;
+    background-color: var(--color-mine-shaft);
+    opacity: 0.5;
+    mask: var(--search-clear-glyph) center / contain no-repeat;
+    transition:
+      background-color var(--motion-fast) var(--easing-standard),
+      opacity var(--motion-fast) var(--easing-standard);
+  }
+  .site-search__input::-webkit-search-cancel-button:hover {
+    background-color: var(--color-cta);
+    opacity: 1;
+  }
+
+  .site-search__status {
+    margin: var(--space-2xs) 0 0;
+    font-size: var(--font-size-caption, 0.875rem);
+    color: var(--color-mine-shaft);
+    opacity: 0.7;
+  }
+  .site-search__status:empty {
+    display: none;
+  }
+
+  .site-search__results {
+    margin: var(--space-2xs) 0 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3xs);
+    max-block-size: min(60vh, 420px);
+    overflow-y: auto;
+  }
+  .site-search__results:empty {
+    display: none;
+  }
+
+  /* Result rows are built at runtime by the enhancement script (document.createElement), so
+     they never receive Astro's scoped `data-astro-*` attribute — scoped selectors wouldn't
+     match them and the rows render as bare links. Author them as :global() (descendants of the
+     template-scoped .site-search__results, so they stay contained to this widget) so the styles
+     actually reach the JS-built nodes. The class names are namespaced, so leaking is a non-issue. */
+  .site-search__results :global(.site-search__result) {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-xs);
+    border-radius: var(--radius-md);
+    text-decoration: none;
+    color: var(--color-text-default);
+    transition:
+      background-color var(--motion-fast) var(--easing-standard),
+      box-shadow var(--motion-fast) var(--easing-standard);
+  }
+  /* Warm CTA tint on hover — the same hover family as the nav links, readable on the solid
+     white panel. The CTA-tinted focus ring keeps the roving keyboard focus clearly visible
+     (a11y gate). */
+  .site-search__results :global(.site-search__result:hover) {
+    background: rgb(230 83 32 / 0.08);
+  }
+  .site-search__results :global(.site-search__result:focus-visible) {
+    background: rgb(230 83 32 / 0.08);
+    outline: 2px solid var(--color-focus-ring);
+    outline-offset: 2px;
+  }
+
+  .site-search__results :global(.site-search__result-body) {
+    flex: 1 1 auto;
+    min-inline-size: 0;
+  }
+  .site-search__results :global(.site-search__result-head) {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-2xs);
+  }
+  .site-search__results :global(.site-search__result-title) {
+    font-weight: var(--font-weight-bold);
+    font-size: var(--type-body-lg-size);
+    line-height: var(--type-body-lg-line);
+  }
+  .site-search__results :global(.site-search__result-brand) {
+    flex: none;
+    font-size: 0.75rem;
+    letter-spacing: var(--letter-spacing-narrow, 0.02em);
+    text-transform: uppercase;
+    /* Semantic muted token (#636366 on white ≈ 5.7:1) — clears AA for this small label. A
+       mine-shaft@0.6 tint blends to ~4.0:1 and fails the a11y gate. */
+    color: var(--color-text-muted);
+  }
+  .site-search__results :global(.site-search__result-excerpt) {
+    margin: var(--space-3xs) 0 0;
+    font-size: var(--font-size-caption, 0.875rem);
+    line-height: var(--line-height-body, 1.5);
+    color: var(--color-mine-shaft);
+    /* Keep excerpts to two lines so long pages don't produce lopsided rows. */
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+  }
+  .site-search__results :global(.site-search__result-excerpt mark) {
+    background: rgb(230 83 32 / 0.22);
+    color: inherit;
+    border-radius: 2px;
+    padding: 0 1px;
+  }
+
+  /* Arrow affordance — a short arrow at rest that extends (line grows left→right, head slides
+     out) and warms to the CTA colour as the row is hovered/focused. Decorative (aria-hidden). */
+  .site-search__results :global(.site-search__result-arrow) {
+    flex: none;
+    align-self: center;
+    inline-size: 22px;
+    block-size: 16px;
+    color: var(--color-mine-shaft);
+    opacity: 0.4;
+    transform: translateX(-2px);
+    transition:
+      color var(--motion-base) var(--easing-standard),
+      opacity var(--motion-base) var(--easing-standard),
+      transform var(--motion-base) var(--easing-standard);
+  }
+  .site-search__results :global(.site-search__result-arrow-line) {
+    transform-origin: left center;
+    transform: scaleX(0.3);
+    transition: transform var(--motion-base) var(--easing-standard);
+  }
+  .site-search__results :global(.site-search__result-arrow-head) {
+    transform: translateX(-9px);
+    transition: transform var(--motion-base) var(--easing-standard);
+  }
+  .site-search__results :global(.site-search__result:hover .site-search__result-arrow),
+  .site-search__results
+    :global(.site-search__result:focus-visible .site-search__result-arrow) {
+    color: var(--color-cta);
+    opacity: 1;
+    transform: translateX(2px);
+  }
+  .site-search__results :global(.site-search__result:hover .site-search__result-arrow-line),
+  .site-search__results
+    :global(.site-search__result:focus-visible .site-search__result-arrow-line) {
+    transform: scaleX(1);
+  }
+  .site-search__results :global(.site-search__result:hover .site-search__result-arrow-head),
+  .site-search__results
+    :global(.site-search__result:focus-visible .site-search__result-arrow-head) {
+    transform: translateX(0);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .site-search__icon {
+      transition: none;
+    }
+    .site-search__results :global(.site-search__result),
+    .site-search__results :global(.site-search__result-arrow),
+    .site-search__results :global(.site-search__result-arrow-line),
+    .site-search__results :global(.site-search__result-arrow-head) {
+      transition: none;
+    }
+  }
+</style>
+
+<script>
+  /**
+   * SiteSearch enhancement. Reveals the trigger, wires open/close + focus management, and
+   * queries Pagefind (loaded lazily on first open). See the component doc-comment for the
+   * a11y model. Guarded end-to-end: if the Pagefind bundle is missing (e.g. `astro dev` with
+   * no prior build), search degrades to a friendly "unavailable" message rather than throwing.
+   */
+  type PagefindResult = {
+    url: string;
+    excerpt: string;
+    meta: Record<string, string>;
+  };
+  type PagefindModule = {
+    init: () => Promise<void>;
+    search: (q: string) => Promise<{ results: { data: () => Promise<PagefindResult> }[] }>;
+  };
+
+  // Static, trusted markup — the extending arrow affordance appended to each result row.
+  const RESULT_ARROW = `
+    <svg class="site-search__result-arrow" viewBox="0 0 22 16" width="22" height="16" fill="none" aria-hidden="true" focusable="false">
+      <path class="site-search__result-arrow-line" d="M1 8H15" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+      <path class="site-search__result-arrow-head" d="M11 3l5 5-5 5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>`;
+
+  const root = document.querySelector<HTMLElement>('[data-site-search]');
+  const toggle = root?.querySelector<HTMLButtonElement>('.site-search__toggle');
+  const panel = root?.querySelector<HTMLElement>('.site-search__panel');
+  const form = root?.querySelector<HTMLFormElement>('.site-search__form');
+  const input = root?.querySelector<HTMLInputElement>('.site-search__input');
+  const status = root?.querySelector<HTMLElement>('.site-search__status');
+  const results = root?.querySelector<HTMLUListElement>('.site-search__results');
+
+  if (root && toggle && panel && form && input && status && results) {
+    // The pill is the positioned ancestor; the nav group is what the panel aligns to.
+    const pill = toggle.closest<HTMLElement>('.site-header__pill, .ngo-header__bar');
+    const anchor = pill?.querySelector<HTMLElement>('[data-search-anchor]');
+
+    let loadPromise: Promise<PagefindModule | null> | null = null;
+    let debounce: ReturnType<typeof setTimeout>;
+    let seq = 0; // guards against out-of-order async result renders
+
+    // JS is present: reveal the trigger (baseline hides it — see the component doc-comment).
+    toggle.hidden = false;
+
+    function loadPagefind(): Promise<PagefindModule | null> {
+      if (!loadPromise) {
+        loadPromise = (async () => {
+          try {
+            const mod = (await import(
+              /* @vite-ignore */ `${import.meta.env.BASE_URL}pagefind/pagefind.js`
+            )) as PagefindModule;
+            await mod.init();
+            return mod;
+          } catch {
+            return null;
+          }
+        })();
+      }
+      return loadPromise;
+    }
+
+    function positionPanel() {
+      if (!anchor || !pill) return;
+      const a = anchor.getBoundingClientRect();
+      const p = pill.getBoundingClientRect();
+      panel!.style.insetInlineStart = `${a.left - p.left}px`;
+      panel!.style.inlineSize = `${a.width}px`;
+    }
+
+    function renderResults(items: PagefindResult[], query: string) {
+      results!.replaceChildren();
+      for (const item of items) {
+        const li = document.createElement('li');
+        const a = document.createElement('a');
+        a.className = 'site-search__result';
+        a.href = item.url;
+
+        const body = document.createElement('div');
+        body.className = 'site-search__result-body';
+
+        const head = document.createElement('div');
+        head.className = 'site-search__result-head';
+        const title = document.createElement('span');
+        title.className = 'site-search__result-title';
+        title.textContent = item.meta.title ?? 'Untitled';
+        head.append(title);
+        if (item.meta.brand) {
+          const brand = document.createElement('span');
+          brand.className = 'site-search__result-brand';
+          brand.textContent = item.meta.brand;
+          head.append(brand);
+        }
+
+        const excerpt = document.createElement('p');
+        excerpt.className = 'site-search__result-excerpt';
+        // Pagefind excerpts are its own escaped index content with only <mark> injected — safe.
+        excerpt.innerHTML = item.excerpt;
+
+        body.append(head, excerpt);
+        a.append(body);
+        a.insertAdjacentHTML('beforeend', RESULT_ARROW);
+        li.append(a);
+        results!.append(li);
+      }
+      status!.textContent = items.length
+        ? `${items.length} result${items.length === 1 ? '' : 's'} for “${query}”`
+        : `No results for “${query}”`;
+    }
+
+    async function search(query: string) {
+      const trimmed = query.trim();
+      if (!trimmed) {
+        results!.replaceChildren();
+        status!.textContent = '';
+        return;
+      }
+      const mine = ++seq;
+      status!.textContent = 'Searching…';
+      const pf = await loadPagefind();
+      if (mine !== seq) return; // a newer keystroke superseded this one
+      if (!pf) {
+        results!.replaceChildren();
+        status!.textContent = 'Search is unavailable right now.';
+        return;
+      }
+      const res = await pf.search(trimmed);
+      if (mine !== seq) return;
+      const items = await Promise.all(res.results.slice(0, 8).map((r) => r.data()));
+      if (mine !== seq) return;
+      renderResults(items, trimmed);
+    }
+
+    function openSearch() {
+      root!.setAttribute('data-open', '');
+      panel!.hidden = false;
+      toggle!.setAttribute('aria-expanded', 'true');
+      toggle!.setAttribute('aria-label', 'Close search');
+      positionPanel();
+      input!.focus();
+      loadPagefind(); // warm the index while the user starts typing
+      document.addEventListener('pointerdown', onOutsidePointer, true);
+      window.addEventListener('resize', positionPanel);
+    }
+
+    function closeSearch(restoreFocus = true) {
+      root!.removeAttribute('data-open');
+      panel!.hidden = true;
+      toggle!.setAttribute('aria-expanded', 'false');
+      toggle!.setAttribute('aria-label', 'Search the site');
+      document.removeEventListener('pointerdown', onOutsidePointer, true);
+      window.removeEventListener('resize', positionPanel);
+      if (restoreFocus) toggle!.focus();
+    }
+
+    function onOutsidePointer(e: PointerEvent) {
+      if (!root!.contains(e.target as Node)) closeSearch(false);
+    }
+
+    function resultLinks() {
+      return Array.from(results!.querySelectorAll<HTMLAnchorElement>('.site-search__result'));
+    }
+
+    toggle.addEventListener('click', () => {
+      if (root.hasAttribute('data-open')) closeSearch();
+      else openSearch();
+    });
+
+    form.addEventListener('submit', (e) => e.preventDefault());
+
+    input.addEventListener('input', () => {
+      clearTimeout(debounce);
+      debounce = setTimeout(() => search(input.value), 150);
+    });
+
+    // Roving focus: ArrowDown from the input enters the results; Arrow keys move between them.
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowDown') {
+        const links = resultLinks();
+        if (links.length) {
+          e.preventDefault();
+          links[0].focus();
+        }
+      }
+    });
+
+    results.addEventListener('keydown', (e) => {
+      const links = resultLinks();
+      const i = links.indexOf(document.activeElement as HTMLAnchorElement);
+      if (i === -1) return;
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        (links[i + 1] ?? links[0]).focus();
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (i === 0) input.focus();
+        else links[i - 1].focus();
+      }
+    });
+
+    // Escape closes from anywhere inside the widget.
+    root.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && root.hasAttribute('data-open')) {
+        e.stopPropagation();
+        closeSearch();
+      }
+    });
+  }
+</script>

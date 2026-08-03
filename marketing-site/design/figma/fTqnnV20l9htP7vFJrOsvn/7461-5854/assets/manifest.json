@@ -1,0 +1,58 @@
+{
+  "vectors": [
+    {
+      "id": "7461:6250",
+      "name": "mail-01",
+      "kind": "icon",
+      "file": "icon-7461-6250.svg"
+    },
+    {
+      "id": "7956:30201",
+      "name": "LOGO",
+      "kind": "icon",
+      "file": "icon-7956-30201.svg"
+    },
+    {
+      "id": "7956:30263",
+      "name": "oo-social-links → List",
+      "kind": "icon",
+      "file": "icon-7956-30263.svg"
+    },
+    {
+      "id": "I7461:6198;4547:22453",
+      "name": "ng-icon",
+      "kind": "icon",
+      "file": "icon-I7461-6198;4547-22453.svg"
+    },
+    {
+      "id": "I7461:6277;5995:7314",
+      "name": "ArrowRight",
+      "kind": "icon",
+      "file": "icon-I7461-6277;5995-7314.svg"
+    },
+    {
+      "id": "7461:6177",
+      "name": "call-02",
+      "kind": "icon",
+      "file": "icon-7461-6177-call-02.svg"
+    },
+    {
+      "id": "7472:5856",
+      "name": "time-schedule",
+      "kind": "icon",
+      "file": "icon-7472-5856-time-schedule.svg"
+    }
+  ],
+  "fills": [
+    {
+      "imageRef": "3172f31ce44b7c8cfb0a897f5d748407dc9e6cbc",
+      "sourceNode": "I7956:30201;5857:4414",
+      "name": "Gemini_Generated_Image_uvhg9uuvhg9uuvhg 1",
+      "file": "fill-3172f31ce44b7c8cfb0a897f5d748407dc9e6cbc.png"
+    }
+  ],
+  "notes": [
+    "WebP skipped (install `sharp` to enable re-encoding)",
+    "call-02 (7461:6177) and time-schedule (7472:5856) weren't captured by the original figma:fetch run — they sit one level deeper than the top-level 'icon'-tagged nodes the ingestion script matches. Pulled individually via Framelink's download_figma_images during the Phase 5 Contact build, not a re-fetch of the page."
+  ]
+}

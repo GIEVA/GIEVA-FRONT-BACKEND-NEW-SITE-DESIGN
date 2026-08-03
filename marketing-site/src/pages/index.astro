@@ -7,14 +7,17 @@
  * node's `visible` flag, not guessed):
  *   - Several sections carry a hidden, unedited placeholder heading ("— Every Major Test.
  *     One Trusted Partner.") behind the real one — `visible: false` in node.json, omitted.
- *   - The CTA paragraph's source text ends with a pasted "Book Free ConsultationView All
- *     Services" fragment duplicating the two buttons below it — an evident copy/paste slip,
- *     not real copy. Trimmed to the intended sentence.
+ *   - The closing CTA band is the shared `CtaSection.astro` — one Figma component instantiated
+ *     identically here and on /services, /about and /team. See that file for the confirmed
+ *     text (including its forced line break) and the copy/paste artifact it trims.
  *   - Core Team repeats one placeholder photo/name/role 4×, and the testimonial quote/name
  *     repeats 3× — that's the design's real (not-yet-personalised) content, kept as-is.
  */
 import BaseLayout from '@layouts/BaseLayout.astro';
 import Button from '@components/Button.astro';
+import PartnersMarquee from '@components/PartnersMarquee.astro';
+import TeamCard from '@components/TeamCard.astro';
+import CtaSection from '@components/CtaSection.astro';
 import { Image } from 'astro:assets';
 import {
   heroRing,
@@ -33,25 +36,19 @@ const stats = [
   { value: '98%', label: 'Success Rate' },
 ];
 
+/* All three cards share one description in the design — the service-card component's default,
+   never overridden per instance (verified against every card in node.json and against a render
+   of 6007:8054). It is placeholder copy from an unrelated project, so it will be replaced; kept
+   verbatim meanwhile, including the blank line between its two paragraphs, which the card's
+   3-line clamp cuts before it ever renders. */
+const serviceDescription = `Peacebuilders rely on research as an important tool to enable them to study and understand conflict. It is also important to coordinate the various stakeholders to ensure the creation and sustenance of strategic partnerships.
+
+By having research, coordination and partnership as an area of thematic focus, we aim to transition the state of negative to positive peace through sustained research, systematic documentation, robust coordination and strategic partnership.`;
+
 const services = [
-  {
-    number: '01',
-    title: 'Test Registration',
-    description:
-      'Peacebuilders rely on research as an important tool to enable them to study and understand conflict. It is also important to coordinate the various stakeholders to ensure the creation and sustenance of strategic partnerships. By having research, coordination and partnership as an area of thematic focus, we aim to transition the state of negative to positive peace through sustained research, systematic documentation, robust coordination and strategic partnership.',
-  },
-  {
-    number: '02',
-    title: 'Study Abroad',
-    description:
-      'Peacebuilders rely on research as an important tool to enable them to study and understand conflict. It is also important to coordinate the various stakeholders to ensure the creation and sustenance of strategic partnerships. By having research, coordination and partnership as an area of thematic focus, we aim to transition the state of negative to positive peace through sustained research, systematic documentation, robust coordination and strategic partnership.',
-  },
-  {
-    number: '03',
-    title: 'Professional Development',
-    description:
-      'Peacebuilders rely on research as an important tool to enable them to study and understand conflict. It is also important to coordinate the various stakeholders to ensure the creation and sustenance of strategic partnerships. By having research, coordination and partnership as an area of thematic focus, we aim to transition the state of negative to positive peace through sustained research, systematic documentation, robust coordination and strategic partnership.',
-  },
+  { number: '01', title: 'Test Registration', description: serviceDescription },
+  { number: '02', title: 'Study Abroad', description: serviceDescription },
+  { number: '03', title: 'Professional Development', description: serviceDescription },
 ];
 
 const team = Array.from({ length: 4 }, () => ({
@@ -61,6 +58,13 @@ const team = Array.from({ length: 4 }, () => ({
 
 const testimonialQuote =
   "The GIEVA team walked me through every step of my TOEFL registration. They even helped me pick test centres I didn't know existed. I got my scores in record time and reported them to my target schools the same week.";
+/* `focus` sets the photo's `object-position`. The design's image fills are `scaleMode: FILL`
+   with no `imageTransform`, i.e. Figma's default centre crop — the designer never made a
+   framing decision, they inherited one. On these three portraits the default puts the quote
+   (which starts 232px down a 520px card) straight across a face: measured from the source
+   pixels, the face centre lands at ~150px on photo 1 but ~224px on photo 2 and ~261px on
+   photo 3, and the design render (frame.png, ~y4834) shows exactly that. Cropping from the
+   bottom lifts both faces clear. Photo 1's default crop already works, so it keeps it. */
 const testimonials = [
   {
     photo: testimonial1,
@@ -71,11 +75,13 @@ const testimonials = [
     photo: testimonial2,
     name: 'Tolulope Ogunwale',
     role: 'TOEFL CLIENT Admitted to University of Michigan',
+    focus: 'center bottom',
   },
   {
     photo: testimonial3,
     name: 'Tolulope Ogunwale',
     role: 'TOEFL CLIENT Admitted to University of Michigan',
+    focus: 'center bottom',
   },
 ];
 
@@ -113,18 +119,26 @@ const faqs = [
     <div class="container hero__grid">
       <div class="hero__content">
         <span class="hero__badge">Educational Consultancy</span>
+        {
+          /* Hard line breaks mirror the design's forced separators (node 5898:5918:
+            "Your Gateway to" / "Global Academic" / "Excellence."); the &nbsp; binds
+            "Global Academic" so line 2 never splits. Explicit breaks over width-based
+            wrapping keeps parity robust against font-metric drift. */
+        }
         <h1 class="u-hero hero__heading">
-          Your Gateway to <em class="u-accent-em">Global</em> Academic <em class="u-accent-em"
-            >Excellence.</em
-          >
+          Your Gateway to<br />
+          <em class="u-accent-em">Global</em>&nbsp;Academic<br />
+          <em class="u-accent-em">Excellence.</em>
         </h1>
         <p class="u-body-lg hero__lead">
           From standardized test registration to university admissions — GIEVA's certified
           counselors guide every step of your international education journey.
         </p>
         <div class="hero__actions">
-          <Button variant="primary" href="/book-consultancy">Book Consultancy</Button>
-          <Button variant="secondary" href="/services">Take Test</Button>
+          <Button variant="primary" href="/book-consultancy" arrow={false}
+            >Book Consultancy</Button
+          >
+          <Button variant="secondary" href="/services" arrow={false}>Take Test</Button>
         </div>
       </div>
 
@@ -151,72 +165,41 @@ const faqs = [
       </div>
     </div>
 
-    <div class="partners">
-      <div class="container partners__row">
-        <p class="u-eyebrow partners__label">Trusted Partners</p>
-        <div class="partners__viewport">
-          <ul role="list" class="partners__track">
-            {
-              [...partnerLogos, ...partnerLogos].map((logo, i) => {
-                const hidden = i >= partnerLogos.length;
-                const alt = hidden ? '' : logo.name;
-                const style = `--logo-h: ${logo.height}px`;
-                return (
-                  <li
-                    class="partners__item"
-                    style={style}
-                    aria-hidden={hidden ? 'true' : undefined}
-                  >
-                    {typeof logo.src === 'string' ? (
-                      <img src={logo.src} alt={alt} />
-                    ) : (
-                      <Image src={logo.src} alt={alt} height={logo.height} width={200} />
-                    )}
-                  </li>
-                );
-              })
-            }
-          </ul>
-        </div>
-      </div>
-    </div>
+    <PartnersMarquee logos={partnerLogos} />
   </section>
 
   <!-- ── Who We Are ───────────────────────────────────────────────────────────── -->
   <section class="section who">
-    <div class="container who__grid">
-      <div class="who__intro">
-        <p class="u-eyebrow">Who We Are</p>
-        <h2 class="u-section-title">
+    <div class="container who__block">
+      <p class="u-eyebrow">Who We Are</p>
+      <div class="who__grid">
+        <h2 class="u-section-title who__heading">
           Global Integrated Education Volunteers Association (GIEVA)
         </h2>
-      </div>
-      <div class="who__body">
-        <p class="u-body-lg">
-          Global Integrated Education Volunteers Association (GIEVA) was registered in 2006 as
-          a nonprofit organization to improve access to quality education and global learning
-          opportunities among young Nigerians. Over the years, GIEVA has grown to serve over
-          1,000 young Nigerians annually, with a strong focus on inclusive education, digital
-          empowerment, and youth development.
-        </p>
-        <Button variant="secondary" href="/about">Learn more about us</Button>
+        <div class="who__body">
+          <p class="u-body-lg">
+            Global Integrated Education Volunteers Association (GIEVA) was registered in 2006
+            as a nonprofit organization to improve access to quality education and global
+            learning opportunities among young Nigerians. Over the years, GIEVA has grown to
+            serve over 1,000 young Nigerians annually, with a strong focus on inclusive
+            education, digital empowerment, and youth development.
+          </p>
+          <Button variant="secondary" href="/about" arrow={false}>Learn more about us</Button>
+        </div>
       </div>
     </div>
 
     <div class="container">
       <div class="who__photo-wrap">
         <Image src={whoWeArePhoto} alt="" width={1312} height={670} class="who__photo" />
+        <div class="who__wash" aria-hidden="true"></div>
+        <div class="who__frost" aria-hidden="true"></div>
         <ul role="list" class="who__stats">
           {
             stats.map((stat, i) => (
-              <li
-                class="who__stat"
-                style={
-                  i > 0 ? 'border-inline-start: 1px solid rgb(255 255 255 / 0.25)' : undefined
-                }
-              >
+              <li class="who__stat" data-divider={i > 0 ? '' : undefined}>
                 <p class="u-h2 who__stat-value">{stat.value}</p>
-                <p class="u-body-lg who__stat-label">{stat.label}</p>
+                <p class="who__stat-label">{stat.label}</p>
               </li>
             ))
           }
@@ -231,7 +214,7 @@ const faqs = [
       <div class="services__intro">
         <p class="u-eyebrow">Consultancy Services</p>
         <h2 class="u-section-title">
-          We don't just register you. <br />We guide you <em class="u-accent-em"
+          We don't just register you. <br />We&nbsp;guide&nbsp;you <em class="u-accent-em"
             >all the way to acceptance.</em
           >
         </h2>
@@ -246,13 +229,18 @@ const faqs = [
           services.map((service) => (
             <li class="services__card">
               <span class="services__number">{service.number}</span>
-              <div class="services__card-body">
-                <h3 class="services__card-title">{service.title}</h3>
-                <p class="u-body-lg services__card-desc">{service.description}</p>
+              {/* The title/divider/description group and its CTA form one block pinned to the
+                  bottom of the card, 96px apart — the card's space-between only separates that
+                  block from the number badge (node 6007:8055). */}
+              <div class="services__card-foot">
+                <div class="services__card-body">
+                  <h3 class="services__card-title">{service.title}</h3>
+                  <p class="u-body-lg services__card-desc">{service.description}</p>
+                </div>
+                <Button variant="link" href="/services">
+                  Learn more
+                </Button>
               </div>
-              <Button variant="link" href="/services">
-                Learn more
-              </Button>
             </li>
           ))
         }
@@ -277,12 +265,8 @@ const faqs = [
       <ul role="list" class="team__grid">
         {
           team.map((member) => (
-            <li class="team__card">
-              <Image src={teamPhoto} alt="" width={310} height={380} class="team__photo" />
-              <div class="team__card-info">
-                <p class="team__name">{member.name}</p>
-                <p class="team__role">{member.role}</p>
-              </div>
+            <li>
+              <TeamCard src={teamPhoto} name={member.name} role={member.role} />
             </li>
           ))
         }
@@ -317,19 +301,24 @@ const faqs = [
       <ul role="list" class="testimonials__grid">
         {
           testimonials.map((t) => (
-            <li class="testimonials__card">
-              <Image
-                src={t.photo}
-                alt=""
-                width={421}
-                height={520}
-                class="testimonials__photo"
-              />
-              <div class="testimonials__card-body">
-                <p class="testimonials__quote">“{testimonialQuote}”</p>
-                <p class="testimonials__name">{t.name}</p>
-                <p class="testimonials__role">{t.role}</p>
-              </div>
+            <li>
+              <figure class="testimonials__card">
+                <Image
+                  src={t.photo}
+                  alt=""
+                  width={421}
+                  height={520}
+                  class="testimonials__photo"
+                  style={t.focus ? `object-position: ${t.focus}` : undefined}
+                />
+                <figcaption class="testimonials__card-body">
+                  <blockquote class="testimonials__quote u-body-lg">
+                    <p>“{testimonialQuote}”</p>
+                  </blockquote>
+                  <p class="testimonials__name u-lead">{t.name}</p>
+                  <p class="testimonials__role u-body-lg">{t.role}</p>
+                </figcaption>
+              </figure>
             </li>
           ))
         }
@@ -354,8 +343,13 @@ const faqs = [
 
       <div class="faq__list">
         {
+          /* `name` groups these into an exclusive accordion — the browser closes the
+            open sibling for us. Pre-2024 browsers ignore it and simply allow several
+            open at once, which is the behaviour we had before. */
+        }
+        {
           faqs.map((faq) => (
-            <details class="faq__item">
+            <details class="faq__item" name="faq">
               <summary class="faq__question">
                 {faq.question}
                 <span class="faq__toggle" aria-hidden="true" />
@@ -371,22 +365,7 @@ const faqs = [
   <!-- ── CTA ──────────────────────────────────────────────────────────────────── -->
   <section class="section cta">
     <div class="container">
-      <div class="cta__card surface-inverse" data-surface="inverse">
-        <div class="cta__text">
-          <p class="u-eyebrow">Get in Touch</p>
-          <h2 class="u-section-title">
-            Ready to Take Your <em class="u-accent-em">First Step?</em>
-          </h2>
-          <p class="u-body-lg">
-            Book a free consultation with a GIEVA counselor today. No commitment, no pressure —
-            just clarity on your path forward.
-          </p>
-        </div>
-        <div class="cta__actions">
-          <Button variant="primary" href="/book-consultancy">Book Consultancy</Button>
-          <Button variant="secondary" href="/services">View all Services</Button>
-        </div>
-      </div>
+      <CtaSection />
     </div>
   </section>
 </BaseLayout>
@@ -417,7 +396,7 @@ const faqs = [
   }
   .hero__content {
     display: grid;
-    gap: var(--space-lg);
+    gap: var(--space-xl); /* 40px — design itemSpacing on the content stack (node 5891:4670) */
   }
   .hero__badge {
     display: inline-block;
@@ -426,17 +405,20 @@ const faqs = [
     border: 1px solid var(--color-border-subtle);
     border-radius: var(--radius-sm);
     font-size: var(--type-body-size);
-    color: var(--color-text-default);
+    /* Confirmed design value (node 5898:5920): #171717, distinct from body text
+       --color-text-default (#292929). Composed inline as a page-local one-off. */
+    color: #171717;
     text-transform: uppercase;
-    letter-spacing: var(--type-eyebrow-tracking);
+    letter-spacing: var(--letter-spacing-none); /* design ls=0, not the eyebrow's -0.16px */
   }
   .hero__heading {
     color: var(--color-violet);
-    max-width: 16ch;
+    /* No max-width: the <br />s above control line breaks exactly (parity with node 5898:5918). */
   }
   .hero__lead {
     color: var(--color-violet);
-    max-width: 48ch;
+    /* No narrow cap: the lead fills the 656px content column and wraps to 2 lines,
+       matching the design (node 5891:5707 is 656px wide × 48px tall = 2 × 24px). */
   }
   .hero__actions {
     display: flex;
@@ -452,9 +434,13 @@ const faqs = [
     height: auto;
   }
   .hero__ngo-link {
-    position: absolute;
-    right: 6%;
-    bottom: 12%;
+    /* Persistent cross-site switcher: fixed to the viewport's bottom-right so it stays
+       reachable as the page scrolls. No transformed ancestor in the hero, so `fixed`
+       anchors to the viewport (not .hero__visual). */
+    position: fixed;
+    right: var(--space-lg);
+    bottom: var(--space-lg);
+    z-index: 45; /* above page content, below the sticky header (50) and skip link (100) */
     display: inline-flex;
     align-items: center;
     gap: var(--space-2xs);
@@ -466,98 +452,48 @@ const faqs = [
     font-weight: var(--font-weight-bold);
     font-size: var(--type-body-lg-size);
     text-decoration: none;
+    box-shadow: 0 2px 12px rgb(14 62 64 / 0.2); /* legibility when overlapping content */
   }
   .hero__ngo-link:hover {
     background: var(--color-green);
     color: var(--color-white);
   }
 
-  /* ── Trusted partners marquee ──────────────────────────────────────────── */
-  .partners {
-    padding-block: var(--space-lg) var(--space-2xl);
-  }
-  .partners__row {
-    display: flex;
-    align-items: center;
-    gap: var(--space-lg);
-  }
-  .partners__label {
-    flex: none;
-  }
-  .partners__viewport {
-    flex: 1;
-    min-width: 0;
-    overflow: hidden;
-    mask-image: linear-gradient(
-      to right,
-      transparent,
-      black var(--space-lg),
-      black 95%,
-      transparent
-    );
-  }
-  .partners__track {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2xl);
-    width: max-content;
-    padding-inline-end: var(--space-2xl);
-    animation: partners-scroll 36s linear infinite;
-  }
-  .partners__item {
-    display: flex;
-    align-items: center;
-    flex: none;
-    block-size: var(--logo-h);
-  }
-  .partners__item :global(img) {
-    height: 100%;
-    width: auto;
-    object-fit: contain;
-    filter: grayscale(1);
-    opacity: 0.7;
-  }
-  @keyframes partners-scroll {
-    from {
-      transform: translateX(0);
-    }
-    to {
-      transform: translateX(-50%);
-    }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .partners__track {
-      animation: none;
-    }
-  }
-
   /* ── Who We Are ─────────────────────────────────────────────────────────── */
-  .who__grid {
-    display: grid;
-    grid-template-columns: minmax(0, 616px) 1fr;
-    gap: var(--space-xl);
-    margin-bottom: var(--space-4xl);
-  }
-  .who__intro,
-  .who__body {
+  /* The eyebrow sits above BOTH columns (node 7152:5162), so the heading and the body copy
+     start on the same baseline — it is not part of the left column. */
+  .who__block {
     display: grid;
     gap: var(--space-sm);
-    align-content: start;
+    margin-bottom: var(--space-4xl);
   }
-  .who__intro h2 {
+  /* Geometry from node 7152:5164: 640 / 40 / 632 columns inside the 1312 content column. */
+  .who__grid {
+    display: grid;
+    grid-template-columns: minmax(0, 640px) 1fr;
+    gap: var(--space-xl);
+    align-items: start;
+  }
+  .who__heading {
     color: var(--color-violet);
   }
+  /* 64px between the paragraph and its CTA (node 7152:5167, itemSpacing 64). */
+  .who__body {
+    display: grid;
+    align-content: start;
+    gap: var(--space-3xl);
+  }
   .who__body p {
-    color: var(--color-text-default);
-    margin-bottom: var(--space-sm);
+    color: var(--color-black); /* node 7152:5169 is pure black, not the default body grey */
   }
   .who__body :global(.btn) {
     justify-self: start;
   }
 
+  /* The photo itself carries no corner radius in the design (node 7152:5182) — only the
+     overlays do, so the wash keeps its 12px while the image stays square. */
   .who__photo-wrap {
     position: relative;
-    border-radius: var(--radius-md);
     overflow: hidden;
   }
   .who__photo {
@@ -565,36 +501,126 @@ const faqs = [
     height: auto;
     display: block;
   }
+  /* Top half: white @ 10% wash (node 7152:5183). */
+  .who__wash {
+    position: absolute;
+    inset-inline: 0;
+    top: 0;
+    height: 50%;
+    border-radius: var(--radius-md);
+    background: var(--color-white-10);
+    pointer-events: none;
+  }
+  /* Bottom half: progressive frost (node 7152:5184's BACKGROUND_BLUR, blurType PROGRESSIVE,
+     radius ramping 0 at the top of the frame to 64 at the bottom). CSS has no progressive
+     blur, so this stacks three uniform backdrop-filters, each faded in by a gradient mask
+     that starts lower than the one below it — the overlap approximates the ramp far more
+     smoothly than a single masked layer, which reads as a hard band. */
+  .who__frost {
+    position: absolute;
+    inset-inline: 0;
+    bottom: 0;
+    height: 50%;
+    pointer-events: none;
+  }
+  .who__frost::before,
+  .who__frost::after,
+  .who__stats::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+  .who__frost::before {
+    backdrop-filter: blur(4px);
+    mask-image: linear-gradient(to bottom, transparent 0%, #000 45%);
+  }
+  .who__frost::after {
+    backdrop-filter: blur(12px);
+    mask-image: linear-gradient(to bottom, transparent 35%, #000 75%);
+  }
+  /* Bottom half: scrim + stats (node 7152:5184) — the gradient runs the full half-height and
+     tops out at 32% black, so the photo stays readable underneath. */
   .who__stats {
     position: absolute;
     inset-inline: 0;
     bottom: 0;
+    height: 50%;
     display: flex;
-    padding: var(--space-xl);
-    background: linear-gradient(to top, rgb(0 0 0 / 0.85), transparent);
+    align-items: flex-end;
+    /* 32px on the scrim + 32px on the inner row = 64px inset from the photo edge. */
+    padding: var(--space-3xl);
+    /* 40px each side of a zero-width divider ⇒ 80px between cards, giving 236px cards. */
+    gap: calc(2 * var(--space-xl));
+    background: linear-gradient(to bottom, transparent, rgb(0 0 0 / 0.32));
+  }
+  /* Deepest frost layer — also absorbs node 7152:5185's separate blur(10) behind the stat
+     row, which is not worth a fourth stacked backdrop-filter on top of this. */
+  .who__stats::before {
+    backdrop-filter: blur(24px);
+    mask-image: linear-gradient(to bottom, transparent 55%, #000 100%);
+  }
+  /* Safari < 18 only ships the prefixed property. It has to live in its own @supports block:
+     Lightning CSS collapses a prefixed/standard pair written in the SAME declaration block
+     down to just the prefixed one, silently dropping the standard property that Chrome and
+     Firefox need (neither supports the -webkit- alias). Chrome fails this query, so it never
+     sees these declarations. */
+  @supports (-webkit-backdrop-filter: blur(1px)) {
+    .who__frost::before {
+      -webkit-backdrop-filter: blur(4px);
+    }
+    .who__frost::after {
+      -webkit-backdrop-filter: blur(12px);
+    }
+    .who__stats::before {
+      -webkit-backdrop-filter: blur(24px);
+    }
   }
   .who__stat {
+    position: relative;
     flex: 1;
+    display: grid;
+    gap: var(--space-md);
+    align-content: center;
+    justify-items: center;
     text-align: center;
-    padding-inline: var(--space-md);
+    /* Design card is 236x168 with 32/64 padding, but its text nodes overflow that padding
+       box rather than wrapping — so only the 32px block padding is load-bearing here. */
+    padding-block: var(--space-lg);
   }
-  .who__stat-value,
+  /* Full-card-height hairline centred in the gap (nodes 7152:5192/5199/5206). */
+  .who__stat[data-divider]::before {
+    content: '';
+    position: absolute;
+    inset-block: 0;
+    inset-inline-start: calc(-1 * var(--space-xl));
+    width: 1px;
+    background: var(--color-white);
+  }
+  .who__stat-value {
+    color: var(--color-white);
+  }
   .who__stat-label {
     color: var(--color-white);
+    font-size: var(--type-body-lg-size);
+    line-height: var(--type-body-lg-line);
+    font-weight: var(--font-weight-bold);
+    letter-spacing: normal; /* node 7152:5190 tracks at 0, unlike the -0.16px body default */
   }
 
   /* ── Consultancy Services ──────────────────────────────────────────────── */
   .services__intro {
     display: grid;
     gap: var(--space-sm);
-    max-width: 52rem;
+    max-width: 817px; /* the design's text column (nodes 6007:8047/8049), not a round rem cap */
     margin-bottom: var(--space-4xl);
   }
   .services__intro h2 {
     color: var(--color-violet);
   }
   .services__intro p.u-body-lg {
-    color: var(--color-text-default);
+    /* node 6007:8051 is #120633 — the heading violet, not the default body grey. */
+    color: var(--color-violet);
   }
   .services__grid {
     display: grid;
@@ -604,11 +630,38 @@ const faqs = [
   .services__card {
     display: flex;
     flex-direction: column;
-    gap: var(--space-4xl);
-    padding: var(--space-xl) var(--space-lg) var(--space-2xl);
+    justify-content: space-between;
+    /* 555px tall in the design (node 6007:8057 is the fixed one, the other two fill to match).
+       A min rather than a fixed height so real copy, once it replaces the placeholder, can grow
+       the row instead of spilling out of the card. */
+    min-height: 555px;
+    padding: var(--space-lg) var(--space-lg) var(--space-3xl);
     border-radius: var(--radius-md);
-    background: #291e47;
     color: var(--color-white);
+    /* #291E47 — the card fill. No published Figma name, so it stays a page-local one-off, same
+       as .hero__badge's #171717 above.
+
+       Over it sits the design's GLASS overlay (node 12290:8889): ten equal vertical panes, each
+       a white→black→#626262 gradient at 25% opacity in OVERLAY blend, with a 2px black-at-2%
+       divider down its right edge. Because the backdrop is this one flat fill, the blend result
+       is a constant — precomputed below (overlay = 2 × base × blend for a base this dark, then
+       mixed 25% with the fill) — so the stripes need no mix-blend-mode layer and no stacking
+       context. The panes are `flex: 1` in the design, hence 10% tiles rather than fixed widths.
+
+       The design also puts a 2.5px backdrop blur on each pane. Dropped deliberately: the panes
+       sit above an opaque fill, so there is nothing behind them to blur — it would cost 30
+       backdrop-filter layers per row and change not one pixel. */
+    background-color: #291e47;
+    background-image:
+      linear-gradient(
+        to right,
+        transparent 0,
+        transparent calc(100% - 2px),
+        rgb(0 0 0 / 0.02) calc(100% - 2px)
+      ),
+      linear-gradient(to right, #332659 0%, #1f1735 74.56%, #271c43 100%);
+    background-size: 10% 100%;
+    background-repeat: repeat;
   }
   .services__number {
     display: inline-flex;
@@ -621,31 +674,54 @@ const faqs = [
     font-weight: var(--font-weight-bold);
     font-size: 2rem;
   }
+  .services__card-foot {
+    display: grid;
+    gap: var(--space-5xl); /* 96px — node I6007:8055;5977:4965 */
+  }
   .services__card-body {
     display: grid;
     gap: var(--space-md);
-    flex: 1;
   }
   .services__card-title {
     text-transform: uppercase;
-    font-weight: var(--font-weight-regular);
-    font-size: 1.875rem;
-    line-height: 1.2;
+    font-family: var(--type-card-title-family);
+    font-weight: var(--type-card-title-weight);
+    font-size: var(--type-card-title-size);
+    line-height: var(--type-card-title-line);
+    letter-spacing: var(--type-card-title-tracking);
     padding-bottom: var(--space-md);
-    border-bottom: 1px solid rgb(255 255 255 / 0.25);
+    border-bottom: 1px solid var(--color-white-25);
   }
   .services__card-desc {
-    color: rgb(255 255 255 / 0.85);
+    color: var(--color-white);
+    /* The design fixes this box at 71px with an ending ellipsis (node I6007:8055;4571:24846,
+       textAutoResize TRUNCATE) — three lines, then "…". Only the -webkit- property is written:
+       pairing it with the standard `line-clamp` in one block lets Lightning CSS collapse the
+       two down to whichever it prefers, the same build-time trap that silently dropped
+       backdrop-filter from the header pill. Every current browser supports this spelling. */
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    overflow: hidden;
+    /* Keeps the blank line between the description's two paragraphs meaningful even though the
+       clamp cuts above it. */
+    white-space: pre-line;
   }
   .services__card :global(.btn--link) {
     color: var(--color-accent-warm);
+    /* Without this the link stretches to the grid column and .btn's own justify-content
+       centres the label; the design has it flush with the card's content edge. */
+    justify-self: start;
   }
 
   /* ── Core Team ──────────────────────────────────────────────────────────── */
   .team__intro {
     display: grid;
+    /* 16px between eyebrow → heading → paragraph (node 6007:7880's auto-layout). */
     gap: var(--space-sm);
-    max-width: 42rem;
+    /* Design's text column is exactly 676px (the heading and paragraph text nodes both
+       measure 676 wide, centred in the 1312 container) — not a round rem value. */
+    max-width: 676px;
     margin-inline: auto;
     margin-bottom: var(--space-4xl);
     text-align: center;
@@ -653,41 +729,17 @@ const faqs = [
   .team__intro h2 {
     color: var(--color-violet);
   }
+  /* Node 6007:7890 fills this paragraph #120633, the same violet as the heading above it —
+     not the default #292929 body ink. Confirmed against Home's node.json. */
   .team__intro p.u-body-lg {
-    color: var(--color-text-default);
+    color: var(--color-violet);
   }
   .team__grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: var(--space-md);
   }
-  .team__card {
-    position: relative;
-    border-radius: var(--radius-md);
-    overflow: hidden;
-  }
-  .team__photo {
-    width: 100%;
-    height: auto;
-    aspect-ratio: 310 / 380;
-    object-fit: cover;
-    display: block;
-  }
-  .team__card-info {
-    position: absolute;
-    inset-inline: 0;
-    bottom: 0;
-    padding: var(--space-md);
-    background: linear-gradient(to top, rgb(0 0 0 / 0.75), transparent);
-    color: var(--color-white);
-  }
-  .team__name {
-    font-weight: 600;
-    font-size: 1.5rem;
-  }
-  .team__role {
-    font-size: 1rem;
-  }
+  /* Card itself lives in `TeamCard.astro` — the canonical implementation shared with /team. */
 
   /* ── Testimonials ───────────────────────────────────────────────────────── */
   .testimonials__intro {
@@ -714,9 +766,12 @@ const faqs = [
     grid-template-columns: repeat(3, 1fr);
     gap: var(--space-md);
   }
+  /* Card 421×520, square-cornered — the design's card frames carry no `cornerRadius` (we had
+     been rounding them to 12px). Its 40/32 padding and flex-end stack reproduce the source
+     geometry exactly: 144 + 16 + 32 + 8 + 48 = 248px of content over 40px of bottom padding
+     puts the quote's first line 232px down, which is where node.json has it. */
   .testimonials__card {
     position: relative;
-    border-radius: var(--radius-md);
     overflow: hidden;
   }
   .testimonials__photo {
@@ -725,7 +780,6 @@ const faqs = [
     aspect-ratio: 421 / 520;
     object-fit: cover;
     display: block;
-    filter: brightness(0.7);
   }
   .testimonials__card-body {
     position: absolute;
@@ -734,21 +788,54 @@ const faqs = [
     flex-direction: column;
     justify-content: flex-end;
     gap: var(--space-2xs);
-    padding: var(--space-xl);
+    padding: var(--space-xl) var(--space-lg);
     color: var(--color-white);
+    /* Phase-4 craft, and the one deliberate deviation in this section: the design's scrim is
+       a flat black 40% over the whole card, which is both too dark over the face and too
+       light under the text. Measured against the three source photos, composited and read
+       back as WCAG relative luminance over the text column (x 32–389, y 232–480), white on
+       the flat 40% scrim bottoms out at 2.97:1 on photo 3 — a real AA failure that axe
+       cannot see, because it has no way to measure text over an image.
+
+       This bottom-weighted ramp holds ≥ 0.58 alpha from 43% down, where the text starts,
+       which measures 8.02 / 9.33 / 6.24:1 worst-pixel across the three photos (AAA on two
+       of them) while leaving the face zone roughly twice as bright as the flat 40% did.
+       Gradient scrims are already this design's own language — the team card's fills are
+       transparent → rgb(0 0 0 / 0.32) top-to-bottom (see TeamCard.astro). Re-run the
+       measurement when the placeholder portraits are replaced with real client photos. */
+    background: linear-gradient(
+      to bottom,
+      rgb(0 0 0 / 0.06) 0%,
+      rgb(0 0 0 / 0.12) 22%,
+      rgb(0 0 0 / 0.26) 34%,
+      rgb(0 0 0 / 0.58) 43%,
+      rgb(0 0 0 / 0.68) 70%,
+      rgb(0 0 0 / 0.76) 100%
+    );
   }
+  /* Decorative only — the card holds no link, so there is nothing to focus and nothing is
+     conveyed by the motion. Add `:focus-within` alongside the hover if a "read the full
+     story" link is ever added to the card. */
+  .testimonials__photo {
+    transition: transform 500ms ease;
+  }
+  .testimonials__card:hover .testimonials__photo {
+    transform: scale(1.04);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .testimonials__photo {
+      transition: none;
+    }
+    .testimonials__card:hover .testimonials__photo {
+      transform: none;
+    }
+  }
+  /* Design gaps are 16px quote→name and 8px name→role. The 8px flex gap gives the latter;
+     this margin adds the other 8px on top of it for the former. */
   .testimonials__quote {
-    font-size: var(--type-body-lg-size);
-    line-height: var(--type-body-lg-line);
-    margin-bottom: var(--space-md);
+    margin-bottom: var(--space-2xs);
   }
-  .testimonials__name {
-    font-weight: var(--font-weight-bold);
-    font-size: 1.5rem;
-  }
-  .testimonials__role {
-    font-size: var(--type-body-lg-size);
-  }
+  /* .testimonials__name is `.u-lead` — 24/32/700/−1.2px is exactly the design's name style. */
 
   /* ── FAQ ────────────────────────────────────────────────────────────────── */
   .faq__grid {
@@ -825,25 +912,8 @@ const faqs = [
   }
 
   /* ── CTA ────────────────────────────────────────────────────────────────── */
-  .cta__card {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--space-2xl);
-    padding: var(--space-3xl);
-    border-radius: var(--radius-md);
-  }
-  .cta__text {
-    display: grid;
-    gap: var(--space-sm);
-    max-width: 34rem;
-  }
-  .cta__actions {
-    display: flex;
-    gap: var(--space-md);
-    flex-wrap: wrap;
-  }
+  /* The CTA band's styles live in src/components/CtaSection.astro, which owns the
+     markup for all four Consultancy pages. */
 
   /* ── Responsive ─────────────────────────────────────────────────────────── */
   @media (max-width: 1024px) {
@@ -884,16 +954,6 @@ const faqs = [
     }
     .who__stat {
       flex: 1 1 40%;
-    }
-    .cta__card {
-      justify-content: center;
-      text-align: center;
-    }
-    .cta__text {
-      max-width: none;
-    }
-    .cta__actions {
-      justify-content: center;
     }
   }
 </style>

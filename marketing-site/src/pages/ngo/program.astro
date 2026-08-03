@@ -1,0 +1,448 @@
+---
+/**
+ * Programs (/ngo/program) — NGO "Our Programs". Built against the committed Figma node
+ * 7447:6027 (design/figma/fTqnnV20l9htP7vFJrOsvn/7447-6027/), confirmed "PROGRAM PAGE NGO" by
+ * frame name — no name-collision to resolve (unlike About/Partners). See docs/ngo-build-plan.md
+ * Phase 4.
+ *
+ * This is the most net-new NGO page — no direct Consultancy analog to riff off. Its shape,
+ * confirmed section-by-section against this page's own node.json (never a whole-file read):
+ *   1. White page header — breadcrumb "HOME / PROGRAMS" + "Our Programs" h1 (same shape as the
+ *      NGO About/Partners headers; node 7958:30355 → 7958:30362).
+ *   2. THREE program-detail sections (node 7447:6030 vertical stack, 120px itemSpacing) —
+ *      alternating photo/copy: STEP (photo left), HEALS (photo right), GVP (photo left). Each
+ *      is a 40px `u-h3` heading + the same placeholder GIEVA paragraph + an outlined green
+ *      "Learn more about us" button (`Button variant="secondary"`). The three sections all use
+ *      the SAME placeholder photo imageRef in the source (see @lib/ngo-program-images).
+ *   3. "Partner Programs" — a centred heading + intro over three deep-teal cards (node 7447:6518)
+ *      with a white divider and a green "Learn more" link. Visually the Home program-card
+ *      pattern, but a distinct 3-across grid with its own copy, so page-local classes are used
+ *      (not Home's `programs__*`) — which also keeps the a11y allowlist scoped to this route.
+ *   4. "Contact Us Now" — the deep-teal inverse form panel (node 7447:6444). Structurally the
+ *      SAME 7-field labelled `<form>` as the NGO Partners "Become a Partner" panel (fixed 387px
+ *      right-aligned label column, 122px gap, white-underline inputs, centred submit) — but its
+ *      labels are a MUTED teal-blue #69A4B8 (node fill), NOT Partners' green #007F0E, and its
+ *      heading accent ("Now") is green. All seven visible labels read "What is your name?" in the
+ *      source (placeholder/duplicated design copy) — reproduced verbatim per exact-replica-first,
+ *      each wired to a uniquely-id'd input so the label→input association stays valid.
+ *
+ * Copy is transcribed from the node.json text runs (not eyeballed): the STEP/HEALS/GVP paragraph
+ * is one shared placeholder run; the "Now" accent is a bold-italic green `characterStyleOverrides`
+ * run (index 4, #007F0E) — the standard NGO heading-accent (green), not an inversion.
+ *
+ * Heading order: h1 "Our Programs" → h2 STEP → h2 HEALS → h2 GVP → h2 "Partner Programs" →
+ * h3 ×3 partner-card titles → h2 "Contact Us Now". No level skipped.
+ *
+ * Tracked colour-contrast gaps (docs/a11y-known-issues.md N12–N15, allowlisted with Program-only
+ * parent classes in tests/a11y.spec.ts): the orange "HOME / PROGRAMS" breadcrumb (3.73:1 on
+ * white), the green Partner-Programs "Learn more" links (2.27:1 on teal), the green "Now" accent
+ * (2.27:1 on teal), and the muted #69A4B8 form labels (4.27:1 on teal) — all confirmed
+ * source-design colours, shipped as designed per CLAUDE.md #2. Everything structural (landmarks,
+ * heading order, keyboard, focus, reduced-motion) passes clean.
+ */
+import BaseLayout from '@layouts/BaseLayout.astro';
+import Button from '@components/Button.astro';
+import { Image } from 'astro:assets';
+import { programPhoto } from '@lib/ngo-program-images';
+
+// The shared placeholder paragraph the three detail sections carry verbatim (node 7463:5843).
+const programBlurb =
+  'Global Integrated Education Volunteers Association (GIEVA) was registered in 2006 as a nonprofit organization to improve access to quality education and global learning opportunities among young Nigerians. Over the years, GIEVA has grown to serve over 1,000 young Nigerians annually, with a strong focus on inclusive education, digital empowerment, and youth development.';
+
+// Program-detail sections, in document order. `reversed` puts the photo on the right (HEALS).
+const details = [
+  {
+    title: 'Strategic Transformative Education Program (STEP)',
+    body: programBlurb,
+    href: '/ngo/program',
+    reversed: false,
+  },
+  {
+    title: 'Holistic Education Advising and Learning Services (HEALS)',
+    body: programBlurb,
+    href: '/ngo/program',
+    reversed: true,
+  },
+  {
+    title: 'The GIEVA Volunteer Project (GVP)',
+    body: programBlurb,
+    href: '/ngo/program',
+    reversed: false,
+  },
+];
+
+// Partner Programs cards (node 7447:6518) — copy transcribed from the card text runs.
+const partnerPrograms = [
+  {
+    title: 'GENERATIVE AI Skilling Project',
+    description:
+      "Strategic Transformative Education Program — leadership pathways for tomorrow's changemakers.",
+    href: '/ngo/program',
+  },
+  {
+    title: 'FEMALE LOCAL AREA MECHANICS - WATERAID',
+    description:
+      "Strategic Transformative Education Program — leadership pathways for tomorrow's changemakers.",
+    href: '/ngo/program',
+  },
+  {
+    title: 'AMIRA & FRIENDS - STERLING BANK',
+    description:
+      'STEM innovation club challenging young minds to create solutions for real-world problems.',
+    href: '/ngo/program',
+  },
+];
+
+// Seven contact fields — all labelled "What is your name?" in the source (node 7447:6451),
+// reproduced verbatim; unique ids keep each label→input association valid.
+const contactFields = Array.from({ length: 7 }, (_, i) => ({
+  id: `contact-${i + 1}`,
+  label: 'What is your name?',
+}));
+---
+
+<BaseLayout
+  title="Our Programs — GIEVA NGO"
+  description="GIEVA's flagship programs — STEP, HEALS, and the GIEVA Volunteer Project — plus community-centered partner programs transforming young lives across Nigeria."
+  brand="ngo"
+>
+  <div class="container program">
+    <!-- ── Page header ────────────────────────────────────────────────────────── -->
+    <header class="program__header">
+      <p class="program-breadcrumb">HOME / PROGRAMS</p>
+      <h1 class="u-section-title program-title">Our Programs</h1>
+    </header>
+
+    <!-- ── Program detail sections (STEP / HEALS / GVP) ───────────────────────── -->
+    {
+      details.map((detail) => (
+        <section class="program__detail" data-reversed={detail.reversed ? '' : undefined}>
+          <Image
+            src={programPhoto}
+            alt=""
+            width={636}
+            height={450}
+            class="program__detail-media"
+          />
+          <div class="program__detail-body">
+            <h2 class="u-h3 program__detail-title">{detail.title}</h2>
+            <p class="u-body-lg program__detail-desc">{detail.body}</p>
+            <Button variant="secondary" href={detail.href}>
+              Learn more about us
+            </Button>
+          </div>
+        </section>
+      ))
+    }
+
+    <!-- ── Partner Programs ───────────────────────────────────────────────────── -->
+    <section class="partner-programs">
+      <div class="partner-programs__intro">
+        <h2 class="u-section-title">Partner Programs</h2>
+        <p class="u-body-lg">
+          Community-centered, measurable, and designed for long-term change across Nigeria.
+        </p>
+      </div>
+
+      <ul role="list" class="partner-programs__grid">
+        {
+          partnerPrograms.map((program) => (
+            <li class="partner-programs__card surface-inverse" data-surface="inverse">
+              <div class="partner-programs__card-head">
+                <h3 class="partner-programs__card-title">{program.title}</h3>
+                <span class="partner-programs__divider" aria-hidden="true" />
+                <p class="u-body-lg partner-programs__card-desc">{program.description}</p>
+              </div>
+              <Button variant="link" href={program.href}>
+                Learn more
+              </Button>
+            </li>
+          ))
+        }
+      </ul>
+    </section>
+
+    <!-- ── Contact Us Now ─────────────────────────────────────────────────────── -->
+    <section class="program-contact surface-inverse" data-surface="inverse">
+      <div class="program-contact__header">
+        <h2 class="u-section-title">
+          Contact Us <em class="u-accent-em">Now</em>
+        </h2>
+        <p class="u-body-lg">
+          Answer Interview questions to help us know how we can impact lives together
+        </p>
+      </div>
+
+      <form class="program-contact__body">
+        <div class="program-contact__fields">
+          {
+            contactFields.map((field) => (
+              <>
+                <label class="program-contact__label u-body-lg" for={field.id}>
+                  {field.label}
+                </label>
+                <div class="program-contact__control">
+                  <input
+                    id={field.id}
+                    class="program-contact__input u-body-lg"
+                    type="text"
+                    name={field.id}
+                    placeholder="Your Answer"
+                    required
+                  />
+                </div>
+              </>
+            ))
+          }
+        </div>
+        <div class="program-contact__submit">
+          <Button variant="primary" type="submit">Send Message</Button>
+        </div>
+      </form>
+    </section>
+  </div>
+</BaseLayout>
+
+<style>
+  /* ── Page flow ────────────────────────────────────────────────────────────────
+     The whole page is the node 7447:6030 vertical stack: 120px between blocks
+     (--space-6xl, matching itemSpacing) and 120px bottom padding. The page header sits above
+     it with the nav overlaying its top (node 7958:30355 paddingTop 240 with the 102px nav on
+     top ≈ 138 visible); our NgoSiteHeader is in-flow, so the visible top offset is authored as
+     --space-6xl and confirmed against frame.png at 1440 rather than transcribing the raw 240
+     (same approach as the NGO About/Partners headers). */
+  .program {
+    display: grid;
+    padding-top: var(--space-6xl);
+    padding-bottom: var(--space-6xl);
+    row-gap: var(--space-6xl);
+  }
+
+  /* ── Page header (white) ─────────────────────────────────────────────────────
+     node 7958:30362 itemSpacing 40 between breadcrumb and title. */
+  .program-breadcrumb {
+    margin: 0 0 40px; /* one-off gap, not a scale step */
+    font-family: var(--font-family-base);
+    font-size: var(--font-size-underline);
+    line-height: var(--line-height-underline);
+    letter-spacing: var(--letter-spacing-none);
+    font-weight: var(--font-weight-bold);
+    color: var(--color-eyebrow); /* NGO eyebrow = orange #E65320 */
+  }
+  /* "Our Programs" — 48/56/700, neutral #292929 (= --color-mine-shaft), NOT NGO's violet
+     default ink (node 7958:30366 fill). Left-aligned per node. */
+  .program-title {
+    margin: 0;
+    color: var(--color-mine-shaft);
+  }
+
+  /* ── Program detail sections ─────────────────────────────────────────────────
+     node 7463:5838 etc.: HORIZONTAL, two equal 636px columns with a 40px gap. `data-reversed`
+     swaps the photo to the right for HEALS (node 7447:6415). */
+  .program__detail {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-xl);
+    align-items: center;
+  }
+  .program__detail[data-reversed] .program__detail-media {
+    order: 2;
+  }
+  .program__detail-media {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 636 / 450;
+    object-fit: cover;
+    border-radius: var(--radius-md);
+    display: block;
+  }
+  /* Copy column (node 7463:5847): title (40/46/700 violet) → paragraph → button. */
+  .program__detail-body {
+    display: grid;
+    gap: var(--space-lg);
+    justify-items: start;
+  }
+  .program__detail-title {
+    margin: 0;
+    color: var(--color-text-default); /* violet #120633 */
+  }
+  .program__detail-desc {
+    margin: 0;
+    color: #000; /* node fill #000000 on the body copy */
+  }
+
+  /* ── Partner Programs ─────────────────────────────────────────────────────────
+     node 7447:6518 (VERTICAL, 80px gap, centred): a centred intro over a 3-across deep-teal
+     card grid. Visually the Home program-card pattern (white divider + green "Learn more"), but
+     page-local classes keep the a11y allowlist scoped to this route. */
+  .partner-programs {
+    display: grid;
+    gap: var(--space-4xl); /* node itemSpacing 80 between intro and grid */
+  }
+  .partner-programs__intro {
+    display: grid;
+    gap: var(--space-sm);
+    max-width: 42.125rem; /* node 7447:6519 width 674 — one-off intro column */
+    margin-inline: auto;
+    text-align: center;
+  }
+  .partner-programs__intro h2 {
+    margin: 0;
+    color: var(--color-text-default);
+  }
+  .partner-programs__intro p.u-body-lg {
+    margin: 0;
+    color: var(--color-text-default);
+  }
+  /* Cards: deep-teal #0E3E40 inverse surface, 12px radius, node 7447:6531 padding 48/32,
+     40px gap, 40px column gap (node grid gap). */
+  .partner-programs__grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-xl);
+  }
+  .partner-programs__card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-xl);
+    padding: var(--space-2xl) var(--space-lg);
+    border-radius: var(--radius-md);
+    text-align: center;
+  }
+  .partner-programs__card-head {
+    display: grid;
+    gap: var(--space-md);
+    justify-items: center;
+    width: 100%;
+  }
+  /* Card title: the shared dark-card title role (Arial Narrow 30/36/400, tracking −0.3) —
+     the same Figma style as Home's program cards. */
+  .partner-programs__card-title {
+    margin: 0;
+    font-family: var(--type-card-title-family);
+    font-weight: var(--type-card-title-weight);
+    font-size: var(--type-card-title-size);
+    line-height: var(--type-card-title-line);
+    letter-spacing: var(--type-card-title-tracking);
+    color: var(--color-text-inverse);
+  }
+  .partner-programs__divider {
+    display: block;
+    width: 100%;
+    height: 1px;
+    background: var(--color-border-on-inverse);
+  }
+  .partner-programs__card-desc {
+    margin: 0;
+    color: var(--color-text-inverse);
+  }
+
+  /* ── Contact Us Now ───────────────────────────────────────────────────────────
+     node 7447:6444: deep-teal inverse panel (#0E3E40), 12px radius, 64px padding + 64px gap
+     between header / fields / submit. Same labelled-form shape as the NGO Partners panel, but
+     the labels are a MUTED teal-blue #69A4B8 here (node fill), not Partners' green, and the
+     accent is green ("Now"). */
+  .program-contact {
+    padding: var(--space-3xl);
+    border-radius: var(--radius-md);
+    display: grid;
+    gap: var(--space-3xl);
+  }
+  .program-contact__header {
+    display: grid;
+    gap: var(--space-sm);
+    justify-items: center;
+    text-align: center;
+  }
+  .program-contact__header h2 {
+    margin: 0;
+  }
+  .program-contact__body {
+    display: grid;
+    gap: var(--space-3xl);
+  }
+  /* Fixed 387px label column, RIGHT-aligned text, 122px gap to a filling input (node: Label
+     sizingH FIXED w=387, row itemSpacing 122) — the same one-off values as the NGO Partners
+     form. Rows are 16px apart (node itemSpacing 16). */
+  .program-contact__fields {
+    display: grid;
+    grid-template-columns: 387px minmax(0, 1fr);
+    column-gap: 122px;
+    row-gap: var(--space-sm);
+    align-items: center;
+  }
+  /* Muted teal-blue labels #69A4B8 (node fill) — distinct from Partners' green labels. */
+  .program-contact__label {
+    color: #69a4b8;
+    text-align: right;
+  }
+  .program-contact__control {
+    display: flex;
+  }
+  .program-contact__input {
+    width: 100%;
+    background: transparent;
+    border: 0;
+    border-bottom: 2px solid var(--color-white);
+    padding-block: var(--space-2xs);
+    color: var(--color-text-inverse);
+    font-family: var(--font-family-base);
+  }
+  .program-contact__input::placeholder {
+    color: var(--color-text-inverse);
+    opacity: 1;
+  }
+  .program-contact__input:focus-visible {
+    outline: 3px solid var(--color-focus-ring);
+    outline-offset: 4px;
+  }
+  /* Submit centred in the panel (node: GIEVA Button counterAxisAlignItems CENTER). */
+  .program-contact__submit {
+    display: flex;
+    justify-content: center;
+  }
+
+  /* ── Responsive ───────────────────────────────────────────────────────────────
+     No tablet/mobile NGO Program frame exists in the design; these are our authored,
+     content-preserving reflows (same approach as the other NGO pages). */
+  @media (max-width: 1024px) {
+    .partner-programs__grid {
+      grid-template-columns: 1fr;
+      max-width: 34rem;
+      margin-inline: auto;
+    }
+    .program-contact__fields {
+      grid-template-columns: 220px minmax(0, 1fr);
+      column-gap: var(--space-3xl);
+    }
+  }
+  @media (max-width: 900px) {
+    .program__detail {
+      grid-template-columns: 1fr;
+      gap: var(--space-lg);
+    }
+    /* Keep the photo above the copy on every stacked section for a consistent reading order. */
+    .program__detail[data-reversed] .program__detail-media {
+      order: 0;
+    }
+  }
+  @media (max-width: 640px) {
+    /* Panel padding drops 64→32 so the 48px heading isn't squeezed on a 375px viewport. */
+    .program-contact {
+      padding: var(--space-lg);
+      gap: var(--space-2xl);
+    }
+    .program-contact__body {
+      gap: var(--space-2xl);
+    }
+    .program-contact__fields {
+      grid-template-columns: 1fr;
+      row-gap: var(--space-3xs);
+    }
+    .program-contact__label {
+      text-align: left;
+      margin-top: var(--space-sm);
+    }
+  }
+</style>

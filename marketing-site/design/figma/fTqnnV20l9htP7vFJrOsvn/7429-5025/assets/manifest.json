@@ -1,0 +1,57 @@
+{
+  "vectors": [
+    {
+      "id": "7956:29967",
+      "name": "LOGO",
+      "kind": "icon",
+      "file": "icon-7956-29967.svg"
+    },
+    {
+      "id": "7956:30015",
+      "name": "mail-01",
+      "kind": "icon",
+      "file": "icon-7956-30015.svg"
+    },
+    {
+      "id": "7956:30029",
+      "name": "oo-social-links → List",
+      "kind": "icon",
+      "file": "icon-7956-30029.svg"
+    },
+    {
+      "id": "I7437:9907;5995:7324",
+      "name": "ArrowRight",
+      "kind": "icon",
+      "file": "icon-I7437-9907;5995-7324.svg"
+    },
+    {
+      "id": "I7956:30007;4547:22453",
+      "name": "ng-icon",
+      "kind": "icon",
+      "file": "icon-I7956-30007;4547-22453.svg"
+    }
+  ],
+  "fills": [
+    {
+      "imageRef": "3172f31ce44b7c8cfb0a897f5d748407dc9e6cbc",
+      "sourceNode": "I7956:29967;5857:4414",
+      "name": "Gemini_Generated_Image_uvhg9uuvhg9uuvhg 1",
+      "file": "fill-3172f31ce44b7c8cfb0a897f5d748407dc9e6cbc.png"
+    },
+    {
+      "imageRef": "4eebccba0adfb3dd26fc6e2fd817cd248d8f7133",
+      "sourceNode": "7429:6069",
+      "name": "Photo",
+      "file": "fill-4eebccba0adfb3dd26fc6e2fd817cd248d8f7133.jpg"
+    },
+    {
+      "imageRef": "8108addc2bb6ce97610dae38d4f1280c1e0332e7",
+      "sourceNode": "I7437:9764;6021:4618",
+      "name": "His excellency",
+      "file": "fill-8108addc2bb6ce97610dae38d4f1280c1e0332e7.jpg"
+    }
+  ],
+  "notes": [
+    "WebP skipped (install `sharp` to enable re-encoding)"
+  ]
+}

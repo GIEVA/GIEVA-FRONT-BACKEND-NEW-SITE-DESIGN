@@ -20,26 +20,12 @@
  *     H1 into the grid. Confirmed per this page's own node.json, not assumed from Home's
  *     precedent — the build plan's instruction to check every recurring pattern per-page
  *     (About's `u-h2` vs `u-section-title` finding) applies here too.
- *   - Card name/role: node.json specifies **Inter** (name: 600/24/28.8/-0.48; role:
- *     400/16/22.4/0) — a different font family from the rest of the site's Arial-only system
- *     (`--font-family-base`, chosen in Phase 0 specifically to avoid any web-font load/FOUT).
- *     This exact card (same "His excellency" component, same imageRef, same "Julie Sande" /
- *     "Director General" placeholder copy) already ships on Home's Core Team section
- *     (`.team__card` in `index.astro`), where it was built as an Arial-inherited approximation
- *     (font-size matched exactly at 24px/16px; line-height/letter-spacing/font-family
- *     simplified). Matching that established, shipped precedent here for the identical
- *     component rather than introducing a second font family for one repeating card — the
- *     font-*sizes* (24px/16px) are honoured exactly; line-height/letter-spacing are composed
- *     from confirmed px values as one-off primitives (same technique as Services'/About's
- *     one-off compositions), font-family stays inherited (Arial).
- *   - CTA banner (eyebrow/heading/body/buttons): identical content, shape, and colours to
- *     Home's/Services'/About's CTA — including the same "Book Free ConsultationView All
- *     Services" copy/paste artifact trailing the paragraph in the source (trimmed here the same
- *     way) and the bold-italic accent-warm "First Step?" run (confirmed via
- *     `characterStyleOverrides`, override table entry "9" — italic, bold, `#E65320`). Button
- *     labels confirmed from the actual button-instance text nodes (not the paragraph's
- *     copy-paste artifact): "Book Consultancy" / "View all Services", exactly matching
- *     About's/Home's CTA buttons — reused verbatim.
+ *   - Member card: the same Figma component Home's Core Team instantiates (node 8090:7151),
+ *     so it lives in `TeamCard.astro` — including its progressive backdrop blur and the
+ *     Inter→Arial typography call. See that file for the confirmed geometry and rationale.
+ *   - The closing CTA band is the shared `CtaSection.astro`. This page's node.json agrees with
+ *     Home's, Services' and About's byte-for-byte, so it is instantiated rather than
+ *     re-authored; see that file for the confirmed content and geometry.
  *
  * Content notes confirmed via node.json (not guessed):
  *   - All 10 member cards (4 + 4 + 2, matching the source's exact row split) carry the
@@ -55,7 +41,8 @@
  * that shape, so this page writes its own markup, same call as About's.
  */
 import BaseLayout from '@layouts/BaseLayout.astro';
-import Button from '@components/Button.astro';
+import TeamCard from '@components/TeamCard.astro';
+import CtaSection from '@components/CtaSection.astro';
 import { Image } from 'astro:assets';
 import { teamHeroPhoto, teamMemberPhoto } from '@lib/team-images';
 
@@ -87,18 +74,8 @@ const team = Array.from({ length: 10 }, () => ({
       <ul role="list" class="team-grid">
         {
           team.map((member) => (
-            <li class="team-card">
-              <Image
-                src={teamMemberPhoto}
-                alt=""
-                width={310}
-                height={380}
-                class="team-card__photo"
-              />
-              <div class="team-card__info">
-                <p class="team-card__name">{member.name}</p>
-                <p class="team-card__role">{member.role}</p>
-              </div>
+            <li>
+              <TeamCard src={teamMemberPhoto} name={member.name} role={member.role} />
             </li>
           ))
         }
@@ -109,24 +86,7 @@ const team = Array.from({ length: 10 }, () => ({
   <!-- ── CTA (same content/shape as Home's/Services'/About's) ───────────────────── -->
   <section class="section cta">
     <div class="container">
-      <div class="cta__card surface-inverse" data-surface="inverse">
-        <div class="cta__text">
-          <p class="u-eyebrow">Get in Touch</p>
-          <h2 class="u-section-title">
-            Ready to Take Your <em class="u-accent-em">First Step?</em>
-          </h2>
-          <p class="u-body-lg">
-            Book a free consultation with a GIEVA counselor today. No commitment, no pressure —
-            just clarity on your path forward.
-          </p>
-        </div>
-        <div class="cta__actions">
-          <Button variant="primary" href="/book-consultancy" arrow={false}>
-            Book Consultancy
-          </Button>
-          <Button variant="secondary" href="/services" arrow={false}>View all Services</Button>
-        </div>
-      </div>
+      <CtaSection />
     </div>
   </section>
 </BaseLayout>
@@ -181,61 +141,11 @@ const team = Array.from({ length: 10 }, () => ({
     column-gap: var(--space-md);
     row-gap: var(--space-4xl);
   }
-  .team-card {
-    position: relative;
-    border-radius: var(--radius-md);
-    overflow: hidden;
-  }
-  .team-card__photo {
-    width: 100%;
-    height: auto;
-    aspect-ratio: 310 / 380;
-    object-fit: cover;
-    display: block;
-  }
-  .team-card__info {
-    position: absolute;
-    inset-inline: 0;
-    bottom: 0;
-    padding: var(--space-md);
-    background: linear-gradient(to top, rgb(0 0 0 / 0.75), transparent);
-    color: var(--color-white);
-  }
-  .team-card__name {
-    margin: 0;
-    font-weight: 600;
-    font-size: 24px;
-    line-height: 28.8px;
-    letter-spacing: -0.48px;
-  }
-  .team-card__role {
-    margin: 0;
-    font-weight: var(--font-weight-regular);
-    font-size: 16px;
-    line-height: 22.4px;
-    letter-spacing: 0;
-  }
+  /* Card itself lives in `TeamCard.astro` — the canonical implementation shared with Home. */
 
   /* ── CTA (same content/shape as Home's/Services'/About's) ──────────────── */
-  .cta__card {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--space-2xl);
-    padding: var(--space-3xl);
-    border-radius: var(--radius-md);
-  }
-  .cta__text {
-    display: grid;
-    gap: var(--space-sm);
-    max-width: 34rem;
-  }
-  .cta__actions {
-    display: flex;
-    gap: var(--space-md);
-    flex-wrap: wrap;
-  }
+  /* The CTA band's styles live in src/components/CtaSection.astro, which owns the
+     markup for all four Consultancy pages. */
 
   /* ── Responsive ─────────────────────────────────────────────────────────── */
   @media (max-width: 1024px) {
@@ -249,16 +159,6 @@ const team = Array.from({ length: 10 }, () => ({
     }
     .team-grid {
       grid-template-columns: 1fr;
-    }
-    .cta__card {
-      justify-content: center;
-      text-align: center;
-    }
-    .cta__text {
-      max-width: none;
-    }
-    .cta__actions {
-      justify-content: center;
     }
   }
 </style>

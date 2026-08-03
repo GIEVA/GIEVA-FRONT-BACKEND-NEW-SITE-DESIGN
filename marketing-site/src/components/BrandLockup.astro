@@ -1,0 +1,117 @@
+---
+/**
+ * BrandLockup — the GIEVA.org logotype: circular mark + "GIEVA" + green ".org".
+ *
+ * One component because the same Figma lockup is instanced in the Consultancy header
+ * (5891:5463), the NGO header, and the footer (I8210:7883;8210:7763) — and the three
+ * page-local copies had already drifted: the footer was rendering 32px bold Arial against the
+ * header's confirmed 48px SemiBold Open Sans, so the *same* logo looked like two different
+ * marks on one page. Per CLAUDE.md, a repeated Figma component becomes one Astro component.
+ *
+ * Geometry (`size="lg"`, confirmed identical in both header and footer node.json):
+ *   mark 48×48 circle · "GIEVA" 48/40 SemiBold, brand face · ".org" 32/27 Regular, green
+ *   · 2px gap · text bottom-aligned (Figma `items-end`).
+ * The `.org` is a nested inline span rather than a flex sibling, so the browser's own baseline
+ * alignment does the bottom-align — matching what the design shows without hand-tuned offsets.
+ *
+ * `size="sm"` is the NGO header's smaller treatment (40px mark / 28px bold). It is NOT a
+ * confirmed design value — it is the value that component shipped with, preserved verbatim so
+ * consolidating the markup doesn't silently change NGO parity. Replace it with measured
+ * geometry when an NGO header node is ingested.
+ */
+import { Image } from 'astro:assets';
+import { logoMark } from '@lib/home-images';
+
+interface Props {
+  /** Where the lockup links. Consultancy → "/", NGO → "/ngo". */
+  href: string;
+  /** `lg` = the confirmed 48px design lockup (header + footer). `sm` = NGO header. */
+  size?: 'lg' | 'sm';
+  /**
+   * Ink for the "GIEVA" word. `brand` is the fixed deep-violet logotype ink on light surfaces,
+   * `inverse` is white on dark. The ".org" is always green in every instance.
+   */
+  ink?: 'brand' | 'inverse' | 'default';
+  /**
+   * Visually-hidden tail on the accessible name, so the link reads "GIEVA.org — go to <this>"
+   * rather than leaving the destination implicit in the logotype alone.
+   */
+  destination?: string;
+  /**
+   * Extra class, as a stable hook for callers. Note that Astro does NOT extend a parent's scope
+   * hash to a child component's root, so a parent's scoped `.that-class { … }` rule will never
+   * match this element — style through `:global()`, or add the case here. The layout defaults
+   * every caller so far needed (`flex: none`, `justify-self: start`) are set below instead.
+   */
+  class?: string;
+}
+
+const {
+  href,
+  size = 'lg',
+  ink = 'brand',
+  destination = 'home page',
+  class: className,
+} = Astro.props;
+const px = size === 'lg' ? 48 : 40;
+---
+
+<a
+  class:list={['brand-lockup', `brand-lockup--${size}`, `brand-lockup--${ink}`, className]}
+  href={href}
+>
+  <Image src={logoMark} alt="" width={px} height={px} class="brand-lockup__mark" />
+  <span class="brand-lockup__wordmark">GIEVA<span class="brand-lockup__tld">.org</span></span>
+  <span class="visually-hidden"> — go to {destination}</span>
+</a>
+
+<style>
+  .brand-lockup {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-3xs);
+    text-decoration: none;
+    /* A logotype should never be squeezed by a flex row (both headers) nor stretched across a
+       grid track (the footer, where stretching would make the whole row one giant link target).
+       `justify-self` is inert in flex layout, so the pair is safe in every container. */
+    flex: none;
+    justify-self: start;
+  }
+  .brand-lockup__mark {
+    border-radius: 50%;
+  }
+
+  .brand-lockup--lg .brand-lockup__wordmark {
+    font-family: var(--font-family-brand);
+    font-weight: var(--font-weight-semibold);
+    font-size: 3rem; /* 48px */
+    line-height: 2.5rem; /* 40px (design) */
+  }
+  .brand-lockup--lg .brand-lockup__tld {
+    font-size: 2rem; /* 32px */
+    line-height: 1.6875rem; /* 27px (design) */
+  }
+
+  /* NGO header — unconfirmed, preserved from the component it replaced (see header comment). */
+  .brand-lockup--sm .brand-lockup__wordmark {
+    font-weight: var(--font-weight-bold);
+    font-size: 1.75rem; /* 28px */
+    line-height: 1;
+  }
+
+  .brand-lockup__tld {
+    color: var(--color-feedback-success);
+    font-weight: var(--font-weight-regular);
+  }
+
+  /* The logotype violet is fixed brand ink, not a themeable text role — hence the primitive. */
+  .brand-lockup--brand .brand-lockup__wordmark {
+    color: var(--color-violet);
+  }
+  .brand-lockup--inverse .brand-lockup__wordmark {
+    color: var(--color-text-inverse);
+  }
+  .brand-lockup--default .brand-lockup__wordmark {
+    color: var(--color-text-default);
+  }
+</style>

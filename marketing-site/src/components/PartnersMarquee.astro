@@ -1,0 +1,157 @@
+---
+/**
+ * Trusted-partners logo marquee — an auto-scrolling, greyscale strip of partner logos with a
+ * fixed left-hand label. Shared by the Consultancy (/) and NGO (/ngo) homes, which pass the
+ * same `partnerLogos` set. Built against Figma node 12023:32440 (label ink #120633, 60px logo
+ * band, full-opacity greyscale marks).
+ *
+ * A11y: the visible label names the strip; the first pass of logos carries each partner's name
+ * as alt text, while the duplicated (scroll-loop) pass is aria-hidden with empty alt so screen
+ * readers hear each partner once. The scroll respects prefers-reduced-motion.
+ *
+ * Each <Image> is given only a height — Astro derives the width from the source's own aspect
+ * ratio. Pinning a fixed width too would force a mismatched canvas that sharp crops (cover),
+ * clipping wide/short marks (e.g. ETS, UJ).
+ */
+import { Image } from 'astro:assets';
+import type { PartnerLogo } from '@lib/home-images';
+
+interface Props {
+  logos: PartnerLogo[];
+  /** Visible label to the left of the strip. */
+  label?: string;
+}
+
+const { logos, label = 'Trusted Partners' } = Astro.props;
+---
+
+<div class="partners">
+  <div class="container partners__row">
+    <p class="u-eyebrow partners__label">{label}</p>
+    <div class="partners__viewport">
+      <ul role="list" class="partners__track">
+        {
+          [...logos, ...logos].map((logo, i) => {
+            const hidden = i >= logos.length;
+            const alt = hidden ? '' : logo.name;
+            const style = `--logo-h: ${logo.height}px`;
+            return (
+              <li
+                class="partners__item"
+                style={style}
+                aria-hidden={hidden ? 'true' : undefined}
+              >
+                {/* Eager, not lazy: the track is ~2x the viewport, so lazy-loaded logos sit
+                    blank off-screen and pop in mid-scroll ("blink into existence"). They're
+                    tiny; fetchpriority=low keeps them from competing with the hero LCP. */}
+                {/* draggable=false: an <img> is natively draggable, so a press-and-move on a
+                    logo tears off a ghost image instead of doing nothing, which on a strip
+                    that is already sliding reads as the page coming apart. */}
+                {typeof logo.src === 'string' ? (
+                  <img
+                    src={logo.src}
+                    alt={alt}
+                    loading="eager"
+                    fetchpriority="low"
+                    draggable={false}
+                  />
+                ) : (
+                  <Image
+                    src={logo.src}
+                    alt={alt}
+                    height={logo.height}
+                    loading="eager"
+                    fetchpriority="low"
+                    draggable={false}
+                  />
+                )}
+              </li>
+            );
+          })
+        }
+      </ul>
+    </div>
+  </div>
+</div>
+
+<style>
+  .partners {
+    padding-block: var(--space-lg) var(--space-2xl);
+  }
+  .partners__row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-lg);
+  }
+  .partners__label {
+    flex: none;
+    /* Design node 12023:32442 — this label is near-black ink (#120633), NOT the page's green
+       eyebrow, so override the .u-eyebrow colour. It also sits on a faint left-edge vignette
+       (16% black, right→left) with a backdrop blur, rather than plain white. */
+    color: var(--color-text-default);
+    padding: var(--space-md) var(--space-sm);
+    background-image: linear-gradient(270deg, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.16) 100%);
+    backdrop-filter: blur(16px);
+  }
+  .partners__viewport {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    mask-image: linear-gradient(
+      to right,
+      transparent,
+      black var(--space-lg),
+      black 95%,
+      transparent
+    );
+  }
+  .partners__track {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2xl);
+    width: max-content;
+    padding-inline-end: var(--space-2xl);
+    animation: partners-scroll 36s linear infinite;
+    /* Dragging across the page highlighted the logos — the strip is moving, so there is nothing
+       here anyone means to select, and the highlight just reads as a glitch. Scoped to the track
+       rather than the whole strip so the "Trusted Partners" label stays selectable; there is no
+       reason to stop someone copying real text. */
+    user-select: none;
+  }
+  /* Safari needed -webkit-user-select for years, and this build adds no prefixes of its own
+     (no browserslist config). It has to sit in its own block: Lightning CSS collapses a
+     prefixed/standard pair written together down to whichever comes LAST — it kept the standard
+     property here and kept the prefixed one in 370d37c's backdrop-filter, which is the same
+     rule seen from both sides. Verified against dist: both spellings survive this way. */
+  @supports (-webkit-user-select: none) {
+    .partners__track {
+      -webkit-user-select: none;
+    }
+  }
+  .partners__item {
+    display: flex;
+    align-items: center;
+    flex: none;
+    block-size: var(--logo-h);
+  }
+  .partners__item :global(img) {
+    height: 100%;
+    width: auto;
+    object-fit: contain;
+    /* Design renders logos as full-opacity greyscale (node 12023:32445); no additional fade. */
+    filter: grayscale(1);
+  }
+  @keyframes partners-scroll {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(-50%);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .partners__track {
+      animation: none;
+    }
+  }
+</style>

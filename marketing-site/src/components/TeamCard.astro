@@ -1,0 +1,169 @@
+---
+/**
+ * TeamCard — a portrait with a frosted caption panel carrying the member's name and role.
+ * The canonical implementation of Figma's `Container` / "His excellency" +
+ * "Overlay+Border+OverlayBlur" component (node 8090:7151), which Home's Core Team section
+ * instantiates 4x and /team 10x. Both pages previously carried their own drifted copy of this
+ * markup; this component is the one place to tune it.
+ *
+ * Geometry confirmed against the committed node.json (design/figma/…/5891-4663 and
+ * …/8187-8979 — the two files agree exactly), not eyeballed:
+ *   - Card 310x380, `clipsContent: true` on the photo frame. **No corner radius and no
+ *     stroke** — `cornerRadius` is absent and `strokes: []` on the card, the photo frame, and
+ *     the overlay alike. The "Border" in the layer name is vestigial from the source component
+ *     library; there is no border to draw.
+ *   - Overlay 310x107, bottom-anchored, padding 24 all round, `layoutMode: VERTICAL`,
+ *     `itemSpacing: 8`.
+ *   - Overlay fills, in Figma's bottom-to-top paint order: solid black at `opacity: 0.01`,
+ *     then a linear gradient rgba(0,0,0,0) → rgba(0,0,0,1) running top→bottom at layer
+ *     `opacity: 0.32` — i.e. an effective transparent → `rgb(0 0 0 / 0.32)` scrim. The 1% wash
+ *     is a no-op to the eye but is reproduced so the stack matches the source exactly.
+ *
+ * Typography: node.json specifies **Inter** (name 600/24/28.8/-0.48; role 400/16/22.4/0).
+ * The rest of the site is deliberately Arial-only (`--font-family-base`, chosen in Phase 0 to
+ * avoid any web-font load/FOUT), so — following the call already made and shipped for this
+ * exact card on /team — the font *sizes* are honoured exactly, line-height and letter-spacing
+ * are composed from the confirmed px values as one-off primitives, and the family stays
+ * inherited. Introducing a second family for one repeating card isn't worth the load cost.
+ *
+ * A11y: `alt` is caller-supplied and defaults to "" because the shipped design uses one
+ * placeholder portrait for every member — an identical photo repeated 14x across two pages
+ * carries no information, so it is decorative until real headshots land. Name and role are
+ * real text, so the card is fully readable either way. The caption's contrast is not gate-checked
+ * — axe cannot measure text over a raster image behind a backdrop-filter, so it reports
+ * `incomplete`, not a violation — and is tracked under "Checked and passing" in
+ * docs/a11y-known-issues.md for re-inspection when real headshots replace the placeholder.
+ */
+import { Image } from 'astro:assets';
+import type { ImageMetadata } from 'astro';
+
+interface Props {
+  src: ImageMetadata;
+  name: string;
+  role: string;
+  /** Defaults to "" (decorative) — see the a11y note above. */
+  alt?: string;
+}
+
+const { src, name, role, alt = '' } = Astro.props;
+---
+
+<div class="team-card">
+  <Image src={src} alt={alt} width={310} height={380} class="team-card__photo" />
+  <div class="team-card__info">
+    <div class="team-card__frost" aria-hidden="true"></div>
+    <div class="team-card__scrim" aria-hidden="true"></div>
+    <p class="team-card__name">{name}</p>
+    <p class="team-card__role">{role}</p>
+  </div>
+</div>
+
+<style>
+  .team-card {
+    position: relative;
+    /* Square corners — the design carries no cornerRadius (see header note). overflow:hidden
+       still earns its keep: it keeps the frost layers off the photo's edges. */
+    overflow: hidden;
+  }
+  .team-card__photo {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 310 / 380;
+    object-fit: cover;
+    display: block;
+  }
+
+  .team-card__info {
+    position: absolute;
+    inset-inline: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2xs); /* itemSpacing: 8 */
+    padding: var(--space-md); /* 24 all round */
+    color: var(--color-white);
+  }
+
+  /* ── Progressive frost ────────────────────────────────────────────────────
+     The overlay's effect is `BACKGROUND_BLUR` with `blurType: "PROGRESSIVE"` —
+     `startRadius: 0` at `startOffset.y: 0` ramping to `radius: 32` at `endOffset.y: 1`, i.e.
+     no blur at the caption's top edge growing to 32px at the bottom of the card. CSS has no
+     progressive backdrop-filter, so this reuses the technique already established for Home's
+     hero glass (`.who__frost` in index.astro): three uniform backdrop-filters, each faded in
+     by a gradient mask that starts lower than the one below it. The overlap approximates the
+     ramp far more smoothly than a single masked layer, which reads as a hard band.
+
+     Split across two hosts purely for the pseudo-element budget — three blur layers plus the
+     scrim need four, and one element only offers ::before/::after. Paint order runs
+     lightest → heaviest → scrim, so the fills sit on top of the frost exactly as Figma
+     composites them (background blur first, node fills over it). */
+  .team-card__frost,
+  .team-card__scrim {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+  .team-card__frost::before,
+  .team-card__frost::after,
+  .team-card__scrim::before,
+  .team-card__scrim::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+  .team-card__frost::before {
+    backdrop-filter: blur(6px);
+    mask-image: linear-gradient(to bottom, transparent 0%, #000 45%);
+  }
+  .team-card__frost::after {
+    backdrop-filter: blur(16px);
+    mask-image: linear-gradient(to bottom, transparent 35%, #000 75%);
+  }
+  .team-card__scrim::before {
+    backdrop-filter: blur(32px);
+    mask-image: linear-gradient(to bottom, transparent 55%, #000 100%);
+  }
+  /* The overlay's two fills. Listed top-first per CSS background order, so this is Figma's
+     fills[1] (the 0.32 gradient) over fills[0] (the 1% black wash). */
+  .team-card__scrim::after {
+    background:
+      linear-gradient(to bottom, rgb(0 0 0 / 0) 0%, rgb(0 0 0 / 0.32) 100%), rgb(0 0 0 / 0.01);
+  }
+  /* Safari < 18 only ships the prefixed property, and it must live in its own @supports block:
+     Lightning CSS collapses a prefixed/standard pair written in the SAME declaration block down
+     to just the prefixed one, silently dropping the standard property Chrome and Firefox need.
+     Chrome fails this query, so it never sees these declarations. (Same reasoning as
+     index.astro's hero frost and SiteHeader's pill.) */
+  @supports (-webkit-backdrop-filter: blur(1px)) {
+    .team-card__frost::before {
+      -webkit-backdrop-filter: blur(6px);
+    }
+    .team-card__frost::after {
+      -webkit-backdrop-filter: blur(16px);
+    }
+    .team-card__scrim::before {
+      -webkit-backdrop-filter: blur(32px);
+    }
+  }
+
+  /* The frost/scrim layers are positioned, so they would otherwise paint over the in-flow
+     text. Promoting the text into the positioned phase puts it back on top. */
+  .team-card__name,
+  .team-card__role {
+    position: relative;
+    margin: 0;
+  }
+  .team-card__name {
+    font-weight: var(--font-weight-semibold);
+    font-size: 24px;
+    line-height: 28.8px;
+    letter-spacing: -0.48px;
+  }
+  .team-card__role {
+    font-weight: var(--font-weight-regular);
+    font-size: 16px;
+    line-height: 22.4px;
+    letter-spacing: 0;
+  }
+</style>
