@@ -93,6 +93,8 @@ import partnerRoutes from "./routes/partner.routes.js";
 import adminPartnerRoutes from "./routes/adminPartner.routes.js";
 import adminFaqRoutes from "./routes/adminFaq.routes.js"
 import faqRoutes from "./routes/faq.routes.js"
+import adminProjectRoutes from "./routes/adminProject.routes.js"
+import projectRoutes from "./routes/project.routes.js"
 
 
 
@@ -271,6 +273,9 @@ app.use("/api/admin/partners/all", adminPartnerRoutes);
 
 app.use("/api/admin/faqs", adminFaqRoutes);
 app.use("/api/faqs/all", faqRoutes);
+
+app.use("/api/admin/projects/all", adminProjectRoutes);
+app.use("/api/projects/all", projectRoutes);
 
     // Sync models AFTER models are loaded
     await sequelize.sync();

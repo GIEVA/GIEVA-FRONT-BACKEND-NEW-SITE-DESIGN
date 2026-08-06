@@ -199,7 +199,7 @@ function App() {
         />
 
         <Route path="/our-programs" element={<OurPrograms />} />
-        <Route path="/program/:id" element={<ProgramDetail />} />
+        <Route path="/our-programs/:slug" element={<ProgramDetail />} />
         <Route path="/history" element={<History />} />
         <Route path="/our-team" element={<OurTeam />} />
         <Route path="/team/:id" element={<StaffDetail />} />

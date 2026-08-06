@@ -43,6 +43,7 @@ import ProgramModel from './Program.js';
 import HistoryPageModel from './HistoryPage.js';
 import PartnerModel from './Partner.js';
 import FaqModel from './Faq.js';
+import ProjectModel from './Project.js';
 
 
 
@@ -90,6 +91,7 @@ const Program = ProgramModel(sequelize)
 const HistoryPage = HistoryPageModel(sequelize)
 const Partner = PartnerModel(sequelize)
 const Faq = FaqModel(sequelize)
+const Project = ProjectModel(sequelize)
 
 // Collect models
 export const models = {
@@ -137,6 +139,7 @@ export const models = {
   HistoryPage,
   Partner,
   Faq,
+  Project,
 };
 
 // Run associations
