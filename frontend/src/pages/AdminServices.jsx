@@ -89,18 +89,24 @@ const StatCard = ({ title, value, color = NAVY, icon }) => (
 const EMPTY_FORM = {
   title: "",
   description: "",
+  content: "",
   iconName: "",
   href: "",
   featured: false,
   category: "",
   order: 0,
   status: "draft",
-
-  // Image fields
   imageFile: null,
   imagePreview: "",
   existingImageUrl: "",
+  offices: [],
+  resources: [],
+  ctaButtons: [],
 };
+
+const emptyOffice = () => ({ id: `o${Date.now()}`, name: "", address: "", phone: "", email: "", hours: "" });
+const emptyResource = () => ({ id: `r${Date.now()}`, label: "", url: "" });
+const emptyCta = () => ({ id: `c${Date.now()}`, label: "", href: "", external: false });
 
 // ─────────────────────────────────────────────────────────────
 // SERVICE FORM DIALOG  (create + edit)
@@ -120,17 +126,21 @@ const ServiceFormDialog = ({ open, onClose, editId, onSaved, setToast }) => {
         setFetching(true);
         const svc = await getAdminService(editId);
         setForm({
-          title:             svc.title             || "",
-          description:       svc.description       || "",
-          iconName:          svc.iconName          || "",
-          href:              svc.href              || "",
-          featured:          svc.featured          || false,
-          category:          svc.category          || "",
-          order:             svc.order             ?? 0,
-          status:            svc.status            || "draft",
-          imageFile: null,       // the actual File object
-          imagePreview: "",      // local preview URL
-          existingImageUrl: svc.imageUrl || "",  // when editing
+          title: svc.title || "",
+          description: svc.description || "",
+          content: svc.content || "",
+          iconName: svc.iconName || "",
+          href: svc.href || "",
+          featured: svc.featured || false,
+          category: svc.category || "",
+          order: svc.order ?? 0,
+          status: svc.status || "draft",
+          imageFile: null,
+          imagePreview: "",
+          existingImageUrl: svc.imageUrl || "",
+          offices: svc.offices?.length ? svc.offices : [],
+          resources: svc.resources?.length ? svc.resources : [],
+          ctaButtons: svc.ctaButtons?.length ? svc.ctaButtons : [],
         });
       } catch (err) {
         setToast({ msg: "Failed to load service data", severity: "error" });
@@ -186,6 +196,10 @@ const ServiceFormDialog = ({ open, onClose, editId, onSaved, setToast }) => {
     formData.append("category", form.category || "General");
     formData.append("order", form.order);
     formData.append("status", form.status);
+    formData.append("content", form.content || "");
+    formData.append("offices", JSON.stringify(form.offices));
+    formData.append("resources", JSON.stringify(form.resources));
+    formData.append("ctaButtons", JSON.stringify(form.ctaButtons));
 
     // Only append image if a new file was selected
     if (form.imageFile) {
@@ -213,6 +227,30 @@ const ServiceFormDialog = ({ open, onClose, editId, onSaved, setToast }) => {
 };
   
   const isEdit = !!editId;
+
+  // Offices
+const updateOffice = (i, field, value) => setForm((f) => {
+  const next = [...f.offices]; next[i] = { ...next[i], [field]: value };
+  return { ...f, offices: next };
+});
+const addOffice = () => setForm((f) => ({ ...f, offices: [...f.offices, emptyOffice()] }));
+const removeOffice = (i) => setForm((f) => ({ ...f, offices: f.offices.filter((_, idx) => idx !== i) }));
+
+// Resources
+const updateResource = (i, field, value) => setForm((f) => {
+  const next = [...f.resources]; next[i] = { ...next[i], [field]: value };
+  return { ...f, resources: next };
+});
+const addResource = () => setForm((f) => ({ ...f, resources: [...f.resources, emptyResource()] }));
+const removeResource = (i) => setForm((f) => ({ ...f, resources: f.resources.filter((_, idx) => idx !== i) }));
+
+// CTA buttons
+const updateCta = (i, field, value) => setForm((f) => {
+  const next = [...f.ctaButtons]; next[i] = { ...next[i], [field]: value };
+  return { ...f, ctaButtons: next };
+});
+const addCta = () => setForm((f) => ({ ...f, ctaButtons: [...f.ctaButtons, emptyCta()] }));
+const removeCta = (i) => setForm((f) => ({ ...f, ctaButtons: f.ctaButtons.filter((_, idx) => idx !== i) }));
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth
@@ -377,6 +415,97 @@ const ServiceFormDialog = ({ open, onClose, editId, onSaved, setToast }) => {
                   )}
                 </Stack>
               </Grid>
+
+              {/* Long-form Content */}
+<Grid item xs={12}>
+  <TextField
+    fullWidth multiline rows={8} label="Detail Page Content"
+    value={form.content} onChange={set("content")}
+    placeholder="Full body content shown on the service detail page — supports plain paragraphs. Use blank lines to separate paragraphs."
+    sx={{ "& fieldset": { borderColor: BORDER } }}
+  />
+</Grid>
+
+{/* Offices */}
+<Grid item xs={12}>
+  <Divider sx={{ my: 1 }} />
+  <Typography sx={{ fontSize: 14, fontWeight: 700, color: TEXT, mb: 1.5 }}>Office Locations</Typography>
+  <Stack spacing={2}>
+    {form.offices.map((o, i) => (
+      <Box key={o.id} sx={{ border: `1px solid ${BORDER}`, borderRadius: 2, p: 2 }}>
+        <Stack direction="row" justifyContent="space-between" mb={1.5}>
+          <Typography sx={{ fontSize: 12.5, fontWeight: 700, color: MUTED }}>Office {i + 1}</Typography>
+          <IconButton size="small" color="error" onClick={() => removeOffice(i)}><Delete fontSize="small" /></IconButton>
+        </Stack>
+        <Grid container spacing={1.5}>
+          <Grid item xs={12} sm={6}>
+            <TextField fullWidth size="small" label="Office Name" value={o.name}
+              onChange={(e) => updateOffice(i, "name", e.target.value)} />
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <TextField fullWidth size="small" label="Phone" value={o.phone}
+              onChange={(e) => updateOffice(i, "phone", e.target.value)} />
+          </Grid>
+          <Grid item xs={12}>
+            <TextField fullWidth size="small" label="Address" value={o.address}
+              onChange={(e) => updateOffice(i, "address", e.target.value)} />
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <TextField fullWidth size="small" label="Email" value={o.email}
+              onChange={(e) => updateOffice(i, "email", e.target.value)} />
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <TextField fullWidth size="small" label="Hours" value={o.hours}
+              placeholder="Mon–Thu: 9am–4pm | Fri: 9am–2pm"
+              onChange={(e) => updateOffice(i, "hours", e.target.value)} />
+          </Grid>
+        </Grid>
+      </Box>
+    ))}
+  </Stack>
+  <Button startIcon={<Add />} onClick={addOffice} sx={{ mt: 1.5, textTransform: "none" }}>Add Office</Button>
+</Grid>
+
+{/* Resources */}
+<Grid item xs={12}>
+  <Divider sx={{ my: 1 }} />
+  <Typography sx={{ fontSize: 14, fontWeight: 700, color: TEXT, mb: 1.5 }}>Resource Links</Typography>
+  <Stack spacing={1.5}>
+    {form.resources.map((r, i) => (
+      <Stack key={r.id} direction="row" spacing={1.5} alignItems="center">
+        <TextField size="small" label="Label" value={r.label}
+          onChange={(e) => updateResource(i, "label", e.target.value)} sx={{ flex: 1 }} />
+        <TextField size="small" label="URL" value={r.url}
+          onChange={(e) => updateResource(i, "url", e.target.value)} sx={{ flex: 2 }} />
+        <IconButton size="small" color="error" onClick={() => removeResource(i)}><Delete fontSize="small" /></IconButton>
+      </Stack>
+    ))}
+  </Stack>
+  <Button startIcon={<Add />} onClick={addResource} sx={{ mt: 1.5, textTransform: "none" }}>Add Resource</Button>
+</Grid>
+
+{/* CTA Buttons */}
+<Grid item xs={12}>
+  <Divider sx={{ my: 1 }} />
+  <Typography sx={{ fontSize: 14, fontWeight: 700, color: TEXT, mb: 1.5 }}>Call-to-Action Buttons</Typography>
+  <Stack spacing={1.5}>
+    {form.ctaButtons.map((c, i) => (
+      <Stack key={c.id} direction="row" spacing={1.5} alignItems="center">
+        <TextField size="small" label="Label" value={c.label}
+          onChange={(e) => updateCta(i, "label", e.target.value)} sx={{ flex: 1 }} />
+        <TextField size="small" label="Link" value={c.href}
+          onChange={(e) => updateCta(i, "href", e.target.value)} sx={{ flex: 2 }} />
+        <FormControlLabel
+          control={<Switch size="small" checked={c.external}
+            onChange={(e) => updateCta(i, "external", e.target.checked)} />}
+          label={<Typography sx={{ fontSize: 12.5 }}>New tab</Typography>}
+        />
+        <IconButton size="small" color="error" onClick={() => removeCta(i)}><Delete fontSize="small" /></IconButton>
+      </Stack>
+    ))}
+  </Stack>
+  <Button startIcon={<Add />} onClick={addCta} sx={{ mt: 1.5, textTransform: "none" }}>Add Button</Button>
+</Grid>
 
               {/* Status + Featured */}
               <Grid item xs={12} sm={6}>

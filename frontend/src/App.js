@@ -136,6 +136,9 @@ import StaffDetail from "./pages/StaffDetail";
 import AdminPartners from "./pages/AdminPartners";
 import AdminFaqs from "./pages/AdminFaqs";
 import FaqPage from "./pages/FaqPage";
+import Projects from "./pages/Projects";
+//import ProjectDetail from "./pages/ProjectDetail";
+import AdminProjects from "./pages/AdminProjects";
 
 // (Optional later)
 // import Dashboard from "./pages/Dashboard";
@@ -205,6 +208,8 @@ function App() {
         <Route path="/team/:id" element={<StaffDetail />} />
         <Route path="/about" element={<About />} />
         <Route path="/faqs" element={<FaqPage />} />
+        <Route path="/projects" element={<Projects />} />
+
 
          <Route
           path="/exam-catalog"
@@ -739,6 +744,14 @@ function App() {
             </AdminLayout>
           }
         />
+        <Route
+        path="/admin/projects"
+        element={
+          <AdminLayout>
+            <AdminProjects />
+          </AdminLayout>
+        }
+      />
         </Routes>
       </BrowserRouter>
     </AuthProvider>
