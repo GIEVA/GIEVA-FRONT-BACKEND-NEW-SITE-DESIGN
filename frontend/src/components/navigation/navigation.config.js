@@ -51,7 +51,7 @@ export const publicNavigation = [
       },
       {
         label: "Partners",
-        path: "/partners",
+        path: "/our-partners",
       },
       {
         label: "Testimonials",
