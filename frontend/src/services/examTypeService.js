@@ -10,7 +10,7 @@ const PUBLIC_API = axios.create({
   headers: { "Content-Type": "application/json" },
 });
 
-const BASE = "/api/exam-types";
+const BASE = "/api/exam-types/catalog";
 
 // ── Public (no auth) ──────────────────────────────────────────
 

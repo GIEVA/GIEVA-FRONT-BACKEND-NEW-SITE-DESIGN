@@ -35,7 +35,7 @@ import {
 
 import {
 
-  getPublicCampaignDetails,
+  getPublicCampaign,
   trackCampaignClick,
 
 } from "../services/publicCampaignService";
@@ -79,7 +79,7 @@ const PublicCampaignDetails =
         try {
 
           const res =
-            await getPublicCampaignDetails(
+            await getPublicCampaign(
               id
             );
 

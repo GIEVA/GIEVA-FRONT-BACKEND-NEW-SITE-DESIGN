@@ -111,13 +111,7 @@ export const getPublicCampaigns =
       // RESPONSE
       // ======================================================
 
-      res.status(200).json({
-
-        total:
-          campaigns.length,
-
-        campaigns,
-      });
+      res.status(200).json(campaigns);
 
     } catch (error) {
 
@@ -215,9 +209,7 @@ export const getPublicCampaignDetails =
       // RESPONSE
       // ======================================================
 
-      res.status(200).json({
-        campaign,
-      });
+      res.status(200).json(campaign);
 
     } catch (error) {
 

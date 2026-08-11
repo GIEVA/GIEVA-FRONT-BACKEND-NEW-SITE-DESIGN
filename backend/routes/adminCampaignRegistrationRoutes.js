@@ -31,7 +31,7 @@ const router =
 
 router.use(
 
-  authenticate,
+  
 
   authorizeRoles(
     "admin",
