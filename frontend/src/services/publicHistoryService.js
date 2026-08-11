@@ -1,6 +1,6 @@
-import api from "./api"; // your existing axios instance
+import api from "./api";
 
 export const getHistory = async () => {
-  const { data } = await api.get("/api/gieva/history/all");
+  const { data } = await api.get("/api/gieva/history");
   return data;
 };
