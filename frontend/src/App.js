@@ -214,7 +214,7 @@ function App() {
         <Route path="/team/:id" element={<StaffDetail />} />
         <Route path="/about" element={<About />} />
         <Route path="/faqs" element={<FaqPage />} />
-        <Route path="/projects" element={<Projects />} />
+        <Route path="/ngo" element={<Projects />} />
         <Route path="/our-partners" element={<OurPartners />} />
 
 
