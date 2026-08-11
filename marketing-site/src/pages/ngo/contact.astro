@@ -1,57 +1,67 @@
 ---
 /**
- * Contact us (/ngo/contact) — NGO. Built against the committed Figma node 7461:5854
- * (design/figma/fTqnnV20l9htP7vFJrOsvn/7461-5854/), confirmed "CONTACT US PAGE NGO" by frame
- * name — no collision to resolve. See docs/ngo-build-plan.md Phase 5. The last of the five NGO
- * pages; the frame is the shortest (1440×2660): a white page-header over one ~1560px content
- * block, then the shared footer.
+ * Contact us (/ngo/contact) — NGO. Built against Figma node 7461:5854 ("CONTACT US PAGE NGO",
+ * confirmed by frame name — no collision to resolve). See docs/ngo-build-plan.md Phase 5.
  *
- * SHAPE, confirmed section-by-section against this page's own node.json (never a whole-file
- * read):
- *   1. White page header — breadcrumb "HOME / PROGRAMS" + "Contact Us" h1 (node 7958:30382),
- *      same shape as About/Partners/Program's headers. The breadcrumb text is another
- *      duplication artifact (this time from the Program frame, not About) — reproduced verbatim
- *      per exact-replica-first, same precedent as Partners' "HOME / ABOUT".
- *   2. Contact info (node 7461:6164) — NOT present on any prior NGO page, so built fresh rather
- *      than reused: a two-column, icon-led block — HEAD OFFICE / LAGOS BRANCH OFFICE / JOS
- *      BRANCH OFFICE addresses on the left, PHONE / EMAIL / OFFICE HOURS on the right. Every
- *      micro-label ("HEAD OFFICE" etc.) sits inside a Figma frame with `opacity: 0.5` over its
- *      raw black (#000000) fill — not a distinct colour token — so the rendered value is flat
- *      black composited at 50% over the white surface, sampled from `frame.png` and confirmed
- *      via `node.json` opacity as `#7F7F7F`. Icons (location pin, call, mail, clock) are the
- *      confirmed green `#007F0E` stroke glyphs from the node tree; the call/clock glyphs weren't
- *      captured by the original ingestion (nested one level deeper than the "icon"-tagged
- *      nodes), so their SVGs were pulled individually via Framelink and committed alongside the
- *      rest of this page's `assets/` — not a re-fetch of the page.
+ * ⚠ REDESIGNED — rebuilt 2026-08-07, the last page of the sweep that reworked About and Program.
+ * The page was first built (Phase 5) against the 2026-07-20 ingest, which is what
+ * design/figma/…/7461-5854/node.json still holds. That snapshot is STALE — it is 2660px tall
+ * where the live frame is 2974px. This build follows the LIVE node, read through the Figma MCP;
+ * every value below was confirmed against it, not against the committed node.json. Re-run
+ * `npm run figma:fetch -- "<contact-url>"` (needs FIGMA_API_KEY) to resync. What changed:
+ *   - A full-bleed photo hero + "Contact" h1 (node 12330:13424) replaced the white
+ *     "HOME / PROGRAMS" breadcrumb header. The breadcrumb is gone from the design entirely,
+ *     exactly as on About and Program — closing a11y issue N16 with the markup that carried it.
+ *     Note the title is "Contact", not "Contact Us"; the design shortened it.
+ * Nothing else about the frame's composition changed: the contact-info block and the form panel
+ * are the same nodes at the same sizes. The remaining fixes below are parity bugs this pass
+ * caught, not redesign deltas.
+ *
+ * SHAPE:
+ *   1. Photo hero — `SubPageHero`, the same component Consultancy's seven sub-pages and NGO
+ *      About/Program use: 1440×670, 25% black scrim, `u-page-title` 120px off the bottom. Its
+ *      photo is byte-identical to About's and Program's (diffed at equal size, RMSE exactly 0),
+ *      so it takes the shared `ngoHeroPhoto` rather than a second copy of anything.
+ *   2. Contact info (node 7461:6164) — a two-column, icon-led block: HEAD OFFICE / LAGOS BRANCH
+ *      OFFICE / JOS BRANCH OFFICE addresses on the left, PHONE / EMAIL / OFFICE HOURS on the
+ *      right. Every micro-label ("HEAD OFFICE" etc.) sits inside a Figma frame with
+ *      `opacity: 0.5` over its raw black (#000000) fill — not a distinct colour token — so the
+ *      rendered value is flat black composited at 50% over the white surface, confirmed via
+ *      `node.json` opacity as `#7F7F7F`. Icons (location pin, call, mail, clock) are the
+ *      confirmed green `#007F0E` stroke glyphs; the call/mail/clock paths were re-diffed against
+ *      the design's own SVG exports in this pass and match character-for-character (float
+ *      rounding aside). The pin did not — see `.contact-info__icon`.
  *   3. "Send us a Message" — the deep-teal inverse form panel (node 7461:5938). Structurally the
  *      SAME 7-field labelled `<form>` as NGO Program's "Contact Us Now" panel (fixed 387px
  *      right-aligned label column, 122px gap, white-underline inputs, centred submit, muted
  *      teal-blue `#69A4B8` labels, green `.u-accent-em` heading accent) — confirmed against this
- *      page's own node.json rather than assumed: same field count, same label pixel colour, same
- *      heading-accent direction (not inverted). The only real deltas from Program's panel are the
+ *      page's own node rather than assumed. The only real deltas from Program's panel are the
  *      heading/subheading copy and three of the seven field labels being genuine ("What is your
  *      full name?" / "What is your email address?" / "Phone Number") rather than all seven
  *      reading the "What is your name?" placeholder — the last four still do, reproduced verbatim.
  *
- * The whole page is one 120px (`--space-6xl`) vertical rhythm — header→info-block and
- * info-block→form-panel are both exactly 120px in the source (header's own paddingBottom 120,
- * content's itemSpacing 120) — so, like Program, it's authored as a single `.container` grid with
- * `row-gap: var(--space-6xl)` rather than per-section double-padding.
+ * GEOMETRY RECONCILES, so the reading above is verified rather than eyeballed: hero 670 + body
+ * 1680 = Main 2350, and 2350 + the 624px footer = 2974, the measured frame. The body is one
+ * 120px (`--space-6xl`) rhythm: 120 + info 300 + 120 + panel 1020 + 120 = 1680.
  *
- * Copy transcribed from the node.json text runs, not eyeballed. Recurring-trap sweep: no hidden
- * `visible:false` runs found on this page; no manual grid-anchor reordering (both info columns
- * and all form rows are document-order); no low-opacity-stroke dividers (the form panel has none
- * — Program's pattern, not Partners'); frame.png pixel-compared throughout, including for the
- * label opacity discovery above (the JSON's raw fill alone reads pure black, matching neither the
- * rendered grey nor any existing colour token — opacity was the missing piece).
+ * TYPE: "Send us a Message" keeps `u-section-title`. Do NOT "fix" it to `u-h2` by analogy with
+ * About — About moved because *its* headings specify tracking −0.26, whereas this frame's h2
+ * (node 7461:5941) really does carry −3.3px, which is what `u-section-title` resolves to. The
+ * hero title is `u-page-title` (64/56/700/−0.26), which is what node 12330:13794 specifies.
  *
- * Heading order: h1 "Contact Us" → h2 "Send us a Message". Nothing else on the page is a
- * heading — the office/phone/email/hours micro-labels are visual field-group labels, not section
- * headings (same precedent as the form `<label>`s themselves), so promoting them would only add
+ * Copy transcribed from the node's text runs, not eyeballed. Recurring-trap sweep: no hidden
+ * `visible:false` runs on this page; no manual grid-anchor reordering (both info columns and all
+ * form rows are document-order); no low-opacity-stroke dividers.
+ *
+ * Heading order: h1 "Contact" → h2 "Send us a Message". Nothing else on the page is a heading —
+ * the office/phone/email/hours micro-labels are visual field-group labels, not section headings
+ * (same precedent as the form `<label>`s themselves), so promoting them would only add
  * heading-order noise without a real content hierarchy to justify it.
  */
 import BaseLayout from '@layouts/BaseLayout.astro';
 import Button from '@components/Button.astro';
+import SubPageHero from '@components/SubPageHero.astro';
+import { ngoHeroPhoto } from '@lib/ngo-hero-images';
 
 const offices = [
   {
@@ -111,39 +121,36 @@ const contactFields: ContactField[] = [
   description="Reach GIEVA's head office, Lagos and Jos branch offices, phone lines, and email — or send us a message about how we can impact lives together."
   brand="ngo"
 >
-  <div class="container contact">
-    <!-- ── Page header ────────────────────────────────────────────────────────── -->
-    <header class="contact__header">
-      <p class="contact-breadcrumb">HOME / PROGRAMS</p>
-      <h1 class="u-section-title contact-title">Contact Us</h1>
-    </header>
+  <!-- ── Photo hero (node 12330:13424) ────────────────────────────────────────── -->
+  <SubPageHero title="Contact" photo={ngoHeroPhoto} />
 
+  <div class="container contact">
     <!-- ── Contact info ───────────────────────────────────────────────────────── -->
     <section class="contact-info">
       <div class="contact-info__col">
         {
           offices.map((office) => (
             <div class="contact-info__group">
-              <p class="contact-info__label">{office.label}</p>
-              <p class="contact-info__row">
+              <p class="u-label contact-info__label">{office.label}</p>
+              <p class="contact-info__row contact-info__row--address">
                 <svg
                   class="contact-info__icon"
                   width="16"
-                  height="20"
-                  viewBox="0 0 16 20"
+                  height="16"
+                  viewBox="0 0 16 16"
                   fill="none"
                   aria-hidden="true"
                   focusable="false"
                 >
                   <path
-                    d="M13.3346 10.6663C13.3346 13.6119 8.0013 18.6663 8.0013 18.6663C8.0013 18.6663 2.66797 13.6119 2.66797 10.6663C2.66797 7.72082 5.05578 5.33301 8.0013 5.33301C10.9468 5.33301 13.3346 7.72082 13.3346 10.6663Z"
+                    d="M13.3346 6.6663C13.3346 9.6119 8.0013 14.6663 8.0013 14.6663C8.0013 14.6663 2.66797 9.6119 2.66797 6.6663C2.66797 3.72082 5.05578 1.33301 8.0013 1.33301C10.9468 1.33301 13.3346 3.72082 13.3346 6.6663Z"
                     stroke="currentColor"
                     stroke-width="1.5"
                     stroke-linecap="round"
                     stroke-linejoin="round"
                   />
                   <path
-                    d="M7.9987 11.3333C8.3669 11.3333 8.66536 11.0349 8.66536 10.6667C8.66536 10.2985 8.3669 10 7.9987 10C7.6305 10 7.33203 10.2985 7.33203 10.6667C7.33203 11.0349 7.6305 11.3333 7.9987 11.3333Z"
+                    d="M7.9987 7.3333C8.3669 7.3333 8.66536 7.0349 8.66536 6.6667C8.66536 6.2985 8.3669 6 7.9987 6C7.6305 6 7.33203 6.2985 7.33203 6.6667C7.33203 7.0349 7.6305 7.3333 7.9987 7.3333Z"
                     fill="currentColor"
                   />
                 </svg>
@@ -156,7 +163,7 @@ const contactFields: ContactField[] = [
 
       <div class="contact-info__col">
         <div class="contact-info__group">
-          <p class="contact-info__label">PHONE</p>
+          <p class="u-label contact-info__label">PHONE</p>
           <p class="contact-info__row">
             <svg
               class="contact-info__icon"
@@ -185,7 +192,7 @@ const contactFields: ContactField[] = [
         </div>
 
         <div class="contact-info__group">
-          <p class="contact-info__label">EMAIL</p>
+          <p class="u-label contact-info__label">EMAIL</p>
           <p class="contact-info__row">
             <svg
               class="contact-info__icon"
@@ -210,7 +217,7 @@ const contactFields: ContactField[] = [
         </div>
 
         <div class="contact-info__group">
-          <p class="contact-info__label">OFFICE HOURS</p>
+          <p class="u-label contact-info__label">OFFICE HOURS</p>
           {
             officeHours.map((hours) => (
               <p class="contact-info__row">
@@ -248,7 +255,7 @@ const contactFields: ContactField[] = [
     </section>
 
     <!-- ── Send us a Message ─────────────────────────────────────────────────── -->
-    <section class="contact-form surface-inverse" data-surface="inverse">
+    <section class="contact-form surface-inverse" id="contact-form" data-surface="inverse">
       <div class="contact-form__header">
         <h2 class="u-section-title">
           Send us a <em class="u-accent-em">Message</em>
@@ -291,31 +298,16 @@ const contactFields: ContactField[] = [
 
 <style>
   /* ── Page flow ────────────────────────────────────────────────────────────────
-     Every gap in the source (header paddingBottom 120, content itemSpacing 120, content
-     paddingBottom 120) is the same --space-6xl step, so — as with Program — the whole page is
-     one grid with a uniform row-gap rather than per-section double-padding. */
+     The body below the hero is node 7461:5857: 120px padding top and bottom, and 120px between
+     the info block and the panel (--space-6xl, matching itemSpacing) — so, like Program, it is
+     one grid with a uniform row-gap rather than per-section double-padding. The top padding used
+     to exist to clear the old in-flow page header; post-redesign it is the node's own padding.
+     120 + 300 + 120 + 1020 + 120 = 1680, the measured height of the node. */
   .contact {
     display: grid;
     padding-top: var(--space-6xl);
     padding-bottom: var(--space-6xl);
     row-gap: var(--space-6xl);
-  }
-
-  /* ── Page header (white) ─────────────────────────────────────────────────────
-     node 7958:30382 itemSpacing 40 between breadcrumb and title, same shape as
-     About/Partners/Program's headers. */
-  .contact-breadcrumb {
-    margin: 0 0 40px; /* one-off gap, not a scale step */
-    font-family: var(--font-family-base);
-    font-size: var(--font-size-underline);
-    line-height: var(--line-height-underline);
-    letter-spacing: var(--letter-spacing-none);
-    font-weight: var(--font-weight-bold);
-    color: var(--color-eyebrow); /* NGO eyebrow = orange #E65320 */
-  }
-  .contact-title {
-    margin: 0;
-    color: var(--color-mine-shaft); /* neutral #292929, not NGO's violet default ink */
   }
 
   /* ── Contact info ─────────────────────────────────────────────────────────────
@@ -330,27 +322,29 @@ const contactFields: ContactField[] = [
     display: grid;
     gap: var(--space-md);
   }
+  /* Every group carries an 8px horizontal inset (node 7461:6194 etc. paddingLeft/Right 8), so
+     the block's text starts 8px in from the container edge rather than flush with it. */
   .contact-info__group {
     display: grid;
     gap: var(--space-sm);
+    padding-inline: var(--space-2xs);
   }
-  /* All-caps micro-label ("HEAD OFFICE", "PHONE"…): node text fill is flat black, but every
-     label sits inside a frame with opacity 0.5 — not a distinct colour token. Flattened against
-     the white surface (measured off frame.png) that's #7F7F7F, a genuine new colour-contrast gap
-     (issue N17, docs/a11y-known-issues.md) — not a translation guess. */
+  /* All-caps micro-label ("HEAD OFFICE", "PHONE"…). The type is the design's own named style
+     "GIEVA.org/Arial/Narrow" (Arial Narrow 14/20/400, tracking −0.14), which is exactly the
+     `--type-label-*` role — hence `.u-label` rather than a hand-rolled copy. The colour is the
+     one thing that isn't a token: the node's text fill is flat black, but every label sits
+     inside a frame with opacity 0.5. Flattened against the white surface that's #7F7F7F, a
+     tracked colour-contrast gap (issue N17, docs/a11y-known-issues.md) — not a translation
+     guess. */
   .contact-info__label {
     margin: 0;
-    font-family: var(--font-family-base);
-    font-size: var(--font-size-body);
-    line-height: 20px; /* node lineHeightPx 20 — one-off, u-caption's 21px doesn't match */
-    letter-spacing: var(--letter-spacing-narrow);
-    font-weight: var(--font-weight-regular);
-    text-transform: uppercase;
     color: #7f7f7f;
   }
+  /* The phone, email and office-hours rows are `items-center` in the design (nodes 7461:6175 /
+     6249 / 6258): single-line copy, so the 16px glyph centres in the 24px line box. */
   .contact-info__row {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     gap: var(--space-2xs);
     margin: 0;
     font-size: var(--type-body-lg-size);
@@ -358,11 +352,25 @@ const contactFields: ContactField[] = [
     letter-spacing: var(--type-body-lg-tracking);
     color: #000; /* node fill #000000 — not NGO's violet default ink */
   }
+  /* The three address rows are the exception — `items-start` with the pin nudged 4px down
+     (node I7461:6198;4547:22453 paddingTop 4), because their copy wraps to two lines and the
+     pin belongs beside the first one, not centred across both. */
+  .contact-info__row--address {
+    align-items: flex-start;
+  }
+  .contact-info__row--address .contact-info__icon {
+    margin-top: var(--space-3xs);
+  }
   /* Icons are the confirmed green stroke glyphs (node fill/stroke #007F0E on every pin/call/
-     mail/clock instance) — decorative and redundant with the adjoining text. */
+     mail/clock instance) — decorative and redundant with the adjoining text.
+
+     All four are 16×16 in the design. The pin used to be authored 16×20 with its glyph sitting
+     in the bottom 15px of that box — a 24-space icon dropped into the wrong viewBox — which
+     rendered it ~4px low and made the row reserve 20px. Re-diffed against the design's own SVG
+     export in this pass and re-anchored: shifting every y by −4 puts the outline at y 1.33–14.67
+     and the dot at 6.0–7.33, which is the export's 8.33%/37.5% insets exactly. */
   .contact-info__icon {
     flex: none;
-    margin-top: 0.2em;
     color: var(--color-cta);
   }
   .contact-info__phones {
@@ -405,36 +413,56 @@ const contactFields: ContactField[] = [
     display: grid;
     gap: var(--space-3xl);
   }
-  /* Fixed 387px label column, RIGHT-aligned text, 122px gap to a filling input — same one-off
-     values as the NGO Partners/Program forms. Rows are 16px apart. */
+  /* Fixed 387px label column, RIGHT-aligned text, 122px gap to a filling input (node: Label
+     sizingH FIXED w=387, row itemSpacing 122) — the same one-off values as the NGO
+     Partners/Program forms. Rows are 16px apart (node itemSpacing 16).
+
+     Each row is a FIXED 74px, which is taller than its own content: the input box is only 42px
+     of it (node 7461:5949) and the remaining 32px is empty. Letting the rows size to content
+     instead — which is what they did until this pass — collapses each one to 42px and the whole
+     panel to 796px against the frame's measured 1020px. The arithmetic is 7 × 74 + 6 × 16 = 614,
+     which is the measured height of node 7461:5944 exactly, and
+     64 + 96 + 64 + 614 + 64 + 54 + 64 = 1020, the panel. Top-align, or the 32px splits itself
+     around the input and the underline drifts off the design's baseline. Same fix as Program. */
   .contact-form__fields {
     display: grid;
     grid-template-columns: 387px minmax(0, 1fr);
     column-gap: 122px;
     row-gap: var(--space-sm);
-    align-items: center;
+    grid-auto-rows: 74px;
+    align-items: start;
   }
   /* Muted teal-blue labels #69A4B8 (node fill) — same colour as Program's Contact panel, not
-     Partners' green. */
+     Partners' green. The 8px offset is the label text's y within its own 74px row cell (node
+     7461:5946 paddingTop 8), which lines its baseline up with the input's text rather than with
+     the top of the input box. */
   .contact-form__label {
     color: #69a4b8;
     text-align: right;
+    padding-top: var(--space-2xs);
   }
   .contact-form__control {
     display: flex;
   }
+  /* The input box's padding is asymmetric in the design — 8px top, 10px bottom (node 7461:5949)
+     — which is what makes it 42px around a 24px line. Not a typo. */
   .contact-form__input {
     width: 100%;
     background: transparent;
     border: 0;
     border-bottom: 2px solid var(--color-white);
-    padding-block: var(--space-2xs);
+    padding-top: var(--space-2xs);
+    padding-bottom: 10px;
     color: var(--color-text-inverse);
     font-family: var(--font-family-base);
   }
+  /* The placeholder run sits in a frame at opacity 0.5 (node 7461:5950), so "Your Answer" is
+     white at 50% over the teal — #879FA0, 4.21:1, which is a tracked colour-contrast gap
+     (issue N20, docs/a11y-known-issues.md) rather than an accident. Shipped as designed on the
+     client's call; the full-opacity white it replaced measured 11.79:1. */
   .contact-form__input::placeholder {
     color: var(--color-text-inverse);
-    opacity: 1;
+    opacity: 0.5;
   }
   .contact-form__input:focus-visible {
     outline: 3px solid var(--color-focus-ring);
@@ -468,12 +496,16 @@ const contactFields: ContactField[] = [
     .contact-form__body {
       gap: var(--space-2xl);
     }
+    /* Stacked, the fixed 74px row is meaningless — label and input become their own rows, so
+       they go back to sizing to content. */
     .contact-form__fields {
       grid-template-columns: 1fr;
+      grid-auto-rows: auto;
       row-gap: var(--space-3xs);
     }
     .contact-form__label {
       text-align: left;
+      padding-top: 0;
       margin-top: var(--space-sm);
     }
   }

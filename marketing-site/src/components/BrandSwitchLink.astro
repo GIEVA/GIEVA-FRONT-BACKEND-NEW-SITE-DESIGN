@@ -1,0 +1,99 @@
+---
+/**
+ * BrandSwitchLink — the persistent cross-site switcher pill, rendered by BaseLayout on every
+ * route so either half of the site is always one click from the other.
+ *
+ * ── Provenance ────────────────────────────────────────────────────────────────
+ * Both instances are the SAME Figma component — `GIEVA Button`, `Type: "C Secondary"`,
+ * `Show ArrowRight: false` — with per-instance fill overrides:
+ *   Consultancy Home 5891:4663 → node 5986:3665, "Explore NGO",         green  on mint
+ *   NGO Home         5990:3672 → node 5990:4604, "Explore Consultancy", orange on peach
+ * Geometry confirmed identical on both: cornerRadius 8, padding 12/32, strokeWeight 1,
+ * fill opacity 0.75, label 18px Bold, `effects: []`. Per CLAUDE.md ("a repeated Figma
+ * component becomes one Astro component") the two page-local copies — which had already
+ * drifted — are collapsed here.
+ *
+ * ── Deviations from the source frames, deliberate ─────────────────────────────
+ * 1. REACH. The design only draws the pill on the two Home frames. Both nodes are
+ *    `isFixed: true` / `scrollBehavior: FIXED`, i.e. viewport-pinned rather than part of the
+ *    hero, so the design's own intent is "persistent chrome" — but it is only *placed* on
+ *    Home. Rendering it on all 18 routes is our call (client sign-off pending; logged in both
+ *    build plans). Off-Home there is otherwise no visible cross-site affordance at all on NGO:
+ *    `ngoPrimaryNav` is flat, so only the footer's NGO/Consultancy columns get you across.
+ * 2. BOX-SHADOW. Not in either node (`effects: []`). Authored by us and kept, because the pill
+ *    now floats over 18 pages of arbitrary content rather than the two hero toruses it was
+ *    drawn against, and the shadow is the only thing separating it from what it overlaps.
+ * 3. The arrow glyph the Consultancy copy used to carry is REMOVED — `Show ArrowRight` is
+ *    `false` on both instances. That was an unlogged slip, not a design value.
+ *
+ * The mint and peach fills are per-instance overrides, not theme tokens — neither brand's
+ * value-set contains them — so they stay literal here rather than inventing token roles that
+ * exactly one element would ever consume.
+ */
+export interface Props {
+  /** Which site the current page belongs to; the pill points at the *other* one. */
+  brand: 'consultancy' | 'ngo';
+}
+
+const { brand } = Astro.props;
+
+const target =
+  brand === 'ngo'
+    ? { href: '/', label: 'Explore Consultancy' }
+    : { href: '/ngo', label: 'Explore NGO' };
+---
+
+<a class="brand-switch" href={target.href}>{target.label}</a>
+
+<style>
+  .brand-switch {
+    /* Viewport-pinned, matching both nodes' `scrollBehavior: FIXED`. No transformed ancestor
+       in the shell, so `fixed` anchors to the viewport as intended. */
+    position: fixed;
+    right: var(--space-lg);
+    bottom: var(--space-lg);
+    z-index: 45; /* above page content, below the sticky header (50) and skip link (100) */
+    display: inline-flex;
+    align-items: center;
+    /* Confirmed geometry: padding 12/32, cornerRadius 8, 1px stroke, 18px Bold. */
+    padding: var(--space-xs) var(--space-lg);
+    border-radius: var(--radius-sm);
+    border: 1px solid;
+    font-size: var(--type-body-lg-size);
+    line-height: var(--type-body-lg-line);
+    font-weight: var(--font-weight-bold);
+    text-decoration: none;
+    box-shadow: 0 2px 12px rgb(0 0 0 / 0.18); /* ours — see header note 2 */
+    transition:
+      background-color var(--motion-fast) var(--easing-standard),
+      color var(--motion-fast) var(--easing-standard);
+  }
+
+  /* Consultancy routes → green on mint (node 5986:3665). */
+  :global([data-brand='consultancy']) .brand-switch {
+    background: rgb(153 204 159 / 0.75);
+    border-color: var(--color-green);
+    color: var(--color-green);
+  }
+  :global([data-brand='consultancy']) .brand-switch:hover {
+    background: var(--color-green);
+    color: var(--color-white);
+  }
+
+  /* NGO routes → orange on peach (node 5990:4604). Tracked contrast gap N5. */
+  :global([data-brand='ngo']) .brand-switch {
+    background: rgb(245 186 166 / 0.75);
+    border-color: var(--color-accent-warm);
+    color: var(--color-accent-warm);
+  }
+  :global([data-brand='ngo']) .brand-switch:hover {
+    background: var(--color-accent-warm);
+    color: var(--color-white);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .brand-switch {
+      transition: none;
+    }
+  }
+</style>

@@ -44,7 +44,15 @@ jobs:
         run: npm run build
       - name: Regenerate baselines
         run: npm run test:update-snapshots
+      # `if: always()` because `--update-snapshots` WRITES the PNGs as it goes, but the run exits
+      # non-zero if any non-snapshot test in the suite fails — and without this, that unrelated
+      # failure discarded every baseline the step had just generated. That is not hypothetical:
+      # it happened on 2026-08-11, when a pre-existing `header-fit` failure meant PR #14's
+      # shell-wide baseline refresh was thrown away, leaving `main` with visual changes and stale
+      # baselines. The step below still reports the failure, so the job goes red either way; it
+      # just no longer throws away the work first.
       - name: Commit + push if anything changed
+        if: always()
         run: |
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
           git config user.name "github-actions[bot]"

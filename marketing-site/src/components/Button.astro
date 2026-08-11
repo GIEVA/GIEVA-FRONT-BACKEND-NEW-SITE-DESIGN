@@ -6,11 +6,15 @@
  *
  * Variants confirmed against Home's node.json (every `GIEVA Button` instance on the page):
  *   - `primary`   solid CTA fill, white label (Book Consultancy / Get Involved, Subscribe…)
- *   - `secondary` CTA at ~10% fill/border, CTA label (Take Test / Donate, Log In,
+ *   - `secondary` soft CTA tint + CTA border, CTA label (Take Test / Donate, Log In,
  *                 Learn more, Chat with us…) — used on both light and dark surfaces as-is,
  *                 so it does NOT hook into the inverse-surface colour flip.
  *   - `link`      no fill/border, just an underline-free CTA label + arrow (the
  *                 "Learn more" links inside the dark service/program cards).
+ *   - `on-inverse` the base box with no fill and a white label — the CTA panel's row links
+ *                 (Volunteer / Donate / Other Partnership Opportunities). Added for the NGO
+ *                 About redesign, now used by `NgoCtaSection` on both NGO pages that carry that
+ *                 panel; see the variant's CSS for why `link` doesn't fit.
  *
  * Colours consume the `--color-cta*` role, not `--color-accent-warm` directly: on Consultancy
  * the CTA colour and the warm accent coincide (both #E65320, so rendering is unchanged), but on
@@ -18,10 +22,30 @@
  * An arrow icon is the default, but not universal — some instances hide it (e.g. the Home
  * hero's `Book Consultancy` / `Take Test`, whose `ArrowRight` nodes are `visible: false`).
  * Pass `arrow={false}` to omit it; confirm per instance against the design.
+ *
+ * The arrow occupies a 20×20 box, not the size of the glyph. Every one of the 103 `ArrowRight`
+ * nodes across every ingested frame is a 20×20 frame wrapping a 15.00×12.50 vector — the 2.5/3.75
+ * of transparent margin is part of the component's metrics. Drawing it at 15×13 (as this did)
+ * made every arrow-bearing button 5px narrower than the design: NGO's header measured 154.1/196.1
+ * against 160/202, and the 11.8px shortfall in the actions group shifted the whole nav 6.4px
+ * right of its designed position, since the pill distributes slack with space-between.
+ *
+ * The box was right but the glyph inside it was not. This used to draw a hand-approximated
+ * STROKED arrow (`M11.2 4.5…`, stroke-width 1.6) spanning 13.4 × 11.0 — ~11% small in both axes
+ * and ~28% heavier than the design, whose shaft is 1.25 thick. The design's arrow is a FILLED
+ * glyph; the path below is the committed export verbatim
+ * (design/figma/…/5990-3672/assets/icon-I5990-3705;5995-7314.svg) with `fill` swapped to
+ * currentColor so the variants keep tinting it. Its bounds are x 2.5→17.5005 and y 3.75→16.2507
+ * — exactly the 15.00 × 12.50 the node data reports, so the glyph now fills its box as designed.
+ * Verified unchanged in the 2026-07-28 ingests, the newest design data we hold.
+ *
+ * One hand-drawn copy of this same glyph still lives outside this component (SiteFooter.astro).
+ * The other two — ngo/about.astro and ngo/index.astro — were both the NGO CTA's row links, and
+ * both went when that CTA became NgoCtaSection.astro and its rows became `on-inverse` Buttons.
  */
 interface Props {
   href?: string;
-  variant?: 'primary' | 'secondary' | 'link';
+  variant?: 'primary' | 'secondary' | 'link' | 'on-inverse';
   type?: 'button' | 'submit' | 'reset';
   arrow?: boolean;
   class?: string;
@@ -44,19 +68,16 @@ const Tag = href ? 'a' : 'button';
     arrow && (
       <svg
         class="btn__arrow"
-        width="15"
-        height="13"
-        viewBox="0 0 15 13"
+        width="20"
+        height="20"
+        viewBox="0 0 20 20"
         fill="none"
         aria-hidden="true"
         focusable="false"
       >
         <path
-          d="M8.5 1L14 6.5M14 6.5L8.5 12M14 6.5H1"
-          stroke="currentColor"
-          stroke-width="1.6"
-          stroke-linecap="round"
-          stroke-linejoin="round"
+          d="M17.3172 10.4425L11.6922 16.0675C11.5749 16.1848 11.4159 16.2507 11.25 16.2507C11.0841 16.2507 10.9251 16.1848 10.8078 16.0675C10.6905 15.9503 10.6247 15.7912 10.6247 15.6253C10.6247 15.4595 10.6905 15.3004 10.8078 15.1832L15.3664 10.6253H3.125C2.95924 10.6253 2.80027 10.5595 2.68306 10.4423C2.56585 10.3251 2.5 10.1661 2.5 10.0003C2.5 9.83459 2.56585 9.67562 2.68306 9.55841C2.80027 9.4412 2.95924 9.37535 3.125 9.37535H15.3664L10.8078 4.81754C10.6905 4.70026 10.6247 4.5412 10.6247 4.37535C10.6247 4.2095 10.6905 4.05044 10.8078 3.93316C10.9251 3.81588 11.0841 3.75 11.25 3.75C11.4159 3.75 11.5749 3.81588 11.6922 3.93316L17.3172 9.55816C17.3753 9.61621 17.4214 9.68514 17.4529 9.76101C17.4843 9.83688 17.5005 9.91821 17.5005 10.0003C17.5005 10.0825 17.4843 10.1638 17.4529 10.2397C17.4214 10.3156 17.3753 10.3845 17.3172 10.4425Z"
+          fill="currentColor"
         />
       </svg>
     )
@@ -72,9 +93,10 @@ const Tag = href ? 'a' : 'button';
        solid, outline and link alike (audited across all 14) — so it lives on the base class. */
     gap: var(--space-sm);
     /* Design (GIEVA Button component): 32px horizontal padding (node 5963:3497/3503).
-       Vertical stays 12px: the design's stated 16px + 24px line-height = 56px, but the
-       button frame renders at 50px — 12px yields ~48px, closer to the real rendered height. */
-    padding: var(--space-xs) var(--space-lg);
+       Vertical is a brand token, not a constant: the declared Figma padding (16px) would give
+       56px, but the instances measure 50px on Consultancy and 54px on NGO. --control-padding-block
+       carries that split (12px / 14px) — see tokens.css. */
+    padding: var(--control-padding-block) var(--space-lg);
     border-radius: var(--radius-sm);
     font-family: var(--font-family-base);
     font-size: var(--type-body-lg-size);
@@ -103,7 +125,7 @@ const Tag = href ? 'a' : 'button';
   }
   .btn--secondary {
     background: var(--color-cta-soft);
-    border-color: var(--color-cta-soft);
+    border-color: var(--color-cta-soft-border);
     color: var(--color-cta);
   }
   .btn--secondary:hover {
@@ -119,6 +141,11 @@ const Tag = href ? 'a' : 'button';
     border: 0;
     border-radius: 0;
     color: var(--color-cta);
+    /* The link variant is its own Figma type style: `GIEVA.org/Arial/Regular underline` carries
+       letterSpacing 0, where the plain `GIEVA.org/Arial/Regular` the base class uses carries
+       −0.16. Confirmed on both brands (every "Learn more" / "View case study" label on both
+       Home frames) and against the live variable definitions. */
+    letter-spacing: 0;
   }
   .btn--link .btn__label {
     text-decoration: underline;
@@ -126,5 +153,20 @@ const Tag = href ? 'a' : 'button';
   }
   .btn--link:hover {
     color: var(--color-cta-hover);
+  }
+  /* `on-inverse` — the CTA panel's row links (NGO About node 12327:12146/12149/12152). A real
+     `GIEVA Button` instance, so it keeps the base box verbatim (32px inline padding, 8px radius,
+     16px label→arrow gap, the 20×20 arrow) and only drops the fill: the design gives these no
+     background at all, just the white label of `GIEVA.org/Arial/Regular` over the teal panel.
+     It is NOT `link` — that variant zeroes the padding and underlines, both wrong here.
+     Hover is ours: the design ships no hover state for these, so a 10% white wash is inferred,
+     chosen to read on the teal panel without introducing a colour the palette doesn't have. */
+  .btn--on-inverse {
+    background: transparent;
+    border-color: transparent;
+    color: var(--color-text-inverse);
+  }
+  .btn--on-inverse:hover {
+    background: rgb(255 255 255 / 0.1);
   }
 </style>

@@ -14,7 +14,7 @@
     },
     {
       "id": "7956:30029",
-      "name": "oo-social-links → List",
+      "name": "oo-social-links \u2192 List",
       "kind": "icon",
       "file": "icon-7956-30029.svg"
     },
@@ -49,9 +49,16 @@
       "sourceNode": "I7437:9764;6021:4618",
       "name": "His excellency",
       "file": "fill-8108addc2bb6ce97610dae38d4f1280c1e0332e7.jpg"
+    },
+    {
+      "imageRef": "8ab4e0ecedef93cf45ff294ab213feac40e6dd7f",
+      "sourceNode": "12330:13417",
+      "name": "Photo",
+      "file": "fill-8ab4e0ecedef93cf45ff294ab213feac40e6dd7f.jpg"
     }
   ],
   "notes": [
-    "WebP skipped (install `sharp` to enable re-encoding)"
+    "WebP skipped (install `sharp` to enable re-encoding)",
+    "fill-8ab4e0ec\u2026 (12330:13417, the new photo hero) was added on 2026-08-07 via the Figma MCP, NOT by scripts/figma-fetch.mjs \u2014 no FIGMA_API_KEY was available. Everything else in this directory, node.json included, is still the 2026-07-20 REST fetch and is STALE: the About frame was redesigned after it (photo hero added, Core Team removed, Core Values rewritten). Re-run `npm run figma:fetch -- \"<about-url>\"` to resync."
   ]
 }

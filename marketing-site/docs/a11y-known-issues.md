@@ -15,15 +15,25 @@
 > a selector not listed here, still fails the build. When one of these is actually fixed, delete
 > its allowlist entry — the test will then fail loudly if the fix regresses.
 
-## Open issues (7 + 19 NGO)
+## Open issues (7 + 16 NGO; N11–N13 and N16 resolved 2026-08-07, N20 opened the same day)
+
+<!-- Count: N1–N20 exist, four are RESOLVED (N11, N12, N13, N16 — all closed by the 2026-08
+     redesign sweep replacing breadcrumb headers with photo heroes, plus Program's deleted
+     Partner-Programs block), leaving 16 open. The heading previously read "18" — it had not
+     been updated when N12/N13 closed. -->
 
 All measured via `@axe-core/playwright` (WCAG 2 AA, `color-contrast` rule) against the built
 Home (`/`), `/styleguide`, and (issues 6–7, added in the Services build) `/services` routes,
 plus (issues N1–N2, added in the NGO Phase 0B build) `/ngo/styleguide` and (issues N3–N7, added
 in the NGO Home / Phase 1 build) `/ngo`, (issues N8–N10, added in the NGO Partners / Phase 2
-build) `/ngo/partners`, (issue N11, added in the NGO About / Phase 3 build) `/ngo/about`, (issues
-N12–N15, added in the NGO Program / Phase 4 build) `/ngo/program`, and (issues N16–N19, added in
-the NGO Contact / Phase 5 build) `/ngo/contact`,
+build) `/ngo/partners`, (issue N11, added in the NGO About / Phase 3 build and since resolved)
+`/ngo/about`, (issues
+N12–N15, added in the NGO Program / Phase 4 build, of which N12 and N13 have since been
+resolved) `/ngo/program`, and (issues N16–N19, added in the NGO Contact / Phase 5 build, of
+which N16 has since been resolved, plus N20 added by that page's 2026-08-07 design pass)
+`/ngo/contact`. **Issue 7 / N5 is the exception to that
+per-route framing** — the cross-site switcher pill is shell chrome, so it applies on all 18
+routes in both brands and is counted once under each numbering scheme.
 Playwright 1.61.1 Chromium. Button/label text on these pages is 18px (`--type-body-lg`), which
 is **not** "large text" under WCAG (needs ≥24px normal or ≥18.66px/14pt bold) even where the
 label happens to be bold — confirmed via `src/lib/contrast.ts`'s `wcagLevel()` — so all of
@@ -104,7 +114,9 @@ these need the strict 4.5:1 threshold, not the relaxed 3:1 large-text one.
 > ratio on two class names — `.service-detail__lead` (the hook sentence) and
 > `.service-detail__cost-highlight` (the "$100" amount). Generalising `ServiceDetailSection`
 > to `blocks[]` collapsed both into one optional `highlight` run, so they are now one class,
-> one entry, and one allowlist marker. There is deliberately no issue #7.
+> one entry, and one allowlist marker. That vacated **#7**, which stayed deliberately empty
+> until the cross-site switcher pill (below) took the slot — it is a genuinely new issue, not
+> the old one resurfacing.
 
 - **Where:** any service block whose body opens with a highlighted run. On Services
   (`/services`) that is the HEALS-content "about" lead sentence ("Studying abroad shouldn't
@@ -154,10 +166,15 @@ these need the strict 4.5:1 threshold, not the relaxed 3:1 large-text one.
 - **Why kept as-is:** the green ".org" is the confirmed footer wordmark colour in Home's
   `node.json` (footer text node ".org" → `#007f0e`); the teal is the confirmed footer fill.
   Both are source-design values — the `CLAUDE.md` #2 colour-contrast exception applies.
-- **Allowlist:** narrow entry `['brand-lockup__tld', 'brand-lockup--lg']` in
-  `KNOWN_CONTRAST_ISSUES`. The size marker keeps the NGO _header_'s `--sm` lockup out of scope;
-  the two `--lg` instances still in reach (Consultancy's header, green on white, and its footer at
-  3.67:1) aren't violations, so the filter never has anything to remove there.
+- **Allowlist:** narrow entry `['brand-lockup__tld', 'brand-lockup--inverse']` in
+  `KNOWN_CONTRAST_ISSUES`. The ink marker scopes this to the dark footer, the only surface where
+  it fails; both headers' lockups sit on light surfaces and are out of scope by construction. The
+  one other `--inverse` instance in reach (Consultancy's footer at 3.67:1) isn't a violation, so
+  the filter never has anything to remove there.
+  <br>Was `['brand-lockup__tld', 'brand-lockup--lg']` until the NGO navbar design pass: the
+  header's `--sm` lockup was an unconfirmed value, the ingested NGO header nodes all instance the
+  same 247×48 lockup as Consultancy, and removing the now-pointless size variants took the `--lg`
+  marker with them.
 - **Future-fix direction:** lighten toward white (dark-surface pairing). Only 3:1 is required
   here (large text), so a mild lift suffices — `#4da558` → **3.84:1** clears it; the shared
   `#5cb466` from issue N1 (4.59:1) would cover both. Best expressed as a surface-aware
@@ -170,6 +187,15 @@ these need the strict 4.5:1 threshold, not the relaxed 3:1 large-text one.
   (`.news__tag`, orange-on-white too). NGO's kicker is orange where Consultancy's is green —
   the two brands invert the eyebrow↔heading-accent colour pairing (see `tokens.css`
   `--color-eyebrow` / `--color-heading-accent`, added this build).
+
+  **Extended 2026-08-11, NGO Resources build** to `/ngo/resources` (the "NEWS & RESOURCES"
+  kicker) and `/ngo/resources/[slug]` (the article's category kicker), plus the category pill on
+  every `ArticleCard` on both. No new colour decision: `ArticleCard`'s pill is Home's
+  `.news__tag` lifted into a component and consumes the same `--color-accent-warm`, and both
+  kickers are the same `.u-eyebrow` on the same white section surface — identical pairing,
+  identical measured ratio. Recorded here rather than opened as N21 because a separate entry
+  would imply a separate decision to make.
+
 - **Measured:** `#e65320` bold 14px on `#ffffff` = **3.73:1**. Needs 4.5:1 (14px bold is under
   the 18.66px large-text cutoff). Same pairing as Consultancy issues #6/#7, different colour role.
 - **Why kept as-is:** `#E65320` is the confirmed kicker/tag fill on every one of these nodes in
@@ -177,7 +203,17 @@ these need the strict 4.5:1 threshold, not the relaxed 3:1 large-text one.
   per the `CLAUDE.md` #2 exception.
 - **Allowlist:** `['who__intro','u-eyebrow']`, `['programs__intro','u-eyebrow']`,
   `['success__intro','u-eyebrow']`, `['news__intro','u-eyebrow']`, `['news__tag']` — each keyed
-  on an NGO-Home-only parent class so no Consultancy node can match.
+  on an NGO-Home-only parent class so no Consultancy node can match. For the Resources routes:
+  `['resources__eyebrow']`, `['article__eyebrow']` and `['article-card__tag']`.
+  `resources__eyebrow` / `article__eyebrow` are **style-free marker classes** added to those two
+  elements for exactly this purpose — those pages' kickers don't get a usable parent class into
+  axe's generated selector, and a bare `['u-eyebrow']` marker would silently allowlist every
+  eyebrow on all 18 routes, which is the failure mode this whole mechanism exists to avoid.
+  `['article-card__tag']` is intentionally NOT paired with a parent: `ArticleCard` is
+  brand-neutral and its pill consumes `--color-accent-warm`, which is `#E65320` on both brands,
+  so when Consultancy `/resources` is built from the same component it will be the same 3.73:1
+  pairing — in scope on purpose, not by accident. If Consultancy's Resources design ever gives
+  the pill a different colour, that becomes its own issue and this entry must be re-narrowed.
 - **Future-fix direction:** darken the kicker orange for light surfaces (same as issue #6):
   `#c4471b` (accent-warm × 0.85) → **4.92:1** on white. Candidate: `--color-accent-warm-accessible`
   wired into `--color-eyebrow` on light NGO surfaces only (the on-teal instance, N4, needs the
@@ -195,20 +231,42 @@ these need the strict 4.5:1 threshold, not the relaxed 3:1 large-text one.
   Opposite move from N3, so best expressed as a surface-aware `--color-eyebrow` in the
   `[data-brand='ngo'] .surface-inverse` flip block.
 
-### N5. NGO "Explore Consultancy" cross-brand pill (`.hero__cross-link`)
+### 7 / N5. The cross-site switcher pill (`.brand-switch`) — **both brands, all 18 routes**
 
-- **Where:** NGO Home (`/ngo`) hero — the peach pill floating over the hero torus, the
-  counterpart to Consultancy's green "Explore NGO" pill. Styled in _Consultancy's_ accent orange
-  on a peach fill, deliberately (each brand's cross-link wears the other brand's colour).
-- **Measured:** `#e65320` bold 18px on the pill's `#f5baa6` fill = **2.22:1**. Needs 4.5:1 (18px
-  bold is not large text). The widest orange gap on the page.
-- **Why kept as-is:** both the fill `#F5BAA6` and text `#E65320` are the confirmed instance values
-  in `node.json` (5990:4604) — a source-design pairing.
-- **Allowlist:** `['hero__cross-link']`.
-- **Future-fix direction:** the peach fill is light, so the text must go much darker than the
-  0.85× used elsewhere — `#8a3213` (accent-warm × 0.6) → **4.89:1** on `#F5BAA6`. Deepening the
-  peach instead makes it worse (it drops toward the text). A pill-specific darker-orange token is
-  the cleanest fix.
+The one entry in this file that isn't per-brand. It was N5 ("NGO `.hero__cross-link`") when the
+pill was NGO-Home-only; `BrandSwitchLink.astro` now renders it as shell chrome from `BaseLayout`
+on every route, so it carries a Consultancy number too. Its Consultancy half used to sit under
+"Checked and passing" below — it only escaped axe on Home because the hero torus behind it made
+the background indeterminate; against ordinary page background it resolves and fails.
+
+- **Where:** bottom-right of every page. Consultancy routes → green "Explore NGO"; NGO routes →
+  orange "Explore Consultancy". Each brand's pill deliberately wears the _other_ half's colour.
+- **Measured** (axe resolves the 0.75-alpha fill against the page background, so the ratio is
+  computed on the composite, not the raw fill):
+  - Consultancy — `#007f0e` bold 18px on mint `#99CC9F` @ 75% → composited `#b3d9b7` = **3.34:1**
+  - NGO — `#e65320` bold 18px on peach `#F5BAA6` @ 75% → composited `#f8cbbc` = **2.53:1**
+
+  Both need 4.5:1 (18px bold is not "large text"). Over imagery the composite differs and axe
+  returns `incomplete` instead — the ratios above are the plain-background worst case, which is
+  what most of the 18 routes give it.
+
+- **Why kept as-is:** both pills are the same Figma component instance (`GIEVA Button`,
+  `Type: "C Secondary"`) — nodes 5986:3665 and 5990:4604. Fills, stroke, and label colours are all
+  confirmed instance values, including the 0.75 opacity. Source-design pairings, so CLAUDE.md #2
+  applies. Note the previously-recorded NGO figure of 2.22:1 was measured against a **flat**
+  `#f5baa6`; that was an implementation slip (the design specifies 0.75, as the Consultancy copy
+  already had), and correcting it to the design value moved the ratio _up_ to 2.53:1.
+- **Allowlist:** `['brand-switch']` — one entry covering both brands, since the class is unique to
+  the shared component.
+- **Future-fix direction:** both fills are light, so both labels must darken (computed with
+  `src/lib/contrast.ts` against the **composited** background, not the raw fill):
+  - green `#00660b` (× 0.80) → **4.66:1** on `#b3d9b7`
+  - orange `#a13a16` (× 0.70) → **4.55:1** on `#f8cbbc`
+
+  Deepening either fill instead makes it worse — the fill moves toward the label. One shared token
+  can't serve both: they're different hues on different surfaces, so this wants two pill-specific
+  label colours in the brand value-sets. Raising the fill opacity to 1 is not a fix either; it
+  costs ~0.3 in both directions (the flat-fill figures are 2.84:1 green / 2.22:1 orange).
 
 ### N6. NGO green link labels ("Learn more" / "View case study") on dark teal
 
@@ -286,50 +344,36 @@ these need the strict 4.5:1 threshold, not the relaxed 3:1 large-text one.
 - **Future-fix direction:** lighten as N7 — `#66b26e` → **4.58:1** on `#0E3E40` (well past the
   3:1 this large text needs).
 
-### N11. NGO About breadcrumb ("HOME / ABOUT") orange on white
+### N11. NGO About breadcrumb ("HOME / ABOUT") orange on white — RESOLVED 2026-08-07
 
-- **Where:** NGO About (`/ngo/about`) page-header breadcrumb `.about-breadcrumb`. Unlike the
-  Partners page's identical-looking breadcrumb (a duplication artifact, tracked separately as
-  N8), "HOME / ABOUT" is the _correct_ text here — About really is one level under Home.
-- **Measured:** orange `#e65320` bold 18px on `#ffffff` = **3.73:1**. 18px/700 is under the
-  18.66px large-text bold cutoff, so the 4.5:1 normal threshold applies and it misses —
-  identical pairing to N3/N8.
-- **Why kept as-is:** `#E65320` is the confirmed breadcrumb fill (node 7958:30346) — the NGO
-  eyebrow/kicker colour, a source-design value shipped as designed (CLAUDE.md #2 exception).
-- **Allowlist:** `['about-breadcrumb']` (About-only class; distinct from Partners'
-  `partners-breadcrumb` so neither page's marker can swallow the other's node).
-- **Future-fix direction:** darken the eyebrow orange for small text on white, exactly as
-  N3/N8 — `#c4471b` (accent-warm × 0.85) → **4.92:1** on `#FFFFFF` (`src/lib/contrast.ts`).
+Closed by the About redesign, not by a colour change: the 2026-08 revision of Figma node
+7429:5025 replaced the white breadcrumb header with a photo hero, so `.about-breadcrumb` and
+its orange-on-white pairing no longer exist on the page. The `['about-breadcrumb']` allowlist
+entry has been deleted from `tests/a11y.spec.ts` in the same commit, so the rule is enforced
+again on `/ngo/about`. `lighthouserc.json`'s `minScore` is deliberately unchanged — it is a
+global floor and the identical pairing is still open on `/ngo/partners` (N8). (It was also open
+on `/ngo/program` as N12 and `/ngo/contact` as N16 until those pages' own redesigns closed it
+the same way, later the same day.)
 
-### N12. NGO Program breadcrumb ("HOME / PROGRAMS") orange on white
+### N12. NGO Program breadcrumb ("HOME / PROGRAMS") orange on white — RESOLVED 2026-08-07
 
-- **Where:** NGO Program (`/ngo/program`) page-header breadcrumb `.program-breadcrumb`. Unlike
-  the Partners page's breadcrumb (a duplication artifact, N8), "HOME / PROGRAMS" is the _correct_
-  text — Programs really is one level under Home (same as About's N11).
-- **Measured:** orange `#e65320` bold 18px on `#ffffff` = **3.73:1**. 18px/700 is 13.5pt bold,
-  under the 18.66px/14pt large-text cutoff, so the 4.5:1 normal threshold applies and it misses —
-  identical pairing to N3/N8/N11.
-- **Why kept as-is:** `#E65320` is the confirmed breadcrumb fill (node 7958:30364) — the NGO
-  eyebrow/kicker colour, a source-design value shipped as designed (CLAUDE.md #2 exception).
-- **Allowlist:** `['program-breadcrumb']` (Program-only class; distinct from `about-breadcrumb`
-  and `partners-breadcrumb` so no page's marker can swallow another's node).
-- **Future-fix direction:** darken the eyebrow orange for small text on white, exactly as
-  N3/N8/N11 — `#c4471b` (accent-warm × 0.85) → **4.92:1** on `#FFFFFF` (`src/lib/contrast.ts`).
+Closed by the Program redesign, not by a colour change, and by exactly the same mechanism as
+N11: the 2026-08 revision of Figma node 7447:6027 replaced the white breadcrumb header with a
+photo hero, so `.program-breadcrumb` and its orange-on-white pairing no longer exist on the
+page. The `['program-breadcrumb']` allowlist entry has been deleted from `tests/a11y.spec.ts`
+in the same commit, so the rule is enforced again on `/ngo/program`. `lighthouserc.json`'s
+`minScore` is deliberately unchanged — it is a global floor and the identical pairing is still
+open on `/ngo/partners` (N8); `/ngo/contact` (N16) closed the same way later that day.
 
-### N13. NGO Program green "Learn more" links on the dark teal Partner-Programs cards
+### N13. NGO Program green "Learn more" links on the dark teal Partner-Programs cards — RESOLVED 2026-08-07
 
-- **Where:** NGO Program (`/ngo/program`) — the `btn--link` "Learn more" inside each of the three
-  deep-teal Partner-Programs cards (`.partner-programs__card`). These have no fill (link variant),
-  so the existing `['btn--secondary']` entry doesn't reach them — same situation as NGO Home's N6.
-- **Measured:** green `#007f0e` normal 18px on `#0e3e40` = **2.27:1**. Needs 4.5:1 — the same
-  green-on-teal pairing as N1/N6/N9.
-- **Why kept as-is:** `#007F0E` is the confirmed "Learn more" label colour (node under 7447:6518)
-  on the confirmed teal card fill `#0E3E40` — source-design values.
-- **Allowlist:** `['partner-programs__card','btn--link']` — the Program-only card class scopes it
-  so the Home `programs__card` / Consultancy `services__card` links can't be swallowed.
-- **Future-fix direction:** lighten the green for the dark surface, as N6 — `#66b26e` →
-  **4.58:1** on `#0E3E40` (`src/lib/contrast.ts` `lightenToContrast`). Shared with N14 via a
-  surface-aware CTA/link value in the NGO inverse flip block.
+Closed by the Program redesign, not by a colour change: the 2026-08 revision of node 7447:6027
+deleted the entire "Partner Programs" block (the old node 7447:6518 — centred intro plus three
+deep-teal cards), so `.partner-programs__card` and the `btn--link` labels inside it no longer
+exist on the page. The `['partner-programs__card','btn--link']` allowlist entry has been deleted
+from `tests/a11y.spec.ts` in the same commit. `lighthouserc.json`'s `minScore` is deliberately
+unchanged — it is a global floor and the identical green-on-teal pairing is still open on
+`/ngo` (N1/N6), `/ngo/partners` (N9) and this page's own Contact panel (N14).
 
 ### N14. NGO Program green heading-accent ("Now") on the dark teal Contact panel
 
@@ -364,21 +408,15 @@ these need the strict 4.5:1 threshold, not the relaxed 3:1 large-text one.
   threshold. A page-local `--color-program-label-accessible`, since this hue isn't reused
   elsewhere.
 
-### N16. NGO Contact breadcrumb ("HOME / PROGRAMS") orange on white
+### N16. NGO Contact breadcrumb ("HOME / PROGRAMS") orange on white — RESOLVED 2026-08-07
 
-- **Where:** NGO Contact (`/ngo/contact`) page-header breadcrumb `.contact-breadcrumb`. The text
-  is literally "HOME / PROGRAMS" — a duplication artifact, this time from the Program frame
-  rather than About (contrast N8's source); reproduced verbatim per exact-replica-first, same
-  precedent as Partners' "HOME / ABOUT" (N8).
-- **Measured:** orange `#e65320` bold 18px on `#ffffff` = **3.73:1**. 18px/700 is under the
-  18.66px large-text bold cutoff, so the 4.5:1 normal threshold applies and it misses —
-  identical pairing to N3/N8/N11/N12.
-- **Why kept as-is:** `#E65320` is the confirmed breadcrumb fill (node 7958:30383) — the NGO
-  eyebrow/kicker colour, a source-design value shipped as designed (CLAUDE.md #2 exception).
-- **Allowlist:** `['contact-breadcrumb']` (Contact-only class; distinct from every other page's
-  breadcrumb marker so none can swallow another's node).
-- **Future-fix direction:** darken the eyebrow orange for small text on white, exactly as
-  N3/N8/N11/N12 — `#c4471b` (accent-warm × 0.85) → **4.92:1** on `#FFFFFF` (`src/lib/contrast.ts`).
+Closed by the Contact redesign, not by a colour change, and by exactly the same mechanism as
+N11 and N12: the 2026-08 revision of Figma node 7461:5854 replaced the white breadcrumb header
+with a photo hero (node 12330:13424), so `.contact-breadcrumb` and its orange-on-white pairing
+no longer exist on the page. The `['contact-breadcrumb']` allowlist entry has been deleted from
+`tests/a11y.spec.ts` in the same commit, so the rule is enforced again on `/ngo/contact`.
+`lighthouserc.json`'s `minScore` is deliberately unchanged — it is a global floor and the
+identical pairing is still open on `/ngo/partners` (N8), the last NGO route on the old header.
 
 ### N17. NGO Contact info micro-labels (opacity-flattened black) on white
 
@@ -437,12 +475,40 @@ these need the strict 4.5:1 threshold, not the relaxed 3:1 large-text one.
 - **Future-fix direction:** identical to N15 — lighten toward white, `#7cb2c4` → **4.86:1** on
   `#0E3E40` (`src/lib/contrast.ts`), clearing the 4.5 normal threshold.
 
+### N20. NGO Contact form placeholder ("Your Answer") at 50% white on the dark teal panel
+
+- **Where:** NGO Contact (`/ngo/contact`) "Send us a Message" form — the seven inputs'
+  `::placeholder` (`.contact-form__input`). The design wraps each placeholder run in a frame at
+  `opacity: 0.5` over a white fill (node 7461:5950 and its six siblings) — the same
+  opacity-composited pattern as N17, but on the dark surface rather than the light one.
+- **Measured:** white at 50% over `#0e3e40` composites to **`#879fa0`** = **4.21:1** (computed
+  via `src/lib/contrast.ts`). Placeholder text is normal 18px/400, so 4.5:1 applies and it
+  misses by 0.29. The full-opacity white this replaced measured 11.79:1.
+- **Why shipped anyway:** the 50% opacity is the confirmed source-design value, and the client
+  chose to match it after being shown this measurement and the recommendation to keep the
+  placeholder at full opacity. That is the CLAUDE.md #2 exception applied with the trade-off on
+  the table, not by default — this is the one tracked entry on the site where matching the
+  design _introduced_ a gap rather than preserving one, so it is the first candidate to revert
+  if the client changes their mind.
+- **Allowlist: none, and none is needed.** axe-core's `color-contrast` rule does not evaluate
+  `::placeholder` text — verified by running the full axe pass against the rebuilt page, which
+  reports 16 contrast nodes, none of them an `<input>`. The gate is therefore silent on this
+  gap; it is tracked here only. **Do not "fix" the missing allowlist entry** — adding one would
+  match nothing and would suggest the rule is being suppressed when it isn't.
+- **Future-fix direction:** dark-surface pairing, so lighten. Raising the placeholder to
+  `opacity: 0.65` composites to `#a6b7b8` → **6.03:1**, clearing AA with room while still
+  reading as clearly secondary to the entered value. Reverting to `opacity: 1` restores
+  11.79:1. Either is a one-line change in `contact.astro`.
+- **Sibling drift:** `/ngo/program` and `/ngo/partners` carry the same 50%-opacity placeholder in
+  _their_ designs and are still built at full opacity. They were left alone rather than changed
+  blind — this pass only measured the Contact frame.
+
 ## Checked and passing (not violations, but flagged in hand-off as "not yet verified")
 
-- **`.hero__ngo-link`** — green `#007F0E` text/border on the mint badge
-  (`rgb(153 204 159 / 0.75)`) floating over the hero visual. Not present in the axe violation
-  list for either route — passes as rendered (the actual composited background under the badge
-  reads lighter than a flat-white worst case would suggest).
+> _(`.hero__ngo-link` — the Consultancy cross-site pill — used to be listed here as passing. It
+> only passed because the hero torus behind it left the background indeterminate to axe. Made
+> shell chrome on all 18 routes, it resolves against ordinary page background and fails at
+> 3.34:1; it is now tracked as issue 7 / N5 above.)_
 
 - **`.team-card__name` / `.team-card__role`** (`TeamCard.astro`, on `/` and `/team`) — white
   caption text over a portrait, backed by the design's confirmed treatment: a progressive
@@ -465,7 +531,10 @@ runs axe-core under the hood) and lands at a consistent `0.96` across all 3 runs
 including the NGO ones — `/ngo`, `/ngo/styleguide`, `/ngo/partners`, `/ngo/about`,
 `/ngo/program`, and `/ngo/contact` all land at exactly `0.96` too (color-contrast is a single
 weighted audit, so the extra NGO findings — N8–N10 on Partners, N11 on About, N12–N15 on Program,
-and N16–N19 on Contact included — don't drop it further). This isn't a separate
+and N16–N19 on Contact included — don't drop it further). Making the switcher pill (issue 7 / N5)
+shell chrome on all 18 routes doesn't move it either, for the same reason: every route already
+carried at least one `color-contrast` finding, and the audit is pass/fail per route, not
+per-node — so `0.96` still stands and `lighthouserc.json` needs no change. This isn't a separate
 gap; it's the same tracked list surfacing in a second tool. **Restore `minScore` to `1`
 in the same commit that closes out the contrast issues above** — if the score is still below 1 at
 that point, something regressed and the gate should catch it.

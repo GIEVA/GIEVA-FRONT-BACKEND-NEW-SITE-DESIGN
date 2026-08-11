@@ -83,44 +83,154 @@ it's not an enhancement — it's unfinished parity work.
 
 ---
 
-## E-02 — Rotating GIEVA mark
+## E-02 — Animating the GIEVA mark
 
-**Status:** Proposed (2026-07-26) — _needs the target pinned down first_
+**Status:** **Rejected (2026-08-07)** — three working prototypes built and all three declined on
+aesthetic grounds. The _technical_ findings below are durable and worth keeping; the _idea_ is
+closed. Do not re-propose without new visual direction from the client.
 
-- **Where:** ambiguous as raised, and the two readings have materially different constraints:
-  - **(a) The hero ring** — `heroRing`, an 818×818 decorative PNG at `index.astro:135`, `alt=""`,
-    Consultancy Home only.
-  - **(b) The GIEVA logo mark** — `logoMark`, the striped globe in `SiteHeader`, present on
-    **every route of both brands**.
-- **Effect:** slow rotation, giving the mark life.
-- **Mechanism:** both are rasters, so a CSS `rotate` is GPU-composited and essentially free. The
-  interesting choice is not how to rotate but _what drives it_:
-  - **Continuous** — simplest, but animates forever, costs battery while idle, and in a fixed
-    masthead (reading b) it sits in the corner of every page on the site. Highest irritation risk.
-  - **Scroll-linked** — rotation tied to scroll progress. Costs nothing when idle and ties motion
-    to user intent. Good fit for the hero ring (a), which scrolls out of view anyway.
-  - **On interaction** — a spin on hover/focus of the brand link. Good fit for the logo mark (b),
-    where the mark is part of a control and the motion has an obvious cause.
-  - **Once on load** — a single settle. Cheapest possible, but only lands on a first visit.
-- **Depends on:** hero parity sign-off for (a); nothing structural for (b), but the masthead is
-  shared with the NGO brand, so anything here ships to both sites at once.
-- **Gates:**
-  - `prefers-reduced-motion: reduce` → static. Non-negotiable for anything continuous.
-  - Input modality: if driven by hover, needs a focus equivalent for keyboard users, or it must
-    be purely decorative.
-  - JS-disabled baseline: pure CSS for continuous/hover variants means no JS at all. Only the
-    scroll-linked variant needs script (or `animation-timeline: scroll()`, which would need a
-    support check and a static fallback).
-  - Contrast: none — decorative imagery, no text over it.
-  - Visual baselines: **a continuous rotation would break them**, since a screenshot catches it at
-    an arbitrary angle. It would need pausing in test runs, which is a real argument for the
-    interaction-driven or scroll-linked variants over continuous.
-  - `alt=""` must stay on the hero ring — motion doesn't make it meaningful content.
-- **Why it earns its place:** GIEVA is a _global_ education body and the mark reads as a globe;
-  rotation is the one motion that means something specific here rather than being generic polish.
-  This justification holds much better for the globe mark (b) than for the abstract ring (a).
-- **Open question:** which element was meant, and which driver. Worth settling before Phase 4 so
-  the entry doesn't get re-litigated.
+Originally Proposed 2026-07-26 as "rotating GIEVA mark". Explored in full on 2026-08-07.
+
+### Where
+
+- **(a) The hero ring** — `heroRing`, an 818×818 decorative PNG at `index.astro:146`, `alt=""`,
+  Consultancy Home only.
+- **(b) The GIEVA logo mark** — `logoMark`, the striped globe in `BrandLockup.astro:52`, present
+  on **every route of both brands**, at 48px.
+
+All prototyping targeted (a). At (b)'s 48px, any per-band treatment is close to invisible, which
+is itself a finding: if this is ever revisited, it is a hero-only effect.
+
+### Finding 1 — there is no vector master, and probably never was
+
+**The mark is a bitmap in every copy that exists**, including inside Figma, where it is a raster
+image _fill_ rather than vector geometry. A file exported as `.svg` and supplied as "the logo as
+an SVG" was:
+
+```
+path/circle/ellipse elements   0
+rect                           1   ← filled with a <pattern>
+image                          1   ← base64 PNG, 1024×1024 RGBA
+```
+
+That is Figma wrapping a bitmap, not vectorising it — the file renders correctly in any viewer,
+which is exactly why it is a trap. The supplied file was named `Gemini_Generated_Image_…`,
+suggesting the artwork originated as a generated image. **Before anyone spends time hunting for
+a vector master, confirm with the brand owner that one exists.**
+
+### Finding 2 — the mark is not a geometric projection, so it cannot be reconstructed
+
+The obvious route — rebuild the mark parametrically as three identical circles at a common tilt,
+orthographically projected — **does not work, and cannot.** Orthographic projection preserves a
+circle's semi-major axis regardless of tilt, so three identical circles must fit with the same
+radius. Fitting each band independently against its own hue mask:
+
+```
+R      = 0.742  0.742  0.626     spread 16.6% of mean
+theta  = 61.4°  60.7°  84.9°     spread 24°
+```
+
+Best whole-silhouette fit topped out at **IoU 0.76** (holes land rotated out of phase). Two
+independent optimisers — coordinate descent, and Nelder-Mead with 60 random restarts — reached
+the same place, so this is not a stuck solver.
+
+**Conclusion: the rings were drawn for visual balance, not projected from a 3D model.** Normal
+for a logo, and fatal to parametric reconstruction. There are no consistent parameters to find.
+
+### Finding 3 — auto-tracing the artwork is the wrong tool
+
+Simulating Inkscape's Trace Bitmap → Colors (quantise, trace each colour layer):
+
+| Colours | Paths |   Size |
+| ------: | ----: | -----: |
+|       8 |   216 |  89 KB |
+|      16 |   326 | 124 KB |
+|      32 |   406 | 180 KB |
+
+Fewer colours bands the gradient into flat steps; more colours means hundreds of paths. Either
+way the paths are **colour regions, not bands** — a single sliver can span two ribbons, so there
+is no band to address, and the ones straddling a boundary cannot be assigned at all.
+
+### Finding 4 — what _did_ work: hue segmentation → per-band stencils
+
+Segmenting the artwork by hue separates the three bands cleanly and automatically (at 512²:
+green 26,234 px · orange 28,387 px · blue 16,843 px; the unassigned 15% is the dark maroon inner
+walls). Running potrace on each mask gives **one path per band**, 16 KB total, registering
+against the real artwork rather than approximating it.
+
+Fitted per-band ellipse geometry (minimum-area enclosing ellipse; `tilt` is the ellipse's
+major-axis angle in the image plane, not a 3D tilt):
+
+| Band   | Foreshortening b/a |   Tilt | Originally visible |
+| ------ | -----------------: | -----: | -----------------: |
+| green  |              0.558 | 149.7° |                54% |
+| orange |              0.627 | 149.9° |                49% |
+| blue   |              0.566 | 151.0° |                40% |
+
+The three tilts agree within 1.4° despite being fitted independently.
+
+### The three prototypes (all declined)
+
+1. **Highlight sweep** — a specular travelling around each band via its stencil.
+2. **True per-band rotation** — the one that actually delivers the original request. Rotate the
+   band _content_ inside a _static_ stencil: since the silhouette encodes the weave and never
+   moves, the interlock is preserved by construction. A ring tilted in 3D projects to an ellipse,
+   so rotation within the ring's own plane is **`M = E·R(α)·E⁻¹`** — un-squash to a circle,
+   rotate, re-squash. A 2×2 matrix, emitted as 36 CSS keyframes per band; the animation itself is
+   pure CSS. Only 40–54% of each ring was ever visible, so each was unwrapped into angle × radius
+   space and the hidden spans interpolated along the ring to avoid gaps rotating into view.
+3. **Shimmer** — a light sweep masked to the mark's own alpha. Simplest by far; no band
+   separation, no inpainting.
+
+### Why "just rotate the three paths" was never going to work
+
+Worth recording, because it is the intuitive first idea and it is wrong for non-obvious reasons.
+It is right for icons; icons are flat, drawn _in_ the screen plane, and don't interlock.
+
+- Each band is a circle **tilted in 3D**. Rotating its ellipse in the screen plane yields the
+  projection of a ring whose _tilt has changed_ — the object tumbles, it doesn't spin.
+- A ring genuinely spinning about its own axis has an **invariant silhouette**. Nothing moves.
+  What sells the motion is the shading travelling while the shape stays.
+- Rotating a path does the **exact opposite**: geometry moves and the baked-in shading goes with
+  it, i.e. the light source rotates along with the object.
+- The bands weave, so any real rotation needs depth order recomputed mid-cycle.
+
+### Reusable gotcha — `mask` creates a stacking context
+
+Hit while building the shimmer, and worth keeping: putting `mix-blend-mode: plus-lighter` on the
+_moving child_ inside a masked wrapper composites it against transparency, washing the mark grey.
+The blend must go on the **masked wrapper** so the group composites against the artwork beneath.
+Correspondingly, the mask must sit on a _static_ wrapper with the gradient moving inside it — a
+mask on the moving element travels with it and the effect cancels out.
+
+### Gates (recorded for any future attempt)
+
+- `prefers-reduced-motion: reduce` → static. Non-negotiable for anything continuous.
+- Input modality: hover-driven needs a focus equivalent, or it stays purely decorative.
+- JS-disabled baseline: the static `<img>` is the baseline in every variant; all three prototypes
+  layer on top and none is what makes the mark look right.
+- Contrast: none — decorative imagery, no text over it.
+- Visual baselines: **anything continuous breaks them**, since a screenshot catches it mid-cycle.
+  Needs pausing in test runs — a standing argument for on-load-once or interaction-driven.
+- `alt=""` stays on the hero ring; motion doesn't make it meaningful content.
+
+### Artefacts
+
+Published, interactive (both still live):
+
+- Rotation + highlight study — <https://claude.ai/code/artifact/aef9efca-9f89-4097-a813-bdf143413ed4>
+- Shimmer study, incl. drop-in component code — <https://claude.ai/code/artifact/38590c6c-eb51-4a06-95c7-775570dd1944>
+
+Working files, local to Akintayo's machine at `~/Downloads/gieva-logo-analysis/` (~3.9 MB) —
+**not committed**, since none of it ships:
+
+- `scripts/` — segmentation, ellipse fitting, unwrap/inpaint, page builders. These regenerate
+  everything else, and are the part actually worth keeping.
+- `assets/` — traced band paths (`band_*.svg`), band masks (`band_*.pbm`), gap-filled rings
+  (`spin_*.png`), fitted geometry (`spin_info.json`).
+- `demos/` — the two prototype pages as built.
+- Diagnostic renders: `segments.png` (the band separation), `registration.png` (traced outlines
+  over the artwork), `rings.png`, `frames.png`, `fit*_compare.png`.
 
 ---
 

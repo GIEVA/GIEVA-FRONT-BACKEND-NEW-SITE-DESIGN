@@ -14,7 +14,7 @@
     },
     {
       "id": "7956:30146",
-      "name": "oo-social-links → List",
+      "name": "oo-social-links \u2192 List",
       "kind": "icon",
       "file": "icon-7956-30146.svg"
     },
@@ -43,9 +43,17 @@
       "sourceNode": "I7956:30084;5857:4414",
       "name": "Gemini_Generated_Image_uvhg9uuvhg9uuvhg 1",
       "file": "fill-3172f31ce44b7c8cfb0a897f5d748407dc9e6cbc.png"
+    },
+    {
+      "imageRef": "1b88c3421e7fc8e23254d3017cf3bb4685cff584",
+      "sourceNode": "7463:5840",
+      "name": "BG (cropped as the node renders it)",
+      "file": "fill-1b88c3421e7fc8e23254d3017cf3bb4685cff584-cropped.png"
     }
   ],
   "notes": [
-    "WebP skipped (install `sharp` to enable re-encoding)"
+    "WebP skipped (install `sharp` to enable re-encoding)",
+    "fill-1b88c3421e\u2026-cropped.png was added on 2026-08-07 via the Figma MCP, NOT by scripts/figma-fetch.mjs \u2014 no FIGMA_API_KEY was available. Same imageRef as the raw fill beside it; what differs is that the design applies a CROP transform to that fill (zoom ~0.7, offset down/right) which figma-fetch's raw imageRef download does not carry. This file is the node as Figma actually renders it. The raw fill is kept because it is the true imageRef export.",
+    "node.json here is still the 2026-07-20 REST fetch and is STALE: the Program frame was redesigned after it (photo hero replaced the breadcrumb header, Partner Programs removed, detail photos re-cropped/mirrored). It is 4593px tall where the live frame is 4264px. Re-run `npm run figma:fetch -- \"<program-url>\"` to resync."
   ]
 }

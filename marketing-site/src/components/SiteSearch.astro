@@ -21,9 +21,19 @@
  * prefers-reduced-motion. Rendered once per page (BaseLayout picks one header), so the ids are
  * unique.
  */
+interface Props {
+  /**
+   * Magnifier glyph size. Consultancy's masthead draws it at 20px (5891:5463 → MagnifyingGlass
+   * 20×20), NGO's at 24px (7429:5891 → 24×24). Only the magnifier scales: the ✕ is our own
+   * close affordance, not a design node, so it keeps one size across brands.
+   */
+  iconSize?: 20 | 24;
+}
+
+const { iconSize = 20 } = Astro.props;
 ---
 
-<div class="site-search" data-site-search>
+<div class:list={['site-search', iconSize === 24 && 'site-search--lg']} data-site-search>
   <button
     type="button"
     class="site-search__toggle"
@@ -125,6 +135,16 @@
     border: none;
     border-radius: var(--radius-sm);
     cursor: pointer;
+  }
+  /* NGO's masthead (7429:5891): 24px glyph in a 48px-wide block. We take the design's width but
+     keep the 40px height — the design's search block is only 24px tall, which merely scrapes
+     WCAG 2.2 §2.5.8's 24×24 minimum, and this is a control we authored the box for anyway. */
+  .site-search--lg .site-search__icon--search {
+    inline-size: 1.5rem;
+    block-size: 1.5rem;
+  }
+  .site-search--lg .site-search__toggle {
+    inline-size: 3rem;
   }
   .site-search__toggle:not([hidden]) {
     display: inline-flex;
@@ -269,14 +289,16 @@
       background-color var(--motion-fast) var(--easing-standard),
       box-shadow var(--motion-fast) var(--easing-standard);
   }
-  /* Warm CTA tint on hover — the same hover family as the nav links, readable on the solid
-     white panel. The CTA-tinted focus ring keeps the roving keyboard focus clearly visible
-     (a11y gate). */
+  /* CTA tint on hover — the same hover family as the nav links, readable on the solid white
+     panel. Brand-resolved (`--color-cta-tint`, tokens.css §1): the row's own arrow affordance
+     below already warms to `--color-cta`, so a hard-coded orange wash left NGO hovering orange
+     under a green arrow. Consultancy's value is unchanged. The CTA-tinted focus ring keeps the
+     roving keyboard focus clearly visible (a11y gate). */
   .site-search__results :global(.site-search__result:hover) {
-    background: rgb(230 83 32 / 0.08);
+    background: var(--color-cta-tint);
   }
   .site-search__results :global(.site-search__result:focus-visible) {
-    background: rgb(230 83 32 / 0.08);
+    background: var(--color-cta-tint);
     outline: 2px solid var(--color-focus-ring);
     outline-offset: 2px;
   }
@@ -315,8 +337,10 @@
     -webkit-line-clamp: 2;
     overflow: hidden;
   }
+  /* Search-term highlight — brand-resolved for the same reason as the row wash above; an orange
+     highlight sitting inside a green-hovered row is the same mismatch one level down. */
   .site-search__results :global(.site-search__result-excerpt mark) {
-    background: rgb(230 83 32 / 0.22);
+    background: var(--color-cta-highlight);
     color: inherit;
     border-radius: 2px;
     padding: 0 1px;

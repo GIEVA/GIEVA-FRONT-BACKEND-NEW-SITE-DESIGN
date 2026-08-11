@@ -1,22 +1,41 @@
 ---
 /**
- * NgoSiteHeader — the NGO masthead. A solid, full-bleed WHITE bar (not the Consultancy
- * floating "glass" pill), confirmed against NGO Home's node.json (5990:3672):
- *   - header node 7417:7717 → inner Container 7417:7718 fill `#ffffff`, 1440×102, full width,
- *     no translucency/blur/rounded-pill — a plain white bar. (Consultancy's SiteHeader is
- *     `rgb(255 255 255 / .85)` + `backdrop-filter: blur(6px)` + `border-radius`, a genuinely
- *     different chrome — hence a separate component rather than a themed SiteHeader.)
- *   - nav 7417:7718 → NGO · About us · Programs · Resources · Contact (see `ngoPrimaryNav`).
- *   - actions → search icon + two `GIEVA Button`s: "Donate" (secondary: green fill 5% / border
- *     10% / green label) and "Get Involved" (primary: solid green / white label).
+ * NgoSiteHeader — the NGO masthead. A floating translucent "glass" pill, the SAME chrome as
+ * Consultancy's SiteHeader, confirmed against `7429:5891` and re-checked against all four
+ * sibling NGO frames (Home 7417:7718, About-alt 7434:8916, Program 7447:6222, Contact
+ * 7461:6062) — every one is identical:
+ *   - wrapper `Background` 1440×102, `fills: []` (no fill at all), padding 16/32/0;
+ *   - the bar itself 1376×86, `cornerRadius: 16`, fill `#FFFFFF` at 85%, BACKGROUND_BLUR 6.
+ *   Height reconciles as 16 + 54 (tallest child: the buttons) + 16 = 86.
+ *   This component previously described the masthead as a solid full-bleed white bar with no
+ *   radius, translucency or blur. That was a misread: the 1440×102 measurement belongs to the
+ *   *wrapper*, which is unfilled, and the fill/radius/blur belong to its 1376-wide child.
+ *   It stays a separate component from SiteHeader only because the nav model differs (no
+ *   dropdowns, no carets, different cell metrics) — not because the chrome differs.
+ *   - nav → NGO · About us · Programs · Resources · Contact (see `ngoPrimaryNav`), Arial 700/18,
+ *     in cells carrying a `minWidth` of 90.64 (see the CSS note — the uneven gaps are real).
+ *   - actions → 24px search glyph + two `GIEVA Button`s: "Donate" (secondary: green fill 5% /
+ *     border 10% / green label) and "Get Involved" (primary: solid green / white label).
  * The FOOTER, by contrast, IS the shared component instance in both designs (same
  * "oo-footer → Footer"), so NGO reuses SiteFooter themed via [data-brand='ngo'] tokens.
+ *
+ * NOT done here, deliberately: in every frame this pill is drawn *over* the hero
+ * (`Background.y === Main.y`, `scrollBehavior: FIXED`) rather than sitting above it in flow.
+ * That is the shell-level gap recorded in docs/consultancy-build-plan.md for all 18 routes, and
+ * it can't be fixed in the header alone — each page's hero top spacing was authored to clear an
+ * in-flow header, so overlaying without re-deriving those paddings moves every hero *up* by a
+ * header height. It belongs to the per-page passes.
  *
  * Zero-JS baseline (WORKFLOW.md §1.5): every link/control is a real, keyboard-reachable
  * element. No NGO mobile frame exists in the design, so the mobile collapse is a native
  * <details>/<summary> disclosure (works with no script), mirroring SiteHeader. Desktop and
  * disclosure copies of the nav/actions are duplicated but only one is ever in the a11y tree at
  * a time. Active state uses aria-current="page" (native), not a visual-only cue.
+ *
+ * Between 1440 and the disclosure the layout follows a three-tier FIT LADDER — see the @media
+ * block at the foot of the stylesheet. The design authorises exactly one width, so the ladder is
+ * ours; what it replaces is a `flex-wrap: wrap` that broke the five nav labels across three rows
+ * on any viewport under 1420px, 1366px laptops included.
  */
 import { ngoPrimaryNav, isActive } from '@lib/nav';
 import Button from '@components/Button.astro';
@@ -27,8 +46,8 @@ const current = Astro.url.pathname;
 ---
 
 <header class="ngo-header">
-  <div class="ngo-header__bar container">
-    <BrandLockup href="/ngo" size="sm" ink="default" destination="NGO home page" />
+  <div class="ngo-header__bar">
+    <BrandLockup href="/ngo" ink="brand" destination="NGO home page" />
 
     <nav class="ngo-nav ngo-nav--desktop" aria-label="Primary" data-search-anchor>
       <ul role="list" class="ngo-nav__list">
@@ -49,7 +68,7 @@ const current = Astro.url.pathname;
     </nav>
 
     <div class="ngo-header__actions ngo-header__actions--desktop">
-      <SiteSearch />
+      <SiteSearch iconSize={24} />
       <Button variant="secondary" href="/ngo/donate">Donate</Button>
       <Button variant="primary" href="/ngo/get-involved">Get Involved</Button>
     </div>
@@ -101,40 +120,97 @@ const current = Astro.url.pathname;
     position: sticky;
     top: 0;
     z-index: 50;
-    background: var(--color-surface-default);
-    border-bottom: 1px solid var(--color-border-subtle);
+    /* Wrapper `Background` 7429:5890: 1440×102, unfilled, padding 16/32/0. No bottom border —
+       the design draws none, and a hairline would defeat the point of a floating pill. */
+    padding: var(--space-sm) var(--shell-gutter) 0;
+
+    /* ── Fit ladder (see the @media block at the foot of this file) ──────────────
+       The design fixes one width, 1440. Every narrower desktop width is ours to author, and
+       the four values below are the only dials the ladder turns. Tier A is design-exact. */
+    --shell-gutter: var(--space-lg); /* 32 — the wrapper's horizontal padding */
+    --bar-pad-inline: var(--space-lg); /* 32 — the pill's own padding */
+    --bar-gap: var(
+      --space-md
+    ); /* MINIMUM gap between the three groups, not the rendered one */
+    --nav-gap: var(--space-md); /* 24 — itemSpacing on 7429:5893 */
+    --nav-cell-min: 90.64px; /* the design's per-cell minWidth (see the cell rule below) */
   }
   .ngo-header__bar {
     position: relative;
+    /* 1376 — inset 32px from the frame, wider than the 1312 content column. */
+    max-width: var(--shell-max);
+    margin-inline: auto;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: var(--space-lg);
-    padding-block: var(--space-2xs);
+    /* `space-between` distributes the slack, so `gap` only ever acts as a floor — at 1440 the
+       rendered gaps are ~37px either way. Declaring the floor at 24 rather than 32 therefore
+       costs nothing at the design width and buys 16px of headroom before the pill runs out of
+       room, which is 16px of Tier A we get for free. */
+    gap: var(--bar-gap);
+    padding: var(--space-sm) var(--bar-pad-inline);
+    border-radius: var(--radius-lg);
+    background: rgb(255 255 255 / 0.85);
+    backdrop-filter: blur(3px);
   }
-  /* Lockup styling — including its `flex: none` — lives in BrandLockup.astro (`size="sm"`). */
+  /* Safari < 18 needs the prefixed property, and it must sit in its own block — Lightning CSS
+     collapses a prefixed/standard pair in one block down to the prefixed form alone, which
+     drops the blur in Chrome and Firefox. (Same treatment as SiteHeader.) */
+  @supports (-webkit-backdrop-filter: blur(1px)) {
+    .ngo-header__bar {
+      -webkit-backdrop-filter: blur(3px);
+    }
+  }
+  /* Lockup styling — including its `flex: none` — lives entirely in BrandLockup.astro; the NGO
+     header instances the same 247×48 lockup as Consultancy and the footer. */
 
+  /* The desktop nav neither wraps nor shrinks: it is a rigid block whose width the fit ladder
+     steps down deliberately. It used to be `flex-wrap: wrap`, which made it the only thing in
+     the pill that could give (the lockup and the actions are both `flex: none`) — so below
+     1420px it broke the five labels across two and three rows and grew the pill from 86px to
+     120px. Wrapping is never a correct outcome for a masthead; running out of room is a
+     breakpoint's job, not a line-break's. */
+  .ngo-nav--desktop {
+    flex: none;
+  }
   .ngo-nav__list {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     align-items: center;
-    gap: var(--space-md);
+    gap: var(--nav-gap);
+  }
+  /* Each nav cell carries `minWidth: 90.64` with its label centred inside (7429:5891 →
+     7429:5894 et al). That, not the 24px gap alone, is what produces the design's uneven-looking
+     label spacing — 54/33/27/35px between words rather than a flat rhythm. 90.64 is not a
+     design-system step; it is residue from whatever label was once widest. Reproduced verbatim
+     because all five NGO frames agree on it, and exact-replica comes first. Desktop only: the
+     mobile disclosure stacks its links full-width.
+     It is also 92px of pure optical padding around a nav whose labels only need 458px, which is
+     why Tier B is able to give it up first: it is the one nav value that buys nothing but the
+     design's rhythm, and the design's rhythm is only specified at 1440. */
+  .ngo-nav--desktop .ngo-nav__list > li {
+    display: flex;
+    justify-content: center;
+    min-inline-size: var(--nav-cell-min);
   }
   .ngo-nav__link {
     display: inline-flex;
     align-items: center;
-    color: var(--color-text-default);
+    white-space: nowrap;
+    color: var(--color-text-default); /* #120633, the variable-bound nav ink */
     text-decoration: none;
     font-size: var(--type-body-lg-size);
+    font-weight: var(--font-weight-bold); /* design nav labels are Arial 700 */
     line-height: var(--type-body-lg-line);
     padding-block: var(--space-3xs);
   }
   .ngo-nav__link:hover {
     color: var(--color-cta);
   }
+  /* Inferred: no NGO frame shows an active nav item. Colour alone now carries it — the labels
+     are all bold at rest, so the weight it used to add is no longer a distinguishing cue. */
   .ngo-nav__link[aria-current='page'] {
     color: var(--color-cta);
-    font-weight: var(--font-weight-bold);
   }
 
   .ngo-header__actions {
@@ -182,7 +258,37 @@ const current = Astro.url.pathname;
     align-items: stretch;
   }
 
-  @media (max-width: 900px) {
+  /* ── Fit ladder ───────────────────────────────────────────────────────────────
+     Authored by us: the design specifies 1440 and nothing else, and there is no NGO mobile
+     frame. Each tier's threshold is the measured width at which the tier above stops fitting,
+     rounded up for headroom; `npm run verify:local` pins them (tests/header-fit.spec.ts).
+
+       ≥1420  A — design-exact. 90.64 cells, 24px nav gap, 32px pill padding and page gutter.
+                  (measured floor 1414, 6px headroom — deliberately the tightest of the three:
+                  every pixel below 1420 that stays in Tier A is a pixel of design fidelity.)
+       ≥1340  B — cells hug their labels. The only thing lost is the design's 1440-only optical
+                  rhythm; label sizes, weights and the 24px gap are untouched. (floor 1321)
+       ≥1260  C — our own slack comes off: page gutter and nav gap halve, pill padding drops to
+                  24. Design values, but no longer the design's values — legible over exact.
+                  (floor 1241)
+       <1260  the disclosure. Previously 900px, which was ~520px below the width at which the
+              desktop layout actually stopped fitting; that gap is what the wrap lived in.
+
+     Nothing here fires at 1440, so parity with 7429:5891 is untouched. */
+  @media (max-width: 1419.98px) {
+    .ngo-header {
+      --nav-cell-min: 0;
+    }
+  }
+  @media (max-width: 1339.98px) {
+    .ngo-header {
+      --shell-gutter: var(--space-sm);
+      --bar-pad-inline: var(--space-md);
+      --nav-gap: var(--space-sm);
+    }
+  }
+
+  @media (max-width: 1259.98px) {
     .ngo-nav--desktop,
     .ngo-header__actions--desktop {
       display: none;

@@ -63,9 +63,22 @@
   --color-orange-10: rgb(
     230 83 32 / 0.1
   ); /* Consultancy secondary-button fill/border (Home node.json) */
-  --color-green-10: rgb(
-    0 127 14 / 0.1
-  ); /* NGO secondary-button fill/border (5990:3672 — Donate: fill 5%, stroke 10%) */
+  /* NGO's secondary button is a 5% fill under a 10% border — NOT one tint doing both jobs, the
+     way Consultancy's is. Confirmed on every translucent `GIEVA Button` across all five NGO
+     frames (Donate, Learn more about us, See all news); Consultancy's are uniformly 10%/10%. */
+  --color-green-05: rgb(0 127 14 / 0.05); /* NGO secondary-button fill */
+  --color-green-10: rgb(0 127 14 / 0.1); /* NGO secondary-button border */
+  /* Interactive washes for the search panel's result rows: the hover/focus background (8%) and
+     the search-term highlight (22%). Both brands need their own, because the rows are shell
+     chrome that renders inside whichever site you're searching from — the arrow affordance
+     beside them already resolves --color-cta, so an orange wash under a green arrow read as a
+     bug on NGO. Deliberately NOT --color-cta-soft: that role is the secondary *button* tint,
+     which is 10% on Consultancy but only 5% on NGO (the two brands draw buttons differently),
+     and 5% is too faint to register as a hover state. */
+  --color-orange-08: rgb(230 83 32 / 0.08);
+  --color-orange-22: rgb(230 83 32 / 0.22);
+  --color-green-08: rgb(0 127 14 / 0.08);
+  --color-green-22: rgb(0 127 14 / 0.22);
 
   /* Typography primitives — Arial, a system font: zero web-font load, no FOUT (TOKENS.md §4). */
   --font-family-base: Arial, Helvetica, sans-serif;
@@ -155,6 +168,16 @@
      `.container` in base.css, which adds the gutter back on top of it. */
   --container-max: 1312px;
   --container-gutter: var(--space-3xl);
+  /* The masthead pill is deliberately WIDER than the content column: both brands' header
+     frames inset it 32px from the 1440 design frame (1376px — Consultancy 8159:7478, NGO
+     7429:5891), not the 64px section gutter. Sections keep --container-max; the shell uses
+     this. */
+  --shell-max: 1376px;
+
+  /* Button vertical padding. 12px + a 24px line-height + 2 × 1px border = the 50px every
+     Consultancy `GIEVA Button` measures. NGO's measure 54px page-wide with the same declared
+     Figma padding, so the brand overrides this to 14px rather than each header patching it. */
+  --control-padding-block: var(--space-xs);
 
   /* Motion — reduced-motion aware defaults (real motion tokens land in Phase 4). */
   --motion-fast: 120ms;
@@ -322,8 +345,14 @@
      the shell consumes --color-cta here rather than --color-accent-warm directly. */
   --color-cta: var(--color-accent-warm);
   --color-cta-contrast: var(--color-white);
-  --color-cta-soft: var(--color-orange-10); /* secondary-button tint fill/border */
+  --color-cta-soft: var(--color-orange-10); /* secondary-button tint fill */
+  /* Consultancy draws the same 10% tint for fill and border; NGO splits them (see §3b). */
+  --color-cta-soft-border: var(--color-cta-soft);
   --color-cta-hover: var(--color-action-hover);
+  /* Search-panel washes (see §1). These values are unchanged from the hard-coded literals they
+     replaced, so Consultancy renders exactly as before. */
+  --color-cta-tint: var(--color-orange-08);
+  --color-cta-highlight: var(--color-orange-22);
 
   --color-border-subtle: var(--color-periwinkle);
   --color-border-on-inverse: var(--color-white-25);
@@ -397,10 +426,12 @@
   /* CTA (buttons/controls) = green; warm accent (eyebrows) = orange — the NGO split. */
   --color-cta: var(--color-green);
   --color-cta-contrast: var(--color-white);
-  --color-cta-soft: var(
-    --color-green-10
-  ); /* Donate: green fill 5% / border 10% → single soft tint */
+  --color-cta-soft: var(--color-green-05); /* Donate et al: green fill at 5% … */
+  --color-cta-soft-border: var(--color-green-10); /* … under a 10% border */
   --color-cta-hover: var(--color-action-hover);
+  /* Search-panel washes (see §1) — green, matching the result row's own arrow affordance. */
+  --color-cta-tint: var(--color-green-08);
+  --color-cta-highlight: var(--color-green-22);
 
   --color-accent-warm: var(--color-orange); /* #E65320 — eyebrow/kicker labels only on NGO */
   /* NGO Home surfaces no chartreuse/aqua-style bright dark accents; default to the green primary
@@ -425,6 +456,12 @@
   --color-feedback-warning: var(--color-orange);
 
   --color-focus-ring: var(--color-green);
+
+  /* NGO's buttons are 4px taller than Consultancy's — 54px vs 50px — across every NGO frame
+     (header Donate/Get Involved, Learn more about us, Send Message), despite both declaring the
+     same 16/32 padding in Figma. Measured heights are the ground truth, so the brand carries
+     the delta: 14 + 24 line-height + 14 + 2 × 1px border = 54. */
+  --control-padding-block: 14px;
 }
 
 /* On NGO's dark teal surfaces, flip text roles so nested components stay readable. Mirrors the

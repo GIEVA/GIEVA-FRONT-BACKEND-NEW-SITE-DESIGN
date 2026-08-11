@@ -23,7 +23,7 @@ const current = Astro.url.pathname;
 
 <header class="site-header">
   <div class="site-header__pill">
-    <BrandLockup href="/" size="lg" ink="brand" />
+    <BrandLockup href="/" ink="brand" />
 
     <nav class="site-nav site-nav--desktop" aria-label="Primary" data-search-anchor>
       <ul role="list" class="site-nav__list">
@@ -36,25 +36,30 @@ const current = Astro.url.pathname;
                 aria-current={isActive(current, item.href) ? 'page' : undefined}
               >
                 {item.label}
-                {/* Design (5891:5463) shows a caret on every top-level item — including
-                    Resource, which has no captured dropdown. It's decorative (aria-hidden);
-                    only items with `item.menu` get the JS-wired disclosure below. */}
-                <svg
-                  class="site-nav__caret"
-                  width="12"
-                  height="7"
-                  viewBox="0 0 12 7"
-                  fill="none"
-                  aria-hidden="true"
-                  focusable="false"
-                >
-                  <path
-                    d="M1 1l5 5 5-5"
-                    stroke="currentColor"
-                    stroke-width="1.5"
-                    stroke-linecap="round"
-                  />
-                </svg>
+                {/* Deliberate deviation from the design (client direction, 2026-08-08): the
+                    Figma header (5891:5463) draws a caret on every top-level item, Resource
+                    included, but Resource has no dropdown — so the caret there promised a menu
+                    that never opens. The caret now tracks `item.menu`, which is also what gates
+                    the disclosure below, so the affordance and the behaviour can't drift apart.
+                    Decorative either way (aria-hidden); state is carried by aria-expanded. */}
+                {item.menu && (
+                  <svg
+                    class="site-nav__caret"
+                    width="12"
+                    height="7"
+                    viewBox="0 0 12 7"
+                    fill="none"
+                    aria-hidden="true"
+                    focusable="false"
+                  >
+                    <path
+                      d="M1 1l5 5 5-5"
+                      stroke="currentColor"
+                      stroke-width="1.5"
+                      stroke-linecap="round"
+                    />
+                  </svg>
+                )}
               </a>
               {item.menu && (
                 <div
@@ -165,17 +170,32 @@ const current = Astro.url.pathname;
     position: sticky;
     top: 0;
     z-index: 50;
-    padding: var(--space-2xs) var(--space-lg) 0;
+    /* The design's header wrapper (5891:5463) is 1440×98 with padding 16/32/0 — so 16px above
+       the pill, not 8, and a 98px wrapper overall. */
+    padding: var(--space-sm) var(--shell-gutter) 0;
+
+    /* ── Fit ladder (see the @media block at the foot of this file) ──────────────
+       Mirrors NgoSiteHeader's. The design fixes 1440 and nothing else; every narrower desktop
+       width is ours, and these three values are the only dials the ladder turns. */
+    --shell-gutter: var(--space-lg); /* 32 — the wrapper's horizontal padding */
+    --pill-pad-inline: var(--space-lg); /* 32 — the pill's own padding */
+    --pill-gap: var(
+      --space-md
+    ); /* MINIMUM gap between the three groups, not the rendered one */
+    --nav-gap: var(--space-md); /* 24 */
   }
   .site-header__pill {
     position: relative;
-    max-width: var(--container-max);
+    /* 1376, not the 1312 content column: the pill is inset 32px from the frame, not 64px. */
+    max-width: var(--shell-max);
     margin-inline: auto;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: var(--space-lg);
-    padding: var(--space-sm) var(--space-lg);
+    /* `space-between` distributes the slack, so `gap` only ever acts as a floor — declaring it
+       at 24 rather than 32 changes nothing at 1440 and buys 16px before the pill runs out. */
+    gap: var(--pill-gap);
+    padding: var(--space-sm) var(--pill-pad-inline);
     border-radius: var(--radius-lg);
     background: rgb(255 255 255 / 0.85);
     backdrop-filter: blur(3px);
@@ -191,15 +211,23 @@ const current = Astro.url.pathname;
   /* The lockup — mark size, 48px SemiBold "GIEVA", green ".org", and its `flex: none` — lives
      entirely in BrandLockup.astro (design 5891:5463). Nothing about it belongs here. */
 
+  /* The desktop nav neither wraps nor shrinks — the fit ladder steps its width down instead.
+     It used to be `flex-wrap: wrap`, which made it the only thing in the pill that could give
+     (the lockup and the actions are both `flex: none`), so below 1303px it broke the labels
+     onto a second row and grew the pill. See NgoSiteHeader for the same fix and the reasoning. */
+  .site-nav--desktop {
+    flex: none;
+  }
   .site-nav__list {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     align-items: center;
-    gap: var(--space-md);
+    gap: var(--nav-gap);
   }
   .site-nav__link {
     display: inline-flex;
     align-items: center;
+    white-space: nowrap;
     gap: var(--space-2xs);
     color: var(--color-black); /* design nav labels are pure #000000 */
     text-decoration: none;
@@ -284,10 +312,17 @@ const current = Astro.url.pathname;
   }
   .site-nav__menu-heading {
     margin: 0 0 19px;
-    font-size: var(--font-size-body);
-    line-height: var(--line-height-body);
-    font-weight: var(--font-weight-regular);
-    letter-spacing: var(--letter-spacing-narrow);
+    /* Same Figma style as the footer's column labels ("GIEVA.org/Arial/Narrow", 14/20/400,
+       tracking −0.14) — confirmed on 8176:7405 / 8171:7396 / 8178:7476. Consume the
+       --type-label-* role rather than re-listing the values: the hand-rolled copy this
+       replaced omitted the *narrow* family, so the labels rendered in regular Arial and ran
+       visibly wide in their 264px columns (the same slip tokens.css:262 records fixing in
+       the footer). */
+    font-family: var(--type-label-family);
+    font-size: var(--type-label-size);
+    line-height: var(--type-label-line);
+    font-weight: var(--type-label-weight);
+    letter-spacing: var(--type-label-tracking);
     text-transform: uppercase;
     color: var(--color-mine-shaft);
     opacity: 0.5;
@@ -389,7 +424,26 @@ const current = Astro.url.pathname;
     color: var(--color-accent-warm);
   }
 
-  @media (max-width: 900px) {
+  /* ── Fit ladder ───────────────────────────────────────────────────────────────
+     Authored by us — the design specifies 1440 and there is no mobile frame. Thresholds are the
+     measured widths at which the tier above stops fitting, rounded up for headroom, and are
+     pinned by tests/header-fit.spec.ts. Consultancy has no per-cell minWidth to give up, so it
+     has one relaxation tier rather than NGO's two. Nothing here fires at 1440.
+
+       ≥1300  design-exact (measured floor 1287, 13px headroom)
+       ≥1230  our own slack comes off: gutter and nav gap halve, pill padding drops to 24
+                  (measured floor 1215, 15px headroom)
+       <1230  the disclosure. Previously 900px — ~400px below where the layout actually
+              stopped fitting, and that gap is where the nav wrapped onto a second row. */
+  @media (max-width: 1299.98px) {
+    .site-header {
+      --shell-gutter: var(--space-sm);
+      --pill-pad-inline: var(--space-md);
+      --nav-gap: var(--space-sm);
+    }
+  }
+
+  @media (max-width: 1229.98px) {
     .site-nav--desktop,
     .site-header__actions--desktop {
       display: none;

@@ -19,6 +19,13 @@ const WCAG_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 // somewhere in that combined haystack, so multi-word entries (e.g. the active nav link) don't
 // accidentally swallow unrelated nodes. Delete an entry here the day its underlying fix lands.
 const KNOWN_CONTRAST_ISSUES: { rule: string; markers: string[] }[] = [
+  // Issue 7 / N5 — the cross-site switcher pill (`BrandSwitchLink.astro`). The only entry here
+  // that spans BOTH brands and ALL 18 routes, because the pill is shell chrome rendered by
+  // BaseLayout. Consultancy: green #007F0E on the mint fill composited to #B3D9B7 (3.34:1).
+  // NGO: orange #E65320 on the peach fill composited to #F8CBBC (2.53:1). Both fills and both
+  // label colours are confirmed instance values on the one shared Figma component (5986:3665 /
+  // 5990:4604). `brand-switch` is unique to that component, so nothing else can match.
+  { rule: 'color-contrast', markers: ['brand-switch'] },
   { rule: 'color-contrast', markers: ['btn--primary'] },
   { rule: 'color-contrast', markers: ['btn--secondary'] },
   { rule: 'color-contrast', markers: ['site-nav__link', 'aria-current'] },
@@ -37,13 +44,16 @@ const KNOWN_CONTRAST_ISSUES: { rule: string; markers: string[] }[] = [
   // See docs/a11y-known-issues.md issue 6.
   { rule: 'color-contrast', markers: ['service-detail__highlight'] },
   // NGO-only (node 5990:3672): the footer wordmark's green ".org" suffix on NGO's dark teal
-  // footer surface — see docs/a11y-known-issues.md issue N2. The wordmark now comes from the
-  // shared BrandLockup, so the marker pairs the `.org` class with the `--lg` size to keep the
-  // NGO *header*'s (`--sm`) lockup out of scope. The two `--lg` instances this can still reach —
-  // Consultancy's header (green on white) and its footer (3.67:1, passes the large threshold) —
-  // never produce a violation, so the filter has nothing to remove there.
+  // footer surface — see docs/a11y-known-issues.md issue N2. The wordmark comes from the shared
+  // BrandLockup, so the marker pairs the `.org` class with the `--inverse` ink to keep the two
+  // light-surface lockups (both headers) out of scope. This used to pair with the `--lg` size
+  // instead, back when the NGO header had its own smaller `--sm` treatment; the design turned
+  // out to instance one 247×48 lockup everywhere, so both size classes are gone and the ink
+  // variant — which is only ever the dark footer — is the narrower anchor anyway. The one other
+  // `--inverse` instance in reach, Consultancy's footer (3.67:1, passes the large threshold), is
+  // not a violation, so the filter has nothing to remove there.
   // (The NGO secondary "Learn more" on dark is already covered by the 'btn--secondary' entry.)
-  { rule: 'color-contrast', markers: ['brand-lockup__tld', 'brand-lockup--lg'] },
+  { rule: 'color-contrast', markers: ['brand-lockup__tld', 'brand-lockup--inverse'] },
   // NGO Home (/ngo, node 5990:3672) — issues N3–N7 in docs/a11y-known-issues.md. NGO's kicker
   // is ORANGE (#E65320) and its heading-accent GREEN (#007F0E) — the inverse of Consultancy —
   // and both are confirmed source-design fills, so the CLAUDE.md #2 exception applies. Markers
@@ -55,10 +65,21 @@ const KNOWN_CONTRAST_ISSUES: { rule: string; markers: string[] }[] = [
   { rule: 'color-contrast', markers: ['success__intro', 'u-eyebrow'] },
   { rule: 'color-contrast', markers: ['news__intro', 'u-eyebrow'] },
   { rule: 'color-contrast', markers: ['news__tag'] },
+  // Same issue N3, on the two NGO Resources routes: the orange kicker on white and the category
+  // pill on the article cards. `resources__eyebrow` and `article__eyebrow` are style-free hooks
+  // added purely so these match without a bare `u-eyebrow` marker, which would allowlist every
+  // eyebrow on all 18 routes.
+  { rule: 'color-contrast', markers: ['resources__eyebrow'] },
+  { rule: 'color-contrast', markers: ['article__eyebrow'] },
+  // `article-card__tag` is deliberately unpaired, unlike the entries above. ArticleCard is
+  // brand-neutral and its pill consumes `--color-accent-warm`, which resolves to the same
+  // #E65320 on BOTH brands, so a Consultancy /resources built from this component would show the
+  // identical 3.73:1 pairing rather than a different, unexamined one. Scope confirmed, not
+  // accidental — see docs/a11y-known-issues.md N3.
+  { rule: 'color-contrast', markers: ['article-card__tag'] },
   // N4 — orange "Get Involved" kicker on the dark teal CTA panel (3.16:1):
   { rule: 'color-contrast', markers: ['u-eyebrow', 'cta__panel'] },
-  // N5 — orange "Explore Consultancy" cross-brand pill on its peach fill #F5BAA6 (2.22:1):
-  { rule: 'color-contrast', markers: ['hero__cross-link'] },
+  // (N5 moved: the cross-brand pill is no longer NGO-Home-only — see issue 7 / N5 below.)
   // N6 — green "Learn more"/"View case study" link labels on the dark teal program cards and
   // testimonial (2.27:1). These are btn--link (no fill), so the existing btn--secondary entry
   // doesn't cover them:
@@ -79,36 +100,34 @@ const KNOWN_CONTRAST_ISSUES: { rule: string; markers: string[] }[] = [
   // N10 — green "Partner" heading-accent em on the dark teal panel (2.26:1; 48px bold is
   // "large", so 3:1 applies, but it still misses):
   { rule: 'color-contrast', markers: ['u-accent-em', 'ngo-partners-form'] },
-  // NGO About (/ngo/about, node 7429:5025) — issue N11 in docs/a11y-known-issues.md. The
-  // "HOME / ABOUT" breadcrumb, orange #E65320 on white — same pairing/ratio as Partners' N8,
-  // this page's own confirmed breadcrumb fill. `about-breadcrumb` is About-only (Partners uses
-  // `partners-breadcrumb`), so neither marker can swallow the other page's node. Note: the
-  // Core Team section's colour-inverted "CORE TEAM" (green) and "One Trusted Partner." (orange)
-  // both pass AA/AA-large as measured (green-on-white and orange-on-white-at-large-text
-  // respectively) — no allowlist needed for either.
-  { rule: 'color-contrast', markers: ['about-breadcrumb'] },
-  // NGO Program (/ngo/program, node 7447:6027) — issues N12–N15 in docs/a11y-known-issues.md.
-  // Same NGO orange-kicker / green-accent source palette, plus one muted teal-blue label colour
-  // unique to this page. Markers use NGO-Program-only parent classes (`program-breadcrumb`,
-  // `partner-programs__card`, `program-contact`) so no other route's node can match.
-  // N12 — the "HOME / PROGRAMS" breadcrumb, orange #E65320 on white (3.73:1):
-  { rule: 'color-contrast', markers: ['program-breadcrumb'] },
-  // N13 — green "Learn more" link labels on the dark teal Partner-Programs cards (2.27:1). These
-  // are btn--link (no fill), so the btn--secondary entry doesn't cover them:
-  { rule: 'color-contrast', markers: ['partner-programs__card', 'btn--link'] },
+  // NGO About (/ngo/about) has NO allowlist entry. It used to carry one for issue N11, the
+  // "HOME / ABOUT" breadcrumb — the 2026-08 redesign of node 7429:5025 replaced that header
+  // with a photo hero, so the node is gone and `color-contrast` is fully enforced on the route
+  // again. See the RESOLVED N11 entry in docs/a11y-known-issues.md before re-adding anything.
+  // NGO Program (/ngo/program, node 7447:6027) — issues N14–N15 in docs/a11y-known-issues.md.
+  // Markers use NGO-Program-only parent classes (`program-contact`) so no other route's node can
+  // match. Two of this page's four original entries are gone: N12 (the "HOME / PROGRAMS"
+  // breadcrumb) and N13 (the green "Learn more" links on the Partner-Programs cards) were both
+  // closed by the 2026-08 redesign of node 7447:6027, which replaced the breadcrumb header with
+  // a photo hero and deleted the Partner-Programs block outright. `color-contrast` is enforced
+  // again on both — see the RESOLVED N12/N13 entries in docs/a11y-known-issues.md before
+  // re-adding anything.
   // N14 — green "Now" heading-accent em on the dark teal Contact panel (2.27:1; 48px bold is
   // "large", so 3:1 applies, but it still misses):
   { rule: 'color-contrast', markers: ['u-accent-em', 'program-contact'] },
   // N15 — muted teal-blue form labels #69A4B8 on the dark teal Contact panel (4.27:1). A colour
   // unique to this page (Partners' labels are green), so it needs its own entry:
   { rule: 'color-contrast', markers: ['program-contact__label', 'program-contact'] },
-  // NGO Contact (/ngo/contact, node 7461:5854) — issues N16–N19 in docs/a11y-known-issues.md.
-  // Same recurring orange-breadcrumb / green-accent / muted-label palette as Program, plus one
-  // genuinely new gap: the contact-info block's micro-labels, which are flat black at 50%
-  // opacity (not a colour token) composited to #7F7F7F on white. Markers use Contact-only
-  // parent classes so no other route's node can match.
-  // N16 — the "HOME / PROGRAMS" breadcrumb, orange #E65320 on white (3.73:1):
-  { rule: 'color-contrast', markers: ['contact-breadcrumb'] },
+  // NGO Contact (/ngo/contact, node 7461:5854) — issues N17–N19 in docs/a11y-known-issues.md.
+  // Same recurring green-accent / muted-label palette as Program, plus one genuinely new gap:
+  // the contact-info block's micro-labels, which are flat black at 50% opacity (not a colour
+  // token) composited to #7F7F7F on white. Markers use Contact-only parent classes so no other
+  // route's node can match. N16 (the "HOME / PROGRAMS" breadcrumb) is gone — the 2026-08
+  // redesign of node 7461:5854 replaced that header with a photo hero, exactly as it did on
+  // About (N11) and Program (N12), so `color-contrast` is enforced again on those nodes. N20
+  // (the 50%-opacity "Your Answer" placeholder) has NO entry on purpose: axe-core's
+  // color-contrast rule does not evaluate placeholder text, so it never reaches this list —
+  // see the entry in docs/a11y-known-issues.md before assuming one is missing.
   // N17 — the contact-info micro-labels ("HEAD OFFICE", "PHONE"…), #7F7F7F on white (4.00:1):
   { rule: 'color-contrast', markers: ['contact-info__label'] },
   // N18 — green "Message" heading-accent em on the dark teal form panel (2.27:1; 48px bold is

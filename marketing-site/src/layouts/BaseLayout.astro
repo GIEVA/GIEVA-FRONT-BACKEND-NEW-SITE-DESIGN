@@ -15,6 +15,7 @@ import '@styles/base.css';
 import SiteHeader from '@components/SiteHeader.astro';
 import NgoSiteHeader from '@components/NgoSiteHeader.astro';
 import SiteFooter from '@components/SiteFooter.astro';
+import BrandSwitchLink from '@components/BrandSwitchLink.astro';
 
 export interface Props {
   title: string;
@@ -61,5 +62,12 @@ const brand =
     <footer>
       <SiteFooter homeHref={brand === 'ngo' ? '/ngo' : '/'} />
     </footer>
+    {
+      /* Cross-site switcher. Outside <main> deliberately: it is shell chrome, so it stays out
+        of the pagefind index and out of the page's own content landmark. It used to be authored
+        into each Home hero, which meant the other 16 routes had no visible way across — see the
+        component's header comment for the design provenance and the logged deviation. */
+    }
+    <BrandSwitchLink brand={brand} />
   </body>
 </html>

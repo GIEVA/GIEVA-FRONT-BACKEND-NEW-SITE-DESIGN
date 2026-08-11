@@ -1,0 +1,142 @@
+---
+/**
+ * /ngo/resources — the NGO news & resources index.
+ *
+ * ⚠ NO FIGMA FRAME EXISTS FOR THIS PAGE. The file (fTqnnV20l9htP7vFJrOsvn) holds five NGO
+ * frames and none of them is a Resources screen — `docs/ngo-build-plan.md` records this as the
+ * top open question for the client, and it is the single most-linked missing route on the site
+ * (11 inbound links: the masthead on all six NGO routes, the footer on all eighteen, and four
+ * separate places on NGO Home).
+ *
+ * So this page is a **design proposal, not a replica**, and it is built the way the /404 page
+ * was: entirely out of vocabulary the design has already confirmed elsewhere, adding no new
+ * visual ideas of its own.
+ *
+ *   - the hero is `SubPageHero` with the NGO photo — the same treatment /ngo/about, /ngo/program
+ *     and /ngo/partners carry since the 2026-08 redesign
+ *   - the intro block is Home's "Recent News" intro: `u-eyebrow` + `u-section-title` with an
+ *     `u-accent-em` run + `u-body-lg` (node 5990:3672)
+ *   - the cards are that same section's cards, now `ArticleCard`
+ *   - the closing CTA is `NgoCtaSection`, as on /ngo and /ngo/about
+ *   - rhythm is `.section` / `.container` and the `--space-*` scale, as everywhere else
+ *
+ * Flagged for client sign-off in docs/ngo-build-plan.md. If a Resources frame is later drawn,
+ * this should be replaced by it rather than reconciled with it.
+ *
+ * DEFERRED, deliberately: category filtering. The design implies none, and doing it with zero JS
+ * means a route per category (`/ngo/resources/category/[slug]`) — real scope that should follow
+ * a confirmed design rather than precede it. `categoriesOf()` in @lib/articles is ready for it.
+ *
+ * Content comes from the CMS at build time; see @lib/articles for why build-time and not SSR.
+ */
+import BaseLayout from '@layouts/BaseLayout.astro';
+import SubPageHero from '@components/SubPageHero.astro';
+import ArticleCard from '@components/ArticleCard.astro';
+import NgoCtaSection from '@components/NgoCtaSection.astro';
+import { ngoHeroPhoto } from '@lib/ngo-hero-images';
+import { getArticles } from '@lib/articles';
+
+const articles = await getArticles('ngo');
+---
+
+<BaseLayout
+  title="News & Resources — GIEVA NGO"
+  description="Reports, programme updates and stories from GIEVA's work with young Nigerians."
+>
+  <SubPageHero title="Resources" photo={ngoHeroPhoto} />
+
+  <!-- ── Index ────────────────────────────────────────────────────────────────── -->
+  <section class="section resources">
+    <div class="container">
+      <div class="resources__panel">
+        <div class="resources__intro">
+          {
+            /* `resources__eyebrow` carries no style — it exists so tests/a11y.spec.ts can match
+              this one orange-on-white kicker (tracked issue N3) without a bare `u-eyebrow`
+              marker that would allowlist every eyebrow on the site. */
+          }
+          <p class="u-eyebrow resources__eyebrow">News &amp; Resources</p>
+          <h2 class="u-section-title">
+            Keep Up <em class="u-accent-em">With Us</em>
+          </h2>
+          <p class="u-body-lg">
+            Programme updates, field reports and stories from our work across Nigeria.
+          </p>
+        </div>
+
+        {
+          articles.length > 0 ? (
+            <ul role="list" class="resources__grid">
+              {articles.map((article) => (
+                <ArticleCard article={article} basePath="/ngo/resources" headingLevel={3} />
+              ))}
+            </ul>
+          ) : (
+            /* A real state, not a placeholder: the CMS starts empty, and this page is linked
+               from every NGO route, so it will be reachable before the first article is
+               published. Says so plainly instead of rendering an empty grid. */
+            <p class="u-body-lg resources__empty">
+              There's nothing published here just yet — new reports and updates will appear on
+              this page. In the meantime,{' '}
+              <a class="u-underline" href="/ngo/program">
+                see the programmes we run
+              </a>{' '}
+              or{' '}
+              <a class="u-underline" href="/ngo/contact">
+                get in touch
+              </a>
+              .
+            </p>
+          )
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- ── CTA — shared with /ngo and /ngo/about, see NgoCtaSection.astro ────────── -->
+  <section class="section cta">
+    <div class="container">
+      <NgoCtaSection />
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  /* Intro-to-grid spacing matches Home's news panel (--space-4xl), so the two readings of the
+     same section feel like one system. */
+  .resources__panel {
+    display: grid;
+    gap: var(--space-4xl);
+  }
+  .resources__intro {
+    display: grid;
+    gap: var(--space-sm);
+    align-content: start;
+  }
+  .resources__intro h2,
+  .resources__intro p.u-body-lg {
+    color: var(--color-text-default);
+  }
+  /* Three across, as Home's news row is. `auto-fill` with a floor rather than a fixed
+     `repeat(3, 1fr)`: this grid holds an archive of unknown length, so rows past the first have
+     to reflow on their own — and a trailing row of one or two cards keeps the 395px card width
+     instead of stretching to fill. */
+  .resources__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: var(--space-2xl);
+  }
+  .resources__empty {
+    max-width: 60ch;
+    color: var(--color-text-default);
+  }
+
+  /* No tablet/mobile frame exists for this page; `auto-fill` above collapses the grid on its
+     own, so the only authored breakpoint is the one that stops 300px cards from overflowing a
+     320px viewport. */
+  @media (max-width: 380px) {
+    .resources__grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

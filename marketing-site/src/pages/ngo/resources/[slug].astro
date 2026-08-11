@@ -1,0 +1,368 @@
+---
+/**
+ * /ngo/resources/[slug] — reading an NGO article.
+ *
+ * ⚠ NO FIGMA FRAME EXISTS FOR THIS PAGE, and unlike the listing there is no near-neighbour to
+ * borrow a layout from either — the design has never drawn long-form reading. So this is a
+ * **design proposal** built from confirmed primitives only (`u-page-title`, `u-eyebrow`,
+ * `u-body-lg`, the `--space-*` rhythm, `ArticleCard`, `NgoCtaSection`), with one authored
+ * decision that deserves to be named rather than buried: **the measure**.
+ *
+ * The body column is capped at 68 characters. Nothing in the design system speaks to running
+ * text longer than a paragraph — every confirmed text block is a heading, a card, or a short
+ * intro — and the site's 1440/1200 container would set article prose about 150 characters wide,
+ * roughly twice the width at which people can track from one line to the next without losing
+ * their place. 68ch is the conventional 45–75 range, and it is the whole reason this page has a
+ * layout of its own rather than reusing `.container` directly. If the client's designer draws a
+ * reading page with a different measure, theirs wins — but a value had to be chosen and the
+ * reasoning should outlive the choice. Widened from the first pass on client direction
+ * 2026-08-11; the current value and the `ch`-vs-length reasoning are in the CSS.
+ *
+ * Flagged for client sign-off in docs/ngo-build-plan.md alongside the listing.
+ *
+ * ## Heading structure
+ *
+ * `h1` is the article title. Body headings are remapped to start at `h2` by
+ * `renderArticleBody` — authors can pick any level in the Tiptap editor, including `h1`, and
+ * without that pass a single editorial choice in the CMS could red the axe gate on a page
+ * nobody touched. See @lib/article-html. The related-articles section is an `h2`, its cards
+ * `h3`.
+ *
+ * ## Body HTML
+ *
+ * `article.content` is CMS HTML and is rendered through `renderArticleBody`, which sanitises it
+ * against the editor's real extension set and normalises those heading levels. It is the only
+ * supported path to `set:html` here — see that module for the threat model.
+ */
+import type { GetStaticPaths } from 'astro';
+import BaseLayout from '@layouts/BaseLayout.astro';
+import ArticleCard from '@components/ArticleCard.astro';
+import NgoCtaSection from '@components/NgoCtaSection.astro';
+import {
+  getArticles,
+  getArticleBySlug,
+  relatedArticles,
+  formatArticleDate,
+  type Article,
+  type ArticleSummary,
+} from '@lib/articles';
+import { renderArticleBody, articleBodyToText } from '@lib/article-html';
+
+export const getStaticPaths = (async () => {
+  const summaries = await getArticles('ngo');
+
+  // One `getArticleBySlug` per article — the list endpoint excludes `content`, so the body has
+  // to be fetched per slug. Sequential rather than `Promise.all`: this hits the client's API
+  // during a build, and a burst of parallel requests against a small instance is a worse
+  // trade than a build that takes a few seconds longer.
+  const paths = [];
+  for (const summary of summaries) {
+    const article = await getArticleBySlug(summary.slug);
+    if (!article) continue; // Unpublished between the list call and this one.
+    paths.push({ params: { slug: summary.slug }, props: { article, siblings: summaries } });
+  }
+  return paths;
+}) satisfies GetStaticPaths;
+
+interface Props {
+  article: Article;
+  siblings: ArticleSummary[];
+}
+
+const { article, siblings } = Astro.props as Props;
+
+const body = renderArticleBody(article.content);
+const related = relatedArticles(siblings, article, 3);
+const date = formatArticleDate(article.publishedAt);
+
+// Meta description: the author's SEO field, then their excerpt, then the body's opening
+// sentence — never nothing, since these are the pages most likely to be found via search.
+const description =
+  article.seoDescription ?? article.excerpt ?? articleBodyToText(article.content, 160);
+---
+
+<BaseLayout
+  title={`${article.seoTitle ?? article.title} — GIEVA NGO`}
+  description={description}
+>
+  <article class="article">
+    <!-- ── Masthead ───────────────────────────────────────────────────────────── -->
+    <header class="article__header">
+      <div class="article__measure">
+        {
+          /* `article__eyebrow` carries no style — it exists so tests/a11y.spec.ts can match this
+             one orange-on-white kicker (tracked issue N3) without a bare `u-eyebrow` marker
+             that would allowlist every eyebrow on the site. */
+          article.category && <p class="u-eyebrow article__eyebrow">{article.category}</p>
+        }
+        <h1 class="u-page-title article__title">{article.title}</h1>
+        {article.subtitle && <p class="u-body-lg article__subtitle">{article.subtitle}</p>}
+
+        <p class="article__meta">
+          {article.author?.fullName && <span>{article.author.fullName}</span>}
+          {
+            article.publishedAt && (
+              <time datetime={article.publishedAt.slice(0, 10)}>{date}</time>
+            )
+          }
+          {article.readingTime && <span>{article.readingTime}</span>}
+        </p>
+      </div>
+    </header>
+
+    {
+      /* Cover art runs wider than the measure — the photo is the one element that benefits from
+         the container's full width, and the design's own cards crop 395×320, so a 3:2-ish band
+         is consistent with how it treats photography. Remote URL, so plain <img>: see
+         ArticleCard for why astro:assets can't process it yet. */
+      article.coverImageUrl && (
+        <div class="article__cover">
+          <img
+            src={article.coverImageUrl}
+            alt=""
+            width={1200}
+            height={630}
+            loading="eager"
+            decoding="async"
+          />
+        </div>
+      )
+    }
+
+    <!-- ── Body ───────────────────────────────────────────────────────────────── -->
+    <div class="article__body-wrap">
+      <div class="article__measure">
+        <div class="article__body" set:html={body} />
+      </div>
+    </div>
+  </article>
+
+  {
+    related.length > 0 && (
+      <section class="section article__related">
+        <div class="container">
+          <div class="article__related-panel">
+            <h2 class="u-section-title">
+              More <em class="u-accent-em">From Us</em>
+            </h2>
+            <ul role="list" class="article__related-grid">
+              {related.map((item) => (
+                <ArticleCard article={item} basePath="/ngo/resources" headingLevel={3} />
+              ))}
+            </ul>
+          </div>
+        </div>
+      </section>
+    )
+  }
+
+  <!-- ── CTA — shared with /ngo and /ngo/about, see NgoCtaSection.astro ────────── -->
+  <section class="section cta">
+    <div class="container">
+      <NgoCtaSection />
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  /* ── Frame ─────────────────────────────────────────────────────────────────────
+     The measure (see the header comment) is the whole reason this page doesn't just use
+     `.container`. It's centred in the container's own width so the article sits under the same
+     gutters as every other page. */
+  .article__measure {
+    /* Widened per client direction 2026-08-11 — the first pass read too narrow.
+       Deliberately a length, not `68ch` as it first was: `ch` resolves against THIS element's
+       font-size, which is the 16px base, while the prose inside renders at 18px
+       (`--type-body-lg-size`). So the ch value silently described a column ~10% narrower than
+       it appeared to promise. 50rem = 800px, which at the 18px body sets roughly 85 characters
+       — above the classic 45–75 range but a deliberate, sighted choice, and still well short of
+       the ~150 the bare 1200px container would give. */
+    max-width: 50rem;
+    margin-inline: auto;
+    padding-inline: var(--space-lg);
+  }
+  .article__header {
+    padding-block: var(--space-5xl) var(--space-2xl);
+  }
+  .article__title {
+    margin: 0;
+  }
+  .article__subtitle {
+    margin-block-start: var(--space-md);
+    color: var(--color-text-muted);
+  }
+  /* Author · date · reading time, separated by a rule rather than punctuation so the row reads
+     the same when any one of the three is absent (all are nullable in the CMS). */
+  .article__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-md);
+    margin-block-start: var(--space-lg);
+    padding-block-start: var(--space-lg);
+    border-block-start: 1px solid var(--color-border-subtle);
+    font-size: var(--type-body-size);
+    color: var(--color-text-muted);
+  }
+  .article__cover {
+    max-width: var(--container-max, 1200px);
+    margin: 0 auto var(--space-3xl);
+    padding-inline: var(--space-lg);
+  }
+  .article__cover img {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1200 / 630;
+    object-fit: cover;
+    border-radius: var(--radius-md);
+    display: block;
+  }
+  .article__body-wrap {
+    padding-block-end: var(--space-6xl);
+  }
+
+  /* ── Prose ─────────────────────────────────────────────────────────────────────
+     Styling for CMS-authored HTML. `:global()` throughout: the body is injected with `set:html`,
+     so Astro's scoping never touches it. The selectors are scoped by `.article__body` instead,
+     which is why every rule is nested under it rather than written bare.
+
+     Only tags @lib/article-html's allowlist can actually produce are styled — anything else
+     never reaches the page. */
+  .article__body :global(> * + *) {
+    margin-block-start: var(--space-lg);
+  }
+  .article__body :global(p),
+  .article__body :global(li) {
+    font-size: var(--type-body-lg-size);
+    line-height: var(--type-body-lg-line);
+    color: var(--color-text-default);
+  }
+  /* Headings get more space above than below, so each binds to the text it introduces. */
+  .article__body :global(h2),
+  .article__body :global(h3),
+  .article__body :global(h4),
+  .article__body :global(h5),
+  .article__body :global(h6) {
+    margin-block: var(--space-2xl) 0;
+    color: var(--color-text-default);
+  }
+  /* In-article headings are SUBORDINATE to the page title, so they take the design's 24px
+     "lead" step — the same size it gives card titles, i.e. its treatment for a heading inside a
+     bounded box. Explicitly NOT `--type-h2-size`: that is the 48px section-title scale, built
+     for full-width section headers, and inside a 800px measure under a 64px title it competes
+     with the title rather than sitting under it (first pass did exactly that and read wrong).
+     The scale jumps 48 → 24 with nothing between, so 24px bold is the correct existing step;
+     inventing a 32px primitive for one frameless page would be a token-layer change the design
+     hasn't asked for. */
+  .article__body :global(h2) {
+    font-size: var(--type-lead-size);
+    line-height: var(--type-lead-line);
+    letter-spacing: var(--letter-spacing-lead);
+    font-weight: var(--font-weight-bold);
+  }
+  /* h3 and deeper all land on 18px bold — the next step down is the body size itself, so the
+     scale runs out here. A documented limitation, not an oversight: an article nesting four
+     levels below its title is beyond what this content type needs, and h2/h3 carry effectively
+     every real post. If deep nesting ever becomes common, that is the point to ask the designer
+     for an intermediate step rather than invent one. */
+  .article__body :global(h3),
+  .article__body :global(h4),
+  .article__body :global(h5),
+  .article__body :global(h6) {
+    font-size: var(--type-body-lg-size);
+    line-height: var(--type-body-lg-line);
+    font-weight: var(--font-weight-bold);
+  }
+  .article__body :global(ul),
+  .article__body :global(ol) {
+    padding-inline-start: var(--space-xl);
+  }
+  .article__body :global(ul) {
+    list-style: disc;
+  }
+  .article__body :global(ol) {
+    list-style: decimal;
+  }
+  .article__body :global(li + li) {
+    margin-block-start: var(--space-sm);
+  }
+  /* The accent bar sits on the inline-start edge, so it flips with writing direction. */
+  .article__body :global(blockquote) {
+    margin-inline: 0;
+    padding-inline-start: var(--space-lg);
+    border-inline-start: 3px solid var(--color-accent-warm);
+    color: var(--color-text-default);
+  }
+  .article__body :global(a) {
+    color: var(--color-link);
+    text-decoration: underline;
+  }
+  .article__body :global(a:hover) {
+    color: var(--color-link-hover);
+  }
+  .article__body :global(img) {
+    max-width: 100%;
+    height: auto;
+    border-radius: var(--radius-sm);
+    display: block;
+  }
+  .article__body :global(figure) {
+    margin: 0;
+  }
+  .article__body :global(figcaption) {
+    margin-block-start: var(--space-sm);
+    font-size: var(--type-body-size);
+    color: var(--color-text-muted);
+  }
+  .article__body :global(hr) {
+    margin-block: var(--space-3xl);
+    border: 0;
+    border-block-start: 1px solid var(--color-border-subtle);
+  }
+  .article__body :global(code) {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.9em;
+  }
+  /* Code blocks and tables are the two things an author can produce that don't fit the measure.
+     Both scroll inside their own box rather than widening the page. */
+  .article__body :global(pre) {
+    overflow-x: auto;
+    padding: var(--space-lg);
+    border-radius: var(--radius-sm);
+    background: var(--color-surface-subtle, #f4f4f5);
+  }
+  .article__body :global(pre code) {
+    font-size: var(--type-body-size);
+  }
+  .article__body :global(table) {
+    display: block;
+    overflow-x: auto;
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--type-body-size);
+  }
+  .article__body :global(th),
+  .article__body :global(td) {
+    padding: var(--space-sm) var(--space-md);
+    border: 1px solid var(--color-border-subtle);
+    text-align: start;
+  }
+  .article__body :global(th) {
+    font-weight: var(--font-weight-bold);
+  }
+
+  /* ── Related ──────────────────────────────────────────────────────────────── */
+  .article__related-panel {
+    display: grid;
+    gap: var(--space-4xl);
+  }
+  .article__related-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: var(--space-2xl);
+  }
+  @media (max-width: 380px) {
+    .article__related-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

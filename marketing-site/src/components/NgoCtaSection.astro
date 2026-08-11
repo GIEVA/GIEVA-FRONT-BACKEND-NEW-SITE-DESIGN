@@ -1,0 +1,153 @@
+---
+/**
+ * NgoCtaSection — the NGO closing call-to-action: the boat photo beside a dark-teal panel
+ * carrying "GET INVOLVED" / "Ready to Join the <em>Movement?</em>" / the three-row link list
+ * (Volunteer · Donate · Other Partnership Opportunities).
+ *
+ * The Consultancy equivalent is `CtaSection.astro`; they stay separate components because the
+ * two designs share no geometry — Consultancy's is a single full-width violet card with a
+ * primary/secondary button pair, NGO's is a 1:1 photo/panel split with a bordered row list.
+ *
+ * Instantiated by `/ngo` (node 5990:4479) and `/ngo/about` (node 12327:12132). Both frames are
+ * byte-for-byte the same CTA — confirmed structurally through the live Figma MCP, node for node:
+ * four full-width rules, three `GIEVA Button` instances (`Type: "NGO Tetiary"`, 52px tall,
+ * arrow shown), 16px between every rule and button, 64px panel padding and 64px between the copy
+ * block and the list. Each page previously carried its own copy of the markup, and they had
+ * already drifted in the two ways this component resolves:
+ *
+ *   - **Rows are buttons, not bare links.** The design's rows are real `GIEVA Button` instances
+ *     (componentId 5995:7321) with no fill and a white label — `Button variant="on-inverse"`,
+ *     which /ngo/about's redesign introduced. Home rendered them instead as hand-drawn anchors
+ *     with a 15×13 stroked arrow and a hover underline: the wrong hit target (text-width, not
+ *     the 32px-padded button box), the wrong arrow (the design's is a 20×20 box around a filled
+ *     15.00×12.50 glyph — see Button.astro), and a hover state the design never specified.
+ *     Retires the last of the three hand-drawn arrow copies Button.astro's header tracked.
+ *   - **The heading is `u-h2`, not `u-section-title`.** Measured off the live frames rather than
+ *     the committed snapshot: the heading's first line renders 340px wide on BOTH nodes, so both
+ *     track −0.26px (`--letter-spacing-h2`). `/ngo`'s committed `node.json` (fetched 2026-07-20,
+ *     before the redesign sweep) still reports −3.3px, which is what put `u-section-title` on
+ *     Home — visibly tighter than the live design. Same page-local correction /ngo/about made;
+ *     `--type-section-title-tracking` is still suspect at the token layer (see CLAUDE.md).
+ *
+ * The copy block is two groups, not three evenly-spaced children — the source nests the eyebrow
+ * and heading in one auto-layout frame (16px gap) and sets 32px between that frame and the body
+ * paragraph (node 5990:4482/4485). Both pages had flattened it to a single 24px gap.
+ *
+ * Renders the card only, not the section wrapper — same split as `CtaSection.astro`, so page
+ * rhythm stays with the page.
+ *
+ * The `cta__panel` class name is load-bearing beyond styling: `tests/a11y.spec.ts` matches known
+ * contrast issues N4 (orange eyebrow) and N7 (green "Movement?" accent) on it. Renaming it
+ * silently un-allowlists two tracked, signed-off gaps and reds the a11y gate.
+ */
+import { Image } from 'astro:assets';
+import Button from '@components/Button.astro';
+import { boatPhoto } from '@lib/ngo-home-images';
+
+interface Props {
+  eyebrow?: string;
+  /** The plain-text run before the accent run. */
+  titleLead?: string;
+  /** The bold-italic accent run closing the heading (green on NGO). */
+  titleAccent?: string;
+  body?: string;
+  links?: { label: string; href: string }[];
+}
+
+const {
+  eyebrow = 'Get Involved',
+  titleLead = 'Ready to Join the ',
+  titleAccent = 'Movement?',
+  body = "Volunteer, donate, or partner — every form of support transforms a young Nigerian's future.",
+  links = [
+    { label: 'Volunteer', href: '/ngo/get-involved' },
+    { label: 'Donate', href: '/ngo/donate' },
+    { label: 'Other Partnership Opportunities', href: '/ngo/partners' },
+  ],
+} = Astro.props;
+---
+
+<div class="cta__card">
+  <Image src={boatPhoto} alt="" width={656} height={676} class="cta__photo" />
+  <div class="cta__panel surface-inverse" data-surface="inverse">
+    <div class="cta__text">
+      <div class="cta__lockup">
+        <p class="u-eyebrow">{eyebrow}</p>
+        <h2 class="u-h2">{titleLead}<em class="u-accent-em">{titleAccent}</em></h2>
+      </div>
+      <p class="u-body-lg">{body}</p>
+    </div>
+    <ul role="list" class="cta__links">
+      {
+        links.map((link) => (
+          <li class="cta__links-item">
+            <Button href={link.href} variant="on-inverse">
+              {link.label}
+            </Button>
+          </li>
+        ))
+      }
+    </ul>
+  </div>
+</div>
+
+<style>
+  .cta__card {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+  }
+  .cta__photo {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  /* Panel 656×676, 64px padding all round, 64px between the copy block and the link list
+     (copy ends y=296, list starts y=360). */
+  .cta__panel {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3xl);
+    padding: var(--space-3xl);
+  }
+  .cta__text {
+    display: grid;
+    gap: var(--space-lg);
+  }
+  .cta__lockup {
+    display: grid;
+    gap: var(--space-sm);
+  }
+  .cta__text h2 {
+    margin: 0;
+    color: var(--color-text-inverse);
+  }
+  .cta__text p.u-body-lg {
+    color: var(--color-text-inverse);
+  }
+  /* Four full-width rules with a button between each pair, 16px clear of both (node
+     7101:10674: line, 16, button, 16, line, …). Rendering them as one border per row plus a
+     closing border on the list gives the same four rules without four empty elements. */
+  .cta__links {
+    display: grid;
+    border-bottom: 1px solid var(--color-border-on-inverse);
+  }
+  .cta__links-item {
+    border-top: 1px solid var(--color-border-on-inverse);
+    padding-block: var(--space-sm);
+  }
+  /* The buttons are left-aligned in the panel; the rules span its full width. */
+  .cta__links-item :global(.btn) {
+    justify-content: flex-start;
+  }
+
+  /* No tablet/mobile NGO frame exists for this section; the stack below is our authored,
+     content-preserving reflow, matching what both pages already did. */
+  @media (max-width: 900px) {
+    .cta__card {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

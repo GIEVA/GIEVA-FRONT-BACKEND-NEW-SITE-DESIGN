@@ -144,24 +144,10 @@ const faqs = [
 
       <div class="hero__visual">
         <Image src={heroRing} alt="" width={818} height={818} class="hero__ring" />
-        <a class="hero__ngo-link" href="/ngo">
-          Explore NGO
-          <svg
-            width="15"
-            height="13"
-            viewBox="0 0 15 13"
-            fill="none"
-            aria-hidden="true"
-            focusable="false"
-          >
-            <path
-              d="M8.5 1L14 6.5M14 6.5L8.5 12M14 6.5H1"
-              stroke="currentColor"
-              stroke-width="1.6"
-              stroke-linecap="round"
-              stroke-linejoin="round"></path>
-          </svg>
-        </a>
+        {
+          /* The "Explore NGO" pill (node 5986:3665) now lives in BrandSwitchLink.astro,
+            rendered by BaseLayout on every route. */
+        }
       </div>
     </div>
 
@@ -433,31 +419,7 @@ const faqs = [
     width: 100%;
     height: auto;
   }
-  .hero__ngo-link {
-    /* Persistent cross-site switcher: fixed to the viewport's bottom-right so it stays
-       reachable as the page scrolls. No transformed ancestor in the hero, so `fixed`
-       anchors to the viewport (not .hero__visual). */
-    position: fixed;
-    right: var(--space-lg);
-    bottom: var(--space-lg);
-    z-index: 45; /* above page content, below the sticky header (50) and skip link (100) */
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-2xs);
-    padding: var(--space-xs) var(--space-md);
-    border-radius: var(--radius-sm);
-    background: rgb(153 204 159 / 0.75);
-    border: 1px solid var(--color-green);
-    color: var(--color-green);
-    font-weight: var(--font-weight-bold);
-    font-size: var(--type-body-lg-size);
-    text-decoration: none;
-    box-shadow: 0 2px 12px rgb(14 62 64 / 0.2); /* legibility when overlapping content */
-  }
-  .hero__ngo-link:hover {
-    background: var(--color-green);
-    color: var(--color-white);
-  }
+  /* The cross-site "Explore NGO" pill's styles moved to BrandSwitchLink.astro. */
 
   /* ── Who We Are ─────────────────────────────────────────────────────────── */
   /* The eyebrow sits above BOTH columns (node 7152:5162), so the heading and the body copy
