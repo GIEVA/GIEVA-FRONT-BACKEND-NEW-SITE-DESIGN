@@ -141,6 +141,7 @@ app.use(
   "/api/campaigns",
   campaignRoutes
 );
+app.use("/api/gieva/history", historyRoutes);
 app.use('/api/users', registerUserRoute);
 app.use('/api', studentProfileRoutes);
 app.use('/api/tutor', tutorProfileRouter);
@@ -265,7 +266,7 @@ app.use("/api/admin/programs", adminProgramRoutes);
 
 
 
-app.use("/api/gieva/history", historyRoutes);
+
 app.use("/api/admin/gieva/history", adminHistoryRoutes);
 
 app.use("/api/partners/all", partnerRoutes);
@@ -278,7 +279,7 @@ app.use("/api/admin/projects/all", adminProjectRoutes);
 app.use("/api/projects/all", projectRoutes);
 
     // Sync models AFTER models are loaded
-    await sequelize.sync({alter:true});
+    await sequelize.sync();
     console.log("🚀 Sequelize models synced");
 
     app.listen(PORT , () => {
