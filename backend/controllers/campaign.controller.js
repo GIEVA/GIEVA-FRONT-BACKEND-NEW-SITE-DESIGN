@@ -932,3 +932,54 @@ export const getCampaignById =
       });
     }
   };
+
+
+  // USERS//
+
+  /**
+ * PUBLIC – only active campaigns
+ */
+export const getPublicCampaigns = async (req, res) => {
+  try {
+    const campaigns = await Campaign.findAll({
+      where: {
+        status: "active",          // only public ones
+      },
+      order: [["createdAt", "DESC"]],
+      attributes: {
+        exclude: [],               // or hide sensitive fields if needed
+      },
+    });
+
+    return res.json(campaigns);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+/**
+ * PUBLIC – single active campaign
+ */
+export const getPublicCampaignById = async (req, res) => {
+  try {
+    const campaign = await Campaign.findOne({
+      where: {
+        [Op.or]: [
+          { id: req.params.id },
+          { slug: req.params.id },
+        ],
+        status: "active",
+      },
+    });
+
+    if (!campaign) {
+      return res.status(404).json({ message: "Campaign not found" });
+    }
+
+    return res.json(campaign);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Server error" });
+  }
+};

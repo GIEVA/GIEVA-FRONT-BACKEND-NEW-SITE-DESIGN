@@ -36,6 +36,15 @@ import ExamRegistrationCommentModel from './ExamRegistrationComment.js'
 import SessionWaitingRoomModel from './SessionWaitingRoom.js'
 import ExamTypeModel from './ExamType.js';
 import ContactMessageModel from './ContactMessage.js';
+import ServiceModel from './Service.js';
+import ConsultationBookingModel from './ConsultationBooking.js';
+import StaffModel from './Staff.js';
+import ProgramModel from './Program.js';
+import HistoryPageModel from './HistoryPage.js';
+import PartnerModel from './Partner.js';
+import FaqModel from './Faq.js';
+import ProjectModel from './Project.js';
+
 
 
 // Init models
@@ -75,7 +84,14 @@ const ExamRegistrationComment = ExamRegistrationCommentModel(sequelize)
 const SessionWaitingRoom = SessionWaitingRoomModel(sequelize)
 const ExamType = ExamTypeModel(sequelize)
 const ContactMessage = ContactMessageModel(sequelize)
-
+const Service = ServiceModel(sequelize)
+const ConsultationBooking = ConsultationBookingModel(sequelize)
+const Staff = StaffModel(sequelize)
+const Program = ProgramModel(sequelize)
+const HistoryPage = HistoryPageModel(sequelize)
+const Partner = PartnerModel(sequelize)
+const Faq = FaqModel(sequelize)
+const Project = ProjectModel(sequelize)
 
 // Collect models
 export const models = {
@@ -116,6 +132,14 @@ export const models = {
   ExamType,
   SessionWaitingRoom,
   ContactMessage,
+  Service,
+  ConsultationBooking,
+  Staff,
+  Program,
+  HistoryPage,
+  Partner,
+  Faq,
+  Project,
 };
 
 // Run associations

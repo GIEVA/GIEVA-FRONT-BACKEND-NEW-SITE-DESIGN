@@ -227,8 +227,12 @@ UserManagement() {
               Tutor
             </MenuItem>
 
-            <MenuItem value="admin">
-              Admin
+            <MenuItem value="operational_admin">
+              Operational Admin
+            </MenuItem>
+
+            <MenuItem value="reviewer">
+              Reviewer
             </MenuItem>
 
             <MenuItem value="superadmin">

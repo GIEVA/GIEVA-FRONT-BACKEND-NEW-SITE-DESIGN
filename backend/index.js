@@ -78,6 +78,27 @@ import adminExamTypeRoutes from "./routes/adminExamTypeRoutes.js"
 import corsConfig from "./middleware/corsConfig.js";
 import contactRoutes from "./routes/contactRoutes.js";
 import adminContactMessageRoutes from "./routes/adminContactMessageRoutes.js";
+import serviceRoutes from "./routes/service.routes.js";
+import adminServiceRoutes from "./routes/adminService.routes.js"
+ import { startConsultationReminderJob } from "./jobs/consultationReminder.js";
+ import consultationRoutes from "./routes/consultationRoutes.js";
+ import adminConsultancyRoutes from "./routes/adminConsultancyRoutes.js"
+ import staffRoutes from "./routes/staff.routes.js";
+import adminStaffRoutes from "./routes/adminStaff.routes.js";
+import programRoutes from "./routes/program.routes.js";
+import adminProgramRoutes from "./routes/adminProgram.routes.js";
+import historyRoutes from "./routes/history.routes.js";
+import adminHistoryRoutes from "./routes/adminHistory.routes.js";
+import partnerRoutes from "./routes/partner.routes.js";
+import adminPartnerRoutes from "./routes/adminPartner.routes.js";
+import adminFaqRoutes from "./routes/adminFaq.routes.js"
+import faqRoutes from "./routes/faq.routes.js"
+import adminProjectRoutes from "./routes/adminProject.routes.js"
+import projectRoutes from "./routes/project.routes.js"
+
+
+
+
 
 
 dotenv.config({
@@ -96,7 +117,7 @@ const PORT = process.env.PORT || 5000;
 corsConfig(app);
 
 startSessionReminderCron();
-
+startConsultationReminderJob();
 startCampaignAutoCloseJob();
 startCampaignEmailScheduler();
 startEmailScheduler();
@@ -109,10 +130,18 @@ const startServer = async () => {
   try {
     await testConnection(); // test DB connection
 
-
+app.use((req, res, next) => {
+  console.log(req.method, req.originalUrl);
+  next();
+});
 
     // Routes
-app.use('/api', registerUserRoute);
+app.use("/api/service", serviceRoutes);
+app.use(
+  "/api/campaigns",
+  campaignRoutes
+);
+app.use('/api/users', registerUserRoute);
 app.use('/api', studentProfileRoutes);
 app.use('/api/tutor', tutorProfileRouter);
 app.use('/api/modules', moduleRoute);
@@ -156,10 +185,7 @@ app.use(
   adminDashboardRoutes
 );
 
-app.use(
-  "/api/campaigns",
-  campaignRoutes
-);
+
 
 app.use(
   "/api/campaign-messages",
@@ -176,8 +202,13 @@ app.use(
   adminCampaignRegistrationRoutes
 );
 
+// app.use(
+//   "/api/campaigns",
+//   campaignRoutes
+// );
+
 app.use(
-  "/api/campaigns",
+  "/api/user/campaigns",
   userGetCampaignRoutes
 );
 
@@ -196,17 +227,17 @@ app.use(
 examPaymentRoutes
 );
 
-app.use(
-"/api/exam-types",
-examPaymentRoutes
-);
+// app.use(
+// "/api/exam-types",
+// adminExamTypeRoutes
+// );
 
 app.use(
   "/admin",
   adminExamRegistrationRoutes
 );
 app.use(
-  "/api/exam-types",
+  "/api/exam-types/catalog",
   adminExamTypeRoutes
 );
 app.use("/admin/live-session",  adminClassSessionRoutes)
@@ -214,8 +245,37 @@ app.use("/admin/get-payments",  adminPaymentROutes)
 
 
 app.use("/api/contact", contactRoutes);
-app.use("/api/admin/contact", adminContactMessageRoutes);
+app.use("/api/admin/contacts", adminContactMessageRoutes);
 
+
+app.use("/api/admin/service", adminServiceRoutes);
+
+app.use("/api/consultations", consultationRoutes);
+app.use("/api/consultations/admin", adminConsultancyRoutes);
+
+
+
+app.use("/api/staff/all", staffRoutes);
+app.use("/api/admin/staff", adminStaffRoutes);
+
+
+
+app.use("/api/programs/all", programRoutes);
+app.use("/api/admin/programs", adminProgramRoutes);
+
+
+
+app.use("/api/gieva/history", historyRoutes);
+app.use("/api/admin/gieva/history", adminHistoryRoutes);
+
+app.use("/api/partners/all", partnerRoutes);
+app.use("/api/admin/partners/all", adminPartnerRoutes);
+
+app.use("/api/admin/faqs", adminFaqRoutes);
+app.use("/api/faqs/all", faqRoutes);
+
+app.use("/api/admin/projects/all", adminProjectRoutes);
+app.use("/api/projects/all", projectRoutes);
 
     // Sync models AFTER models are loaded
     await sequelize.sync({alter:true});
