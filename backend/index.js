@@ -265,7 +265,7 @@ app.use("/api/admin/programs", adminProgramRoutes);
 
 
 
-app.use("/api/gieva/history", historyRoutes);
+app.use("/api/gieva/history/all", historyRoutes);
 app.use("/api/admin/gieva/history", adminHistoryRoutes);
 
 app.use("/api/partners/all", partnerRoutes);
