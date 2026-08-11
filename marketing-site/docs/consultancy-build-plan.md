@@ -561,6 +561,24 @@ gaps are deliberate, tracked deferrals (7 open colour-contrast issues in
 `docs/a11y-known-issues.md`, all confirmed source-design colours per client direction) rather
 than unbuilt content.
 
+#### Shell change — cross-site switcher promoted to all 18 routes (AWAITING CLIENT SIGN-OFF)
+
+The "Explore NGO" pill was authored into Home's hero only, so the other 11 Consultancy routes
+never rendered it. Collapsed with its NGO counterpart into `src/components/BrandSwitchLink.astro`
+and rendered from `BaseLayout` on every route. Both are the same Figma component instance —
+`GIEVA Button`, `Type: "C Secondary"` — node **5986:3665** here, **5990:4604** on NGO Home.
+
+Two Consultancy-side corrections: the arrow glyph is **removed** (`Show ArrowRight` is `false` on
+both instances — it was an unlogged slip), and the padding goes 24 → **32** to match the node.
+The reach itself, and the box-shadow (`effects: []` in both nodes), are deliberate deviations.
+
+The pill's green-on-mint label now fails `color-contrast` at 3.34:1 on Consultancy routes — it
+previously read as passing only because Home's hero torus made the background indeterminate to
+axe. Tracked as **issue 7 / N5** in `docs/a11y-known-issues.md`. Note this is a _second_
+shell-level change affecting all 18 routes, alongside the header/hero overlap gap below — both
+want the same round of baseline regeneration. **Full rationale and the NGO-side detail live in
+`docs/ngo-build-plan.md`** (the shell change was made from that side); don't duplicate it here.
+
 #### Phase 6 — session status (service sub-pages: SAT, ACT, TOEFL, IELTS, GRE, Prof. Dev.)
 
 Six frames ingested and built. The five test-registration frames are **one layout with different
@@ -671,6 +689,26 @@ newline in the source text node** that renders a phantom empty line in Figma but
 
 No ranking implied between the three — whoever picks this up next should confirm with the
 client/team which matters most before starting, per the session hand-off protocol below.
+
+### Open: the Services dropdown's seven anchor links are all dead
+
+Found 2026-08-08 during the NGO link audit (see `docs/ngo-build-plan.md`, "Cross-page link
+map"), **not fixed** — recorded here so it isn't rediscovered a third time.
+
+`src/lib/nav.ts` points seven Services-dropdown entries at in-page anchors:
+`/services#heals`, `#admission-processing`, `#scholarship-advising`, `#career-guidance`,
+`#tuition-acceptance-fee-payments`, and `/services/professional-development#teacher-training`,
+`#technology-training`. **Neither `src/pages/services.astro` nor
+`src/pages/services/professional-development.astro` defines a single `id`**, so all seven land
+at the top of the page — the nav's most granular affordance silently does nothing.
+
+The fix is the one the NGO Programs page just took: give each section an `id` matching the slug
+already chosen in `nav.ts`. The scroll offset is already handled globally (`scroll-padding-top`
+on `<html>` in `src/styles/base.css`, added in the same pass). Note `isActive()` deliberately
+never marks a hash link as current — see its header comment — so no nav-state work is implied.
+
+Worth doing together with a decision on `/resources`, `/contact`, `/login` and
+`/book-consultancy`, which are linked from the Consultancy shell and also do not exist.
 
 ## Verification checklist (run every phase — non-negotiable)
 

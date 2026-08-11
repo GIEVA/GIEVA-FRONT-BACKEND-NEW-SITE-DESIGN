@@ -151,6 +151,23 @@ export interface FooterColumn {
   items: NavItem[];
 }
 
+/**
+ * Footer link columns.
+ *
+ * ⚠ DELIBERATE DEVIATION from the frame, in the NGO column only. The design's footer (node
+ * 5990:3672 and every sibling) gives each column exactly THREE items — Consultancy: "About us" /
+ * "What we do" / "Resources"; NGO: the same three labels. We carry a fourth NGO item,
+ * **Partners**, because `/ngo/partners` is a built, verified route that the design places in NO
+ * persistent navigation at all: it is absent from the 5-item NGO masthead (7417:7718) and from
+ * this footer, leaving `NgoCtaSection`'s "Other Partnership Opportunities" row — present on only
+ * /ngo and /ngo/about — as its single inbound link site-wide. A page reachable from two of six
+ * pages and from no nav is effectively unfindable. Adding it to the masthead would break the
+ * confirmed nav geometry; a footer row costs nothing structural, so the gap is closed here.
+ *
+ * Flagged for client sign-off in docs/ngo-build-plan.md ("Cross-page link map"). Because the
+ * footer renders on all 18 routes, this changes every committed visual baseline — regenerate
+ * them in the pinned container.
+ */
 export const footerColumns: FooterColumn[] = [
   {
     heading: 'Consultancy',
@@ -165,6 +182,7 @@ export const footerColumns: FooterColumn[] = [
     items: [
       { label: 'About', href: '/ngo/about' },
       { label: 'Programs', href: '/ngo/program' },
+      { label: 'Partners', href: '/ngo/partners' },
       { label: 'Resources', href: '/ngo/resources' },
     ],
   },

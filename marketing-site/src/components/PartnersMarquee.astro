@@ -12,6 +12,12 @@
  * Each <Image> is given only a height — Astro derives the width from the source's own aspect
  * ratio. Pinning a fixed width too would force a mismatched canvas that sharp crops (cover),
  * clipping wide/short marks (e.g. ETS, UJ).
+ *
+ * Two logos carry a `crop` (see PartnerLogo in @lib/home-images): their export is mostly
+ * transparent padding and the design shows only a sub-region. Those get an item box sized to
+ * the crop with the image scaled up and offset inside it, so the visible mark fills the band
+ * like every other logo does. They're also emitted at native resolution rather than downscaled
+ * to the row height, since only a slice of those pixels survives the crop.
  */
 import { Image } from 'astro:assets';
 import type { PartnerLogo } from '@lib/home-images';
@@ -34,10 +40,26 @@ const { logos, label = 'Trusted Partners' } = Astro.props;
           [...logos, ...logos].map((logo, i) => {
             const hidden = i >= logos.length;
             const alt = hidden ? '' : logo.name;
-            const style = `--logo-h: ${logo.height}px`;
+            const meta = typeof logo.src === 'string' ? null : logo.src;
+            const crop = meta ? logo.crop : undefined;
+            // Width the crop occupies at the row height, from the source's own pixel dims —
+            // derived rather than hard-coded so it stays correct if `height` is ever retuned.
+            const cropW = crop
+              ? (logo.height * (crop.width * meta!.width)) / (crop.height * meta!.height)
+              : 0;
+            const style = crop
+              ? [
+                  `--logo-h: ${logo.height}px`,
+                  `--logo-w: ${cropW.toFixed(2)}px`,
+                  `--crop-x: ${crop.x}`,
+                  `--crop-y: ${crop.y}`,
+                  `--crop-w: ${crop.width}`,
+                  `--crop-h: ${crop.height}`,
+                ].join('; ')
+              : `--logo-h: ${logo.height}px`;
             return (
               <li
-                class="partners__item"
+                class:list={['partners__item', crop && 'partners__item--crop']}
                 style={style}
                 aria-hidden={hidden ? 'true' : undefined}
               >
@@ -59,7 +81,7 @@ const { logos, label = 'Trusted Partners' } = Astro.props;
                   <Image
                     src={logo.src}
                     alt={alt}
-                    height={logo.height}
+                    height={crop ? meta!.height : logo.height}
                     loading="eager"
                     fetchpriority="low"
                     draggable={false}
@@ -140,6 +162,25 @@ const { logos, label = 'Trusted Partners' } = Astro.props;
     object-fit: contain;
     /* Design renders logos as full-opacity greyscale (node 12023:32445); no additional fade. */
     filter: grayscale(1);
+  }
+  /* Reproduces Figma's crop fill. The box is the crop's own size; inside it the full image is
+     blown up to 1/crop of that box (so the crop region lands at exactly box size) and slid back
+     by the crop's origin. The translate percentages resolve against the img's *own* scaled
+     size, which is what makes the two cancel out to the right offset. */
+  .partners__item--crop {
+    position: relative;
+    inline-size: var(--logo-w);
+    overflow: hidden;
+  }
+  .partners__item--crop :global(img) {
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline-start: 0;
+    width: calc(100% / var(--crop-w));
+    height: calc(100% / var(--crop-h));
+    max-inline-size: none;
+    object-fit: fill;
+    transform: translate(calc(var(--crop-x) * -100%), calc(var(--crop-y) * -100%));
   }
   @keyframes partners-scroll {
     from {

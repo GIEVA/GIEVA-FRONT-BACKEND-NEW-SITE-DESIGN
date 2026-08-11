@@ -1,0 +1,164 @@
+---
+/**
+ * 404 — Not Found.
+ *
+ * NO FIGMA FRAME EXISTS FOR THIS PAGE. The file (fTqnnV20l9htP7vFJrOsvn) contains five
+ * Consultancy-family frames and five NGO ones; an error state is not among them. So rather than
+ * invent a screen, this page is assembled **entirely from already-confirmed primitives** —
+ * `.container`, the `u-hero`/`u-body-lg`/`u-eyebrow` type utilities, `--space-*` rhythm and
+ * `Button` — and adds no new visual vocabulary. If the designer later draws a 404, this should
+ * be replaced by that frame, not reconciled with it. Logged in docs/ngo-build-plan.md.
+ *
+ * Why it exists at all: the site previously shipped none, so every dead link (and there were
+ * three whole missing routes' worth — /ngo/resources, /ngo/donate, /ngo/get-involved) dropped
+ * the visitor onto the host's default error page — no masthead, no footer, no GIEVA branding,
+ * and no way back except the browser's Back button.
+ *
+ * BRAND: `data-brand` is path-derived in BaseLayout, and a static 404 is built once at `/404`,
+ * so it resolves to `consultancy` — correct for the root domain, but it means an NGO visitor
+ * gets the Consultancy masthead. That is unavoidable without server-side routing or client JS
+ * (zero-JS baseline, CLAUDE.md #3); the recovery links below therefore cover BOTH sites
+ * explicitly rather than assuming which one the visitor was on.
+ *
+ * `data-pagefind-ignore` keeps the error copy out of the site-search index — without it,
+ * searching "page" or "GIEVA" can surface the 404 itself as a result.
+ */
+import BaseLayout from '@layouts/BaseLayout.astro';
+import Button from '@components/Button.astro';
+
+// Both sites' real, built routes. Deliberately excludes /ngo/resources, /ngo/donate and
+// /ngo/get-involved: they are linked from the NGO masthead but have no page yet, and listing
+// them here would send someone who just hit a 404 straight to another one.
+const destinations = [
+  {
+    heading: 'GIEVA Consultancy',
+    home: '/',
+    items: [
+      { label: 'Services', href: '/services' },
+      { label: 'About us', href: '/about' },
+      { label: 'Our team', href: '/team' },
+      { label: 'Strategic partners', href: '/partners' },
+    ],
+  },
+  {
+    heading: 'GIEVA NGO',
+    home: '/ngo',
+    items: [
+      { label: 'Our programs', href: '/ngo/program' },
+      { label: 'About us', href: '/ngo/about' },
+      { label: 'Our partners', href: '/ngo/partners' },
+      { label: 'Contact us', href: '/ngo/contact' },
+    ],
+  },
+];
+---
+
+<BaseLayout
+  title="Page not found — GIEVA"
+  description="The page you were looking for doesn't exist. Find your way back to GIEVA Consultancy or GIEVA NGO."
+>
+  <section class="notfound" data-pagefind-ignore>
+    <div class="container notfound__inner">
+      <p class="u-eyebrow">Error 404</p>
+      <h1 class="u-hero notfound__heading">
+        We couldn't find <em class="u-accent-em">that page.</em>
+      </h1>
+      <p class="u-body-lg notfound__lead">
+        The link may be out of date, or the page may have moved. Everything below is a working
+        way back in.
+      </p>
+
+      <div class="notfound__actions">
+        <Button variant="primary" href="/">GIEVA Consultancy</Button>
+        <Button variant="secondary" href="/ngo">GIEVA NGO</Button>
+      </div>
+
+      <div class="notfound__columns">
+        {
+          destinations.map((group) => (
+            <nav class="notfound__col" aria-label={group.heading}>
+              <h2 class="u-label notfound__col-heading">
+                <a class="notfound__col-link" href={group.home}>
+                  {group.heading}
+                </a>
+              </h2>
+              <ul role="list" class="notfound__list">
+                {group.items.map((item) => (
+                  <li>
+                    <a class="u-body-lg notfound__link" href={item.href}>
+                      {item.label}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+          ))
+        }
+      </div>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  /* Section rhythm matches the sub-page family: 120px top and bottom (--space-6xl). The block is
+     centred in the viewport rather than top-aligned, so a short page doesn't leave the footer
+     riding high — min-height subtracts nothing precise, it just guarantees a full-ish screen. */
+  .notfound {
+    padding-block: var(--space-6xl);
+    display: grid;
+    align-items: center;
+    min-height: 60vh;
+  }
+  .notfound__inner {
+    display: grid;
+    justify-items: start;
+    gap: var(--space-lg);
+  }
+  .notfound__heading {
+    max-width: 18ch;
+  }
+  .notfound__lead {
+    max-width: 56ch;
+    color: var(--color-text-muted);
+  }
+  .notfound__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-md);
+    margin-block-start: var(--space-md);
+  }
+
+  /* Two link columns, one per site. `auto-fit` collapses them to one at narrow widths without a
+     breakpoint of their own. */
+  .notfound__columns {
+    margin-block-start: var(--space-3xl);
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: var(--space-2xl);
+    width: 100%;
+    padding-block-start: var(--space-2xl);
+    border-block-start: 1px solid var(--color-border-subtle);
+  }
+  .notfound__col-heading {
+    margin-block-end: var(--space-md);
+  }
+  .notfound__col-link {
+    color: var(--color-link);
+    text-decoration: none;
+  }
+  .notfound__col-link:hover {
+    color: var(--color-link-hover);
+    text-decoration: underline;
+  }
+  .notfound__list {
+    display: grid;
+    gap: var(--space-sm);
+  }
+  .notfound__link {
+    color: var(--color-text-default);
+    text-decoration: none;
+  }
+  .notfound__link:hover {
+    text-decoration: underline;
+  }
+</style>

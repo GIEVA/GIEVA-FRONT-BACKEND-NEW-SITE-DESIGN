@@ -1,51 +1,52 @@
 ---
 /**
- * About (/ngo/about) — NGO "Our Story". Built against the committed Figma node 7429:5025
- * (design/figma/fTqnnV20l9htP7vFJrOsvn/7429-5025/), confirmed the genuine About page — see
- * docs/ngo-build-plan.md Phase 3. (The sibling frame 7434:8750, also named "ABOUT PAGE NGO" in
- * Figma, is the real Partners page — resolved in the Phase 2 build.)
+ * About (/ngo/about) — NGO "Who We Are". Built against Figma node 7429:5025.
  *
- * REUSE: the boat photo and Core Team placeholder portrait are the exact same imageRefs already
- * imported for NGO Home (`fill-4eebccba…` / `fill-8108addc…`), so both come from
- * `@lib/ngo-home-images` verbatim — no new image module needed. The stats (10,000+/30+/12+/98%)
- * are the same four figures as Home's, but rendered plain (black-on-white band, thin dividers)
- * rather than overlaid on a photo with a gradient scrim — confirmed against this page's own
- * node.json (7437:9629 etc.), not assumed from Home's markup. The CTA section (photo + teal
- * panel, "GET INVOLVED" / "Ready to Join the Movement?" / Volunteer·Donate·Other Partnership
- * Opportunities links) is byte-for-byte identical copy/structure to Home's — reused verbatim,
- * including class names (`cta__panel`, `u-eyebrow`, `u-accent-em`), which is why no new a11y
- * allowlist entry is needed for it: the existing Home-added entries already match on those
- * classes regardless of route.
+ * ⚠ REDESIGNED 2026-08-07. The page was first built (Phase 3, docs/ngo-build-plan.md) against the
+ * 2026-07-20 ingest, which is what design/figma/…/7429-5025/node.json still holds. The frame has
+ * since been reworked and that snapshot is STALE — it is 5547px tall where the live frame is
+ * 4066px. This build follows the LIVE node, read through the Figma MCP; every value below was
+ * confirmed against it, not against the committed node.json. Re-run `npm run figma:fetch` (needs
+ * FIGMA_API_KEY) to resync the snapshot. What changed, and is now reflected here:
+ *   - A full-bleed photo hero + "Who We Are" h1 replaced the white "HOME / ABOUT" breadcrumb
+ *     header. The breadcrumb is gone from the design entirely.
+ *   - The boat photo that opened the intro is gone; the section starts on the "Our Story" h2.
+ *   - Core Values became five title-case headings with descriptive paragraphs in a 2-col grid,
+ *     replacing five bare all-caps labels. The source's own typos were fixed upstream —
+ *     "INTERGRITY"→"Integrity", "EMPOERMENT"→"Empowerment" — and "INCLUSIVENESS" became
+ *     "Inclusivity", a different word, not a re-spelling. "Mision" was NOT fixed and is still
+ *     misspelled in the live design, so it stays verbatim here (exact-replica-first).
+ *   - The entire Core Team section (eyebrow, "Every Major Test. One Trusted Partner.", lead
+ *     paragraph, 8 portrait cards) was deleted. With it goes the accent-colour inversion this
+ *     file used to document: that green-eyebrow/orange-heading flip existed only for that
+ *     section, so `.team__eyebrow`/`.team__accent` are gone and every eyebrow/accent left on the
+ *     page (the CTA's) follows NGO's standard mapping via the shared utilities.
  *
- * THREE HIDDEN PLACEHOLDER RUNS SKIPPED: the Vision, Mission, and Core Values sections each
- * contain a "GIEVA handles your entire registration process…" text node under a
- * `visible: false` parent — leftover boilerplate from duplicating a component, invisible in
- * Figma and in frame.png. Confirmed via node.json (not present in the rendered frame) and
- * omitted here. The *same* sentence appears a fourth time under the Core Team heading, but
- * THAT instance is visible in both node.json and frame.png — it's the real Core Team lead
- * paragraph, reproduced verbatim.
+ * REUSE: the hero is `SubPageHero`, the same component Consultancy's seven sub-pages use — the
+ * redesign gave NGO the identical 1440×670 / 25%-scrim / bottom-120 / `u-page-title` treatment,
+ * so it takes a `photo` prop rather than a second copy of the markup. The closing CTA is
+ * `NgoCtaSection` — this page's copy of that markup and CSS moved there wholesale; see that
+ * component for the node data and for why the rows are `Button`s.
  *
- * ACCENT-COLOUR INVERSION (confirmed via characterStyleOverrides, not assumed): the Core Team
- * block flips NGO's usual eyebrow/heading-accent pairing for this one section only —
- * "CORE TEAM" renders GREEN (`--color-heading-accent`) where NGO eyebrows are normally orange,
- * and "One Trusted Partner." renders ORANGE (`--color-accent-warm`) where NGO's heading-accent
- * is normally green. Handled with page-local classes (`.team__eyebrow`, `.team__accent`)
- * instead of the shared `.u-eyebrow`/`.u-accent-em` utilities, which would resolve backwards
- * here. Every other eyebrow/accent on this page (the CTA's "GET INVOLVED"/"Movement?") follows
- * the standard NGO mapping and uses the shared utilities as-is.
+ * ⚠ A note here used to claim Home's CTA was a DIFFERENT (older) shape whose links were not
+ * button instances, and left it alone on that basis. That was wrong: Home's rows are the same
+ * `GIEVA Button` instances (componentId 5995:7321), in the live frame and in its own committed
+ * node.json alike. Both pages now render `NgoCtaSection`.
  *
- * Core Values spelling is transcribed verbatim from the node.json text runs, including the
- * source's own typos: "INTERGRITY" and "EMPOERMENT" (not "INTEGRITY"/"EMPOWERMENT") — same
- * exact-replica-first precedent as "Mision" below and the Partners page's duplicated breadcrumb.
+ * TYPE: the section headings use `u-h2`, not `u-section-title`. The design's headings are
+ * `GIEVA.org/Arial/Heading 2` — 48/56/700 tracking **−0.26px** — and `u-section-title` resolves
+ * its tracking to `--letter-spacing-display` (−3.3px, the 110px display step), which rendered
+ * these visibly tighter than the frame. `u-h2` is the same size/line/weight with the right
+ * tracking. Fixed page-locally on purpose: `--type-section-title-tracking` looks wrong at the
+ * token layer too, but it feeds all 18 routes and is not this page's to change.
  *
- * Heading order: h1 "Our Story" → h2 "Vision" → h2 "Mision" → h2 "Core Values" → h2 "Every
- * Major Test. One Trusted Partner." → (Core Team card names are plain text, not headings, same
- * precedent as the Consultancy Team page's `team-card__name`) → h2 "Ready to Join the
- * Movement?". No level is skipped.
+ * Heading order: h1 "Who We Are" → h2 "Our Story" → h2 "Vision" → h2 "Mision" → h2 "Core Values"
+ * → h3 per value → h2 "Ready to Join the Movement?". No level is skipped.
  */
 import BaseLayout from '@layouts/BaseLayout.astro';
-import { Image } from 'astro:assets';
-import { boatPhoto, testimonialPortrait } from '@lib/ngo-home-images';
+import SubPageHero from '@components/SubPageHero.astro';
+import NgoCtaSection from '@components/NgoCtaSection.astro';
+import { ngoHeroPhoto } from '@lib/ngo-hero-images';
 
 const stats = [
   { value: '10,000+', label: 'Lives Changed' },
@@ -54,37 +55,43 @@ const stats = [
   { value: '98%', label: 'Success Rate' },
 ];
 
-const coreValues = ['INTERGRITY', 'INCLUSIVENESS', 'INNOVATION', 'SERVICE', 'EMPOERMENT'];
-
-const team = Array.from({ length: 8 }, () => ({
-  name: 'Julie Sande',
-  role: 'Director General',
-}));
-
-const ctaLinks = [
-  { label: 'Volunteer', href: '/ngo/get-involved' },
-  { label: 'Donate', href: '/ngo/donate' },
-  { label: 'Other Partnership Opportunities', href: '/ngo/partners' },
+/* Verbatim from the live node's text runs (12327:12081 → 12327:12096). */
+const coreValues = [
+  {
+    title: 'Integrity',
+    body: 'We uphold the highest standards of honesty, transparency, and accountability in everything we do. Our commitment to ethical practices builds trust with the students, families, partners, and communities we serve.',
+  },
+  {
+    title: 'Inclusivity',
+    body: 'We foster an environment where everyone is welcomed, respected, and given equal access to opportunities regardless of their background, gender, ability, or circumstance.',
+  },
+  {
+    title: 'Innovation',
+    body: 'We embrace creativity, technology, and forward-thinking solutions to address educational and social challenges, ensuring our programs remain relevant in an ever-changing world.',
+  },
+  {
+    title: 'Service',
+    body: 'Service is at the heart of who we are. We are dedicated to creating positive social impact by supporting communities, promoting volunteerism, and responding to the evolving needs of society.',
+  },
+  {
+    title: 'Empowerment',
+    body: 'We believe every individual deserves the opportunity to learn, lead, and succeed. Through education, mentorship, and skills development, we equip young people with the confidence and tools to shape their own futures.',
+  },
 ];
 ---
 
 <BaseLayout
-  title="Our Story — GIEVA NGO"
-  description="How GIEVA began, our vision and mission, the values that guide us, and the team behind 12+ years of impact across Nigeria."
+  title="Who We Are — GIEVA NGO"
+  description="How GIEVA began, our vision and mission, and the values that guide 12+ years of impact across Nigeria."
   brand="ngo"
 >
-  <!-- ── Page header ──────────────────────────────────────────────────────────── -->
-  <section class="about-header">
-    <div class="container">
-      <p class="about-breadcrumb">HOME / ABOUT</p>
-      <h1 class="u-section-title about-title">Our Story</h1>
-    </div>
-  </section>
+  <!-- ── Photo hero (node 12330:13416) ────────────────────────────────────────── -->
+  <SubPageHero title="Who We Are" photo={ngoHeroPhoto} />
 
-  <!-- ── Intro: boat photo, two-column copy, stats band ──────────────────────── -->
+  <!-- ── Our Story: two-column copy + stats band ─────────────────────────────── -->
   <section class="section intro">
     <div class="container">
-      <Image src={boatPhoto} alt="" width={1312} height={670} class="intro__photo" />
+      <h2 class="u-h2 intro__title">Our Story</h2>
 
       <div class="intro__grid">
         <p class="u-body-lg">
@@ -104,8 +111,8 @@ const ctaLinks = [
 
       <ul role="list" class="stats">
         {
-          stats.map((stat, i) => (
-            <li class="stats__item" data-divider={i > 0 ? '' : undefined}>
+          stats.map((stat) => (
+            <li class="stats__item">
               <p class="u-h2 stats__value">{stat.value}</p>
               <p class="stats__label">{stat.label}</p>
             </li>
@@ -115,18 +122,18 @@ const ctaLinks = [
     </div>
   </section>
 
-  <!-- ── Vision / Mission / Core Values ───────────────────────────────────────── -->
+  <!-- ── Vision / Mission / Core Values (node 12327:12048) ────────────────────── -->
   <section class="section pillars">
     <div class="container">
       <div class="pillars__grid">
         <div>
-          <h2 class="u-section-title">Vision</h2>
+          <h2 class="u-h2">Vision</h2>
           <p class="u-body-lg pillars__body">
             To inspire youths to lead, innovate, and create equitable opportunities for all.
           </p>
         </div>
         <div>
-          <h2 class="u-section-title">Mision</h2>
+          <h2 class="u-h2">Mision</h2>
           <p class="u-body-lg pillars__body">
             Our mission is to nurture bold young leaders through transformative education,
             mentorship, and digital innovation, enabling them to create solutions and expand
@@ -136,342 +143,176 @@ const ctaLinks = [
       </div>
 
       <div class="values">
-        <h2 class="u-section-title">Core Values</h2>
-        <ul role="list" class="values__list">
-          {coreValues.map((value) => <li class="values__item">{value}</li>)}
+        <h2 class="u-h2">Core Values</h2>
+        <ul role="list" class="values__grid">
+          {
+            coreValues.map((value) => (
+              <li>
+                <h3 class="u-lead values__title">{value.title}</h3>
+                <p class="u-body-lg values__body">{value.body}</p>
+              </li>
+            ))
+          }
         </ul>
       </div>
     </div>
   </section>
 
-  <!-- ── Core Team ─────────────────────────────────────────────────────────────── -->
-  <section class="section team">
-    <div class="container">
-      <div class="team__intro">
-        <p class="u-eyebrow team__eyebrow">Core Team</p>
-        <h2 class="u-section-title">
-          Every Major Test. <em class="team__accent">One Trusted Partner.</em>
-        </h2>
-        <p class="u-body-lg team__lead">
-          GIEVA handles your entire registration process — from account setup to score
-          reporting — with certified guidance at every step.
-        </p>
-      </div>
-
-      <ul role="list" class="team__grid">
-        {
-          team.map((member) => (
-            <li class="team__card">
-              <Image
-                src={testimonialPortrait}
-                alt=""
-                width={298}
-                height={380}
-                class="team__photo"
-              />
-              <div class="team__card-info">
-                <p class="team__card-name">{member.name}</p>
-                <p class="team__card-role">{member.role}</p>
-              </div>
-            </li>
-          ))
-        }
-      </ul>
-    </div>
-  </section>
-
-  <!-- ── CTA (same content/shape as Home's) ───────────────────────────────────── -->
+  <!-- ── CTA (node 12327:12132) — shared with /ngo, see NgoCtaSection.astro ───── -->
   <section class="section cta">
     <div class="container">
-      <div class="cta__card">
-        <Image src={boatPhoto} alt="" width={656} height={676} class="cta__photo" />
-        <div class="cta__panel surface-inverse" data-surface="inverse">
-          <div class="cta__text">
-            <p class="u-eyebrow">Get Involved</p>
-            <h2 class="u-section-title">
-              Ready to Join the <em class="u-accent-em">Movement?</em>
-            </h2>
-            <p class="u-body-lg">
-              Volunteer, donate, or partner — every form of support transforms a young
-              Nigerian's future.
-            </p>
-          </div>
-          <ul role="list" class="cta__links">
-            {
-              ctaLinks.map((link) => (
-                <li>
-                  <a class="cta__link" href={link.href}>
-                    <span>{link.label}</span>
-                    <svg
-                      class="cta__link-arrow"
-                      width="15"
-                      height="13"
-                      viewBox="0 0 15 13"
-                      fill="none"
-                      aria-hidden="true"
-                      focusable="false"
-                    >
-                      <path
-                        d="M8.5 1L14 6.5M14 6.5L8.5 12M14 6.5H1"
-                        stroke="currentColor"
-                        stroke-width="1.6"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                      />
-                    </svg>
-                  </a>
-                </li>
-              ))
-            }
-          </ul>
-        </div>
-      </div>
+      <NgoCtaSection />
     </div>
   </section>
 </BaseLayout>
 
 <style>
-  /* ── Shared section rhythm (matches Home/Partners) ────────────────────────── */
+  /* ── Shared section rhythm ───────────────────────────────────────────────────
+     The live frame stacks its three body blocks 240px apart (story ends y=688, pillars start
+     y=928; pillars end y=1736, CTA starts y=1976) and closes with 120px before the footer —
+     i.e. 120px top and bottom per section, which is what --space-6xl already gives. The hero
+     needs no bottom padding of its own: the story block's own 120px top is the whole gap. */
   .section {
     padding-block: var(--space-6xl);
   }
 
-  /* ── Page header ────────────────────────────────────────────────────────────
-     node 7429:5890: paddingTop 240 / paddingBottom 120 with the nav absolutely overlaying the
-     top 102px (same shape as Partners' header, node 7434:8753). Our nav is in-flow (sticky), so
-     the visible top offset is authored below and confirmed against frame.png at 1440 rather
-     than transcribing the raw 240. */
-  .about-header {
-    padding-top: var(--space-6xl);
-    padding-bottom: var(--space-6xl);
-  }
-  .about-breadcrumb {
-    margin: 0 0 40px; /* node 7958:30345 itemSpacing 40 — one-off gap, not a scale step */
-    font-family: var(--font-family-base);
-    font-size: var(--font-size-underline);
-    line-height: var(--line-height-underline);
-    letter-spacing: var(--letter-spacing-none);
-    font-weight: var(--font-weight-bold);
-    color: var(--color-eyebrow); /* NGO eyebrow = orange #E65320 */
-  }
-  .about-title {
-    margin: 0;
+  /* ── Our Story ───────────────────────────────────────────────────────────────
+     node 12327:12012, 1312×568, reconciled: 56 (title) + 80 + 120 (copy) + 80 + 232 (stats). */
+  .intro__title {
+    margin: 0 0 var(--space-4xl);
     color: var(--color-mine-shaft);
-  }
-
-  /* ── Intro ──────────────────────────────────────────────────────────────────
-     node 7429:6049 itemSpacing 80 between photo / two-col copy / stats — every gap here is the
-     shared --space-4xl step, no one-offs. */
-  .intro__photo {
-    width: 100%;
-    height: auto;
-    border-radius: var(--radius-md);
-    margin-bottom: var(--space-4xl);
   }
   .intro__grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: var(--space-xl);
+    gap: var(--space-xl); /* 676 − 636 = 40 */
     margin-bottom: var(--space-4xl);
     color: var(--color-mine-shaft);
   }
-  /* Stats band (node 7437:9628): plain black-on-white text with thin vertical dividers —
-     unlike Home, these are NOT overlaid on the photo with a gradient scrim. */
+
+  /* Stats band (node 12327:12021). Each figure sits in its own 252×168 rounded box, and the
+     boxes are separated by 1px full-height rules — not by borders on the boxes themselves.
+     Reconciled across: 4×252 + 6×40 (gaps) + 2×32 (container padding) = 1312.
+     Down: 32 + 56 (value) + 24 (gap) + 24 (label) + 32 = 168.
+     The design also sets backdrop-blur 5px here; it is inert over the white page, so it is
+     not reproduced. */
   .stats {
     display: flex;
-    padding-block: var(--space-lg);
+    align-items: stretch;
+    /* 80, not 40: the design's rules are zero-width flex *children*, so each sits between two
+       40px gaps. Rendering them as pseudo-elements removes those children, and the 80px gap is
+       what reproduces the same spacing — it lands each box at exactly the designed 252px
+       (1312 − 64 padding − 3×80 = 1008; 1008 / 4 = 252). */
+    gap: var(--space-4xl);
+    padding: var(--space-lg);
   }
   .stats__item {
+    /* min-width:0 overrides flex's `auto` minimum, which would otherwise let the widest figure
+       ("10,000+", 174px + 128px padding) push its own box past the other three. */
     flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-md);
+    padding: var(--space-lg) var(--space-3xl);
+    border-radius: var(--radius-md);
     text-align: center;
-    padding-inline: var(--space-md);
   }
-  .stats__item[data-divider] {
-    border-inline-start: 1px solid var(--color-mine-shaft);
+  /* The rule is a sibling element in the design, so it renders between items rather than as a
+     border on one: 1px, #292929, and exactly as tall as the 168px box it sits beside. */
+  .stats__item + .stats__item {
+    position: relative;
   }
+  .stats__item + .stats__item::before {
+    content: '';
+    position: absolute;
+    inset-block: 0;
+    inset-inline-start: calc(var(--space-4xl) / -2);
+    width: 1px;
+    background: var(--color-mine-shaft);
+  }
+  /* The 64px inline padding is a minimum, not a clamp: "10,000+" measures 174px against the
+     box's 124px inner width, and the design lets it overflow the padding rather than wrap
+     (every figure and label in the frame is a single unwrapped line). Without `nowrap` the
+     widest figure breaks after the comma. */
   .stats__value {
-    color: #000;
+    margin: 0;
+    color: var(--color-mine-shaft);
+    white-space: nowrap;
   }
   .stats__label {
     margin: 0;
-    color: #000;
+    color: var(--color-mine-shaft);
+    white-space: nowrap;
     font-size: var(--type-body-lg-size);
     line-height: var(--type-body-lg-line);
     font-weight: var(--font-weight-bold);
   }
 
   /* ── Vision / Mission / Core Values ─────────────────────────────────────────
-     node 7445:5828 → 7437:10117: 80px (--space-4xl) between the pillars grid and Core Values,
-     same step as the intro's internal gaps. */
+     node 12327:12049: two 636 columns 40 apart, heading→body 40 (y 56→96).
+     node 12327:12071: 40 between the Core Values heading and the first row, 40 between rows,
+     24 between each value's title and body. Reconciled: 56 + 3×(40 + 128) = 560. */
   .pillars__grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: var(--space-4xl);
+    gap: var(--space-xl);
     margin-bottom: var(--space-4xl);
   }
   .pillars__grid h2,
   .values h2 {
+    margin: 0;
     color: var(--color-mine-shaft);
   }
   .pillars__body {
-    margin-top: var(--space-xl);
+    margin: var(--space-xl) 0 0;
     color: var(--color-mine-shaft);
   }
-  .values__list {
+  .values__grid {
     display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: var(--space-xl);
     margin-top: var(--space-xl);
   }
-  .values__item {
-    font-size: var(--font-size-underline);
-    line-height: var(--line-height-underline);
-    font-weight: var(--font-weight-bold);
-    color: #000;
-  }
-
-  /* ── Core Team ──────────────────────────────────────────────────────────────
-     node 7437:9750 itemSpacing 80 between the heading block and the grid; node 7437:9751/9756
-     itemSpacing 16 (--space-sm) between eyebrow/heading/lead — a tighter rhythm than the
-     pillars above, confirmed straight from the tree rather than assumed uniform. "CORE TEAM"
-     and "One Trusted Partner." invert NGO's usual eyebrow/accent colours for this section only
-     (see the file header comment) — --color-heading-accent and --color-accent-warm are used
-     directly rather than the shared .u-eyebrow/.u-accent-em utilities. */
-  .team__intro {
-    display: grid;
-    gap: var(--space-sm);
-    max-width: 47.5rem; /* node 7437:9756 width 760 — one-off column width */
-    margin-bottom: var(--space-4xl);
-  }
-  .team__eyebrow {
-    color: var(--color-heading-accent);
-  }
-  .team__accent {
-    font-style: italic;
-    color: var(--color-accent-warm);
-  }
-  .team__lead {
+  .values__title {
+    margin: 0;
     color: var(--color-mine-shaft);
   }
-  .team__grid {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    column-gap: var(--space-xl);
-    row-gap: var(--space-4xl);
-  }
-  .team__card {
-    position: relative;
-    border-radius: var(--radius-md);
-    overflow: hidden;
-  }
-  .team__photo {
-    width: 100%;
-    height: auto;
-    aspect-ratio: 298 / 380;
-    object-fit: cover;
-    display: block;
-  }
-  .team__card-info {
-    position: absolute;
-    inset-inline: 0;
-    bottom: 0;
-    padding: var(--space-md);
-    background: linear-gradient(to top, rgb(0 0 0 / 0.75), transparent);
-    color: var(--color-white);
-  }
-  .team__card-name {
-    margin: 0;
-    font-weight: 600;
-    font-size: 24px;
-    line-height: 28.8px;
-    letter-spacing: -0.48px;
-  }
-  .team__card-role {
-    margin: 0;
-    font-weight: var(--font-weight-regular);
-    font-size: 16px;
-    line-height: 22.4px;
+  .values__body {
+    margin: var(--space-md) 0 0;
+    color: var(--color-mine-shaft);
   }
 
-  /* ── CTA — identical markup/classes to Home's, reused verbatim ────────────── */
-  .cta__card {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    border-radius: var(--radius-md);
-    overflow: hidden;
-  }
-  .cta__photo {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
-  }
-  .cta__panel {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-3xl);
-    padding: var(--space-3xl);
-  }
-  .cta__text {
-    display: grid;
-    gap: var(--space-md);
-  }
-  .cta__text h2 {
-    color: var(--color-text-inverse);
-  }
-  .cta__text p.u-body-lg {
-    color: var(--color-text-inverse);
-  }
-  .cta__links {
-    display: grid;
-    border-bottom: 1px solid var(--color-border-on-inverse);
-  }
-  .cta__link {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-sm);
-    padding-block: var(--space-md);
-    border-top: 1px solid var(--color-border-on-inverse);
-    color: var(--color-text-inverse);
-    font-size: var(--type-body-lg-size);
-    text-decoration: none;
-    width: fit-content;
-  }
-  .cta__link:hover {
-    text-decoration: underline;
-  }
-  .cta__link-arrow {
-    flex: none;
-  }
+  /* The CTA card's CSS (node 12327:12132) now lives in NgoCtaSection.astro, shared with /ngo. */
 
   /* ── Responsive ─────────────────────────────────────────────────────────────
      No tablet/mobile NGO About frame exists in the design; these are our authored,
      content-preserving reflows (same approach as the NGO Partners page). */
+  /* The stats band has to break to 2×2 well before the text columns do: a row of four boxes
+     needs 4×(174px figure + padding) + 3×80 gaps, so below ~1024px the un-wrappable figures
+     overflow the page rather than the box (they are `nowrap` by design — see above). The
+     rules are dropped once wrapped: they mark divisions in a single row, and a 2×2 grid has
+     no single row to divide. */
   @media (max-width: 1024px) {
-    .team__grid {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+    .stats {
+      flex-wrap: wrap;
+      gap: var(--space-xl);
+      padding-inline: 0;
+    }
+    .stats__item {
+      flex: 1 1 40%;
+      padding-inline: var(--space-md);
+    }
+    .stats__item + .stats__item::before {
+      content: none;
     }
   }
   @media (max-width: 900px) {
     .intro__grid,
-    .pillars__grid {
-      grid-template-columns: 1fr;
-    }
-    .cta__card {
-      grid-template-columns: 1fr;
-    }
-  }
-  @media (max-width: 640px) {
-    .stats {
-      flex-wrap: wrap;
-      gap: var(--space-md);
-    }
-    .stats__item {
-      flex: 1 1 40%;
-    }
-    .stats__item[data-divider] {
-      border-inline-start: 0;
-    }
-    .team__grid {
+    .pillars__grid,
+    .values__grid {
       grid-template-columns: 1fr;
     }
   }

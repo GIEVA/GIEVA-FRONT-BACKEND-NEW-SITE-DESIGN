@@ -8,16 +8,17 @@
  * header's confirmed 48px SemiBold Open Sans, so the *same* logo looked like two different
  * marks on one page. Per CLAUDE.md, a repeated Figma component becomes one Astro component.
  *
- * Geometry (`size="lg"`, confirmed identical in both header and footer node.json):
+ * Geometry (confirmed identical in the Consultancy header, the NGO header and the footer):
  *   mark 48×48 circle · "GIEVA" 48/40 SemiBold, brand face · ".org" 32/27 Regular, green
- *   · 2px gap · text bottom-aligned (Figma `items-end`).
+ *   · 2px gap · text bottom-aligned (Figma `items-end`) · 247px overall.
  * The `.org` is a nested inline span rather than a flex sibling, so the browser's own baseline
  * alignment does the bottom-align — matching what the design shows without hand-tuned offsets.
  *
- * `size="sm"` is the NGO header's smaller treatment (40px mark / 28px bold). It is NOT a
- * confirmed design value — it is the value that component shipped with, preserved verbatim so
- * consolidating the markup doesn't silently change NGO parity. Replace it with measured
- * geometry when an NGO header node is ingested.
+ * There used to be a `size="sm"` variant (40px mark / 28px bold) here, carried over from the
+ * NGO header as it shipped and explicitly marked unconfirmed. The NGO header nodes have since
+ * been ingested (7429:5891 and its four siblings) and every one instances the *same* 247×48
+ * lockup as Consultancy — so the small treatment was never a design value, and is gone. One
+ * size, because the design has one.
  */
 import { Image } from 'astro:assets';
 import { logoMark } from '@lib/home-images';
@@ -25,8 +26,6 @@ import { logoMark } from '@lib/home-images';
 interface Props {
   /** Where the lockup links. Consultancy → "/", NGO → "/ngo". */
   href: string;
-  /** `lg` = the confirmed 48px design lockup (header + footer). `sm` = NGO header. */
-  size?: 'lg' | 'sm';
   /**
    * Ink for the "GIEVA" word. `brand` is the fixed deep-violet logotype ink on light surfaces,
    * `inverse` is white on dark. The ".org" is always green in every instance.
@@ -46,21 +45,11 @@ interface Props {
   class?: string;
 }
 
-const {
-  href,
-  size = 'lg',
-  ink = 'brand',
-  destination = 'home page',
-  class: className,
-} = Astro.props;
-const px = size === 'lg' ? 48 : 40;
+const { href, ink = 'brand', destination = 'home page', class: className } = Astro.props;
 ---
 
-<a
-  class:list={['brand-lockup', `brand-lockup--${size}`, `brand-lockup--${ink}`, className]}
-  href={href}
->
-  <Image src={logoMark} alt="" width={px} height={px} class="brand-lockup__mark" />
+<a class:list={['brand-lockup', `brand-lockup--${ink}`, className]} href={href}>
+  <Image src={logoMark} alt="" width={48} height={48} class="brand-lockup__mark" />
   <span class="brand-lockup__wordmark">GIEVA<span class="brand-lockup__tld">.org</span></span>
   <span class="visually-hidden"> — go to {destination}</span>
 </a>
@@ -81,27 +70,36 @@ const px = size === 'lg' ? 48 : 40;
     border-radius: 50%;
   }
 
-  .brand-lockup--lg .brand-lockup__wordmark {
+  .brand-lockup__wordmark {
     font-family: var(--font-family-brand);
     font-weight: var(--font-weight-semibold);
     font-size: 3rem; /* 48px */
-    line-height: 2.5rem; /* 40px (design) */
-  }
-  .brand-lockup--lg .brand-lockup__tld {
-    font-size: 2rem; /* 32px */
-    line-height: 1.6875rem; /* 27px (design) */
+    line-height: 0.8333; /* 40/48 (design) */
   }
 
-  /* NGO header — unconfirmed, preserved from the component it replaced (see header comment). */
-  .brand-lockup--sm .brand-lockup__wordmark {
-    font-weight: var(--font-weight-bold);
-    font-size: 1.75rem; /* 28px */
-    line-height: 1;
-  }
-
+  /* Sized as a ratio of the wordmark rather than in absolute rem, so the lockup scales as one
+     object: 48 × 0.6667 = the design's 32px, 32 × 0.84375 = its 27px line-height. The mobile
+     step below then only has to move one number. */
   .brand-lockup__tld {
+    font-size: 0.6667em;
+    line-height: 0.84375;
     color: var(--color-feedback-success);
     font-weight: var(--font-weight-regular);
+  }
+
+  /* Mobile step — ours, not the design's: neither brand has a mobile frame. At full size the
+     lockup (247px) plus the header's gap and menu toggle needs a 383px row, which overflows a
+     320px viewport and fails WCAG 2.2 §1.4.10 (Reflow). Below 560px it steps down to a 40px
+     mark / 28px wordmark — which is exactly the treatment the NGO header used to apply at every
+     width as `size="sm"`. That was never a desktop value, but it is a sound mobile one. */
+  @media (max-width: 560px) {
+    .brand-lockup__mark {
+      inline-size: 2.5rem;
+      block-size: 2.5rem;
+    }
+    .brand-lockup__wordmark {
+      font-size: 1.75rem; /* 28px */
+    }
   }
 
   /* The logotype violet is fixed brand ink, not a themeable text role — hence the primitive. */

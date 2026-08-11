@@ -15,6 +15,18 @@
 html {
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
+
+  /* Reserve the sticky masthead's height when jumping to an in-page anchor (`/ngo/program#gvp`
+     and friends). BOTH mastheads are `position: sticky; top: 0` — Consultancy's wrapper is 98px
+     tall (node 5891:5463), NGO's 102px (node 7429:5890) — so without this the top of every
+     anchored section lands *behind* the header. Reserve the taller of the two plus a 32px
+     breath, so the target reads as "the section starts here" rather than being flush to the bar.
+
+     This belongs on the scroll container, once, not as `scroll-margin-top` on each target: a
+     per-section version has to be repeated on every anchor added from here on and silently
+     drifts from the real header height. Nothing sets `scroll-behavior: smooth`, so the jump is
+     instant and needs no `prefers-reduced-motion` opt-out. */
+  scroll-padding-top: calc(102px + var(--space-lg));
 }
 body,
 h1,

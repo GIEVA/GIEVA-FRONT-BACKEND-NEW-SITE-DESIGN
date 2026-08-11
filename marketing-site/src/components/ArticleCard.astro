@@ -1,0 +1,152 @@
+---
+/**
+ * ArticleCard — one article as the design's news card: a 395×320 photo with a category pill
+ * over its top-left corner, then the title and date on a white body.
+ *
+ * NOT AN INVENTED TREATMENT. This is NGO Home's "Recent News" card (node 5990:3672), lifted
+ * into a component so the listing page and Home's news row render the same thing. Geometry and
+ * type come from that node: media 395×320 (`aspect-ratio: 395/320`, `object-fit: cover`), pill
+ * inset 16px/16px with a white fill and the warm-accent label, card body 24px padding with a
+ * 24px gap, title at `--type-lead-*` bold, date at `--type-body-size`. The card is
+ * `--radius-md` with `overflow: hidden` so the photo takes the top corners.
+ *
+ * The 1px shadow is the one value not in the node data — Home's page-local copy carried it, and
+ * it is preserved here rather than dropped, so this commit changes nothing visually on Home.
+ * Flagged in docs/ngo-build-plan.md as the card's single unconfirmed value.
+ *
+ * BRAND-NEUTRAL by construction: every colour is a semantic token, so the pill picks up
+ * Consultancy's warm accent on `/resources` and NGO's on `/ngo/resources` without a variant.
+ *
+ * ## Two things worth knowing
+ *
+ * **The whole card is one link.** The design gives no secondary action, so wrapping everything
+ * in a single `<a>` is both the design and the accessible choice — one tab stop, one accessible
+ * name, no nested-interactive trap. The heading level is the caller's (`headingLevel`): a
+ * listing page's cards sit under its `h1` and want `h2`, while Home's news row sits under a
+ * section `h2` and wants `h3`. Getting this wrong is an axe `heading-order` failure, which is
+ * why it is a required-ish prop with the listing-page default.
+ *
+ * **Cover images are remote.** `Article.coverImageUrl` points at the CMS's own host, so
+ * `astro:assets` cannot process it without `image.remotePatterns` in astro.config.mjs, and that
+ * host is not confirmed yet. So a cover renders as a plain `<img>` with explicit dimensions and
+ * `loading="lazy"` — correct and CLS-free, just unoptimised. Articles with no cover fall back to
+ * `boatPhoto`, the design's own placeholder photo for these cards, which IS a local asset and
+ * does go through the pipeline. Once the CDN host is known, adding it to `remotePatterns` and
+ * swapping this for `<Image>` is a contained change.
+ */
+import { Image } from 'astro:assets';
+import { boatPhoto } from '@lib/ngo-home-images';
+import { formatArticleDate, type ArticleSummary } from '@lib/articles';
+
+interface Props {
+  article: ArticleSummary;
+  /** Base path the slug hangs off, e.g. `/ngo/resources`. */
+  basePath: string;
+  /**
+   * Heading level for the card title. Must be one deeper than the enclosing section's heading —
+   * `h2` on a listing page, `h3` inside a section that already has an `h2`.
+   */
+  headingLevel?: 2 | 3 | 4;
+}
+
+const { article, basePath, headingLevel = 2 } = Astro.props;
+const Heading = `h${headingLevel}` as 'h2' | 'h3' | 'h4';
+const href = `${basePath}/${article.slug}`;
+const date = formatArticleDate(article.publishedAt);
+---
+
+<li class="article-card">
+  <a class="article-card__link" href={href}>
+    <span class="article-card__media">
+      {
+        article.coverImageUrl ? (
+          <img
+            class="article-card__img"
+            src={article.coverImageUrl}
+            alt=""
+            width={395}
+            height={320}
+            loading="lazy"
+            decoding="async"
+          />
+        ) : (
+          <Image src={boatPhoto} alt="" width={395} height={320} class="article-card__img" />
+        )
+      }
+      {article.category && <span class="article-card__tag">{article.category}</span>}
+    </span>
+    <span class="article-card__body">
+      <Heading class="article-card__title">{article.title}</Heading>
+      {
+        /* The design's card shows a date under the title and nothing else. The excerpt is
+           deliberately not rendered here — it belongs to the article page and the listing's
+           featured row, and adding it would make the cards uneven-height for no design reason. */
+      }
+      {date && <span class="article-card__date">{date}</span>}
+    </span>
+  </a>
+</li>
+
+<style>
+  .article-card {
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    background: var(--color-surface-default);
+    box-shadow: 0 1px 2px rgb(0 0 0 / 0.06);
+  }
+  .article-card__link {
+    display: grid;
+    /* Body takes the slack so titles of different lengths still bottom-align their dates. */
+    grid-template-rows: auto 1fr;
+    text-decoration: none;
+    color: inherit;
+    height: 100%;
+  }
+  .article-card__media {
+    position: relative;
+    display: block;
+  }
+  .article-card__img {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 395 / 320;
+    object-fit: cover;
+    display: block;
+  }
+  .article-card__tag {
+    position: absolute;
+    top: var(--space-md);
+    left: var(--space-md);
+    display: inline-block;
+    padding: var(--space-3xs) var(--space-md);
+    border-radius: var(--radius-pill);
+    background: var(--color-white);
+    color: var(--color-accent-warm);
+    font-size: var(--type-body-size);
+    font-weight: var(--font-weight-bold);
+    letter-spacing: var(--type-eyebrow-tracking);
+  }
+  .article-card__body {
+    display: grid;
+    /* Title, then the date pinned to the bottom of the body box. */
+    grid-template-rows: auto 1fr;
+    gap: var(--space-lg);
+    padding: var(--space-lg);
+  }
+  .article-card__title {
+    margin: 0;
+    font-weight: var(--font-weight-bold);
+    font-size: var(--type-lead-size);
+    line-height: var(--type-lead-line);
+    letter-spacing: var(--letter-spacing-lead);
+    color: var(--color-text-default);
+  }
+  .article-card__date {
+    align-self: end;
+    font-size: var(--type-body-size);
+    color: var(--color-text-default);
+  }
+  .article-card__link:hover .article-card__title {
+    text-decoration: underline;
+  }
+</style>

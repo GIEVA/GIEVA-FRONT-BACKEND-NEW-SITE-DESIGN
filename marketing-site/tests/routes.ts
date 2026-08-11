@@ -31,4 +31,18 @@ export const routes: RouteUnderTest[] = [
   { path: '/ngo/about', name: 'ngo-about' },
   { path: '/ngo/program', name: 'ngo-program' },
   { path: '/ngo/contact', name: 'ngo-contact' },
+  // NGO Resources — the CMS-backed news index and one article page. The article route is a
+  // fixture slug: with GIEVA_API_URL unset (dev machines and CI both), @lib/articles serves
+  // fixtures, so this path exists and renders deterministically for the a11y and visual gates.
+  // Against a real backend the fixture slug won't exist and this baseline needs repointing at a
+  // real article — see docs/ngo-build-plan.md.
+  { path: '/ngo/resources', name: 'ngo-resources' },
+  {
+    path: '/ngo/resources/step-cohort-four-graduates',
+    name: 'ngo-resources-article',
+  },
+  // Not-Found. A real route so the error page is held to the same a11y gate and visual baseline
+  // as every other page — it renders the full shell (masthead, footer, brand switcher), so a
+  // regression there is exactly as user-facing as one on Home.
+  { path: '/404', name: 'not-found' },
 ];

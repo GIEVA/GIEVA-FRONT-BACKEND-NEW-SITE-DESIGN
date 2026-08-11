@@ -21,7 +21,10 @@
         "/ngo/partners/index.html",
         "/ngo/about/index.html",
         "/ngo/program/index.html",
-        "/ngo/contact/index.html"
+        "/ngo/contact/index.html",
+        "/ngo/resources/index.html",
+        "/ngo/resources/step-cohort-four-graduates/index.html",
+        "/404.html"
       ],
       "settings": {
         "chromeFlags": "--no-sandbox --headless=new --disable-dev-shm-usage --disable-gpu"

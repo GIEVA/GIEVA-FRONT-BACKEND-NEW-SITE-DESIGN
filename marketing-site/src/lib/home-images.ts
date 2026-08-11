@@ -42,6 +42,16 @@ export interface PartnerLogo {
   src: ImageMetadata | string;
   /** Rendered height varies per logo's natural aspect ratio, matching the design's row. */
   height: number;
+  /**
+   * The sub-region of the source actually shown, as fractions of the source canvas.
+   *
+   * Most of these exports are trimmed to their ink, so the whole file is the logo. Two are
+   * not: their PNG is mostly transparent padding, and Figma hides that with a *crop* fill
+   * (`scaleMode: "STRETCH"` plus an `imageTransform` matrix `[[w,0,x],[0,h,y]]` — see the
+   * per-logo notes below). Rendering the untrimmed file at the row height shrinks the actual
+   * mark to a fraction of the band, so the crop has to be reproduced, not ignored.
+   */
+  crop?: { x: number; y: number; width: number; height: number };
 }
 
 /**
@@ -56,11 +66,27 @@ export const partnerLogos: PartnerLogo[] = [
   { name: 'Drake University', src: logoDrake, height: 40 },
   { name: 'The College Board', src: logoCollegeBoardMark, height: 60 },
   { name: 'ETS', src: logoEts, height: 40 },
-  { name: 'ECOSOC', src: logoEcosocSmall, height: 60 },
+  {
+    name: 'ECOSOC',
+    src: logoEcosocSmall,
+    height: 60,
+    // Node 12023:32429, imageTransform [[0.5626566,0,0.2218045],[0,1,0]] — the 798×409 export
+    // carries wide transparent side margins; the design shows the middle 449px, giving 65.9×60.
+    crop: { x: 0.2218045, y: 0, width: 0.5626566, height: 1 },
+  },
   { name: 'UN ECOSOC', src: logoUnEcosoc, height: 60 },
   { name: 'ujweb', src: logoUjweb, height: 40 },
   { name: 'US Embassy', src: logoUsEmbassy, height: 60 },
-  { name: 'College Board', src: logoCollegeBoardFull, height: 40 },
+  {
+    name: 'College Board',
+    src: logoCollegeBoardFull,
+    height: 40,
+    // Node 12023:32435, imageTransform [[0.6095890,0,0.1952055],[0,0.1609756,0.4195122]] — the
+    // 584×410 export is ~85% empty: the wordmark is a 356×66 band sitting mid-canvas. Uncropped
+    // at height 40 the lettering renders ~6px tall, which is why this one read as "tiny". The
+    // crop restores the design's 215×40.
+    crop: { x: 0.1952055, y: 0.4195122, width: 0.609589, height: 0.1609756 },
+  },
   { name: 'British Council', src: logoBritishCouncil, height: 40 },
   { name: 'idXdWonEmY', src: logoIdxdwonemy, height: 60 },
 ];

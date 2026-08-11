@@ -12,10 +12,19 @@
  *
  * The shell (NgoSiteHeader + SiteFooter) is finalized against this frame here; the only shell
  * token correction Home surfaced was the eyebrow↔accent colour inversion (tokens.css/base.css).
+ *
+ * The closing CTA is `NgoCtaSection`, shared with /ngo/about — this page's copy of the markup
+ * and CSS moved there, and with it went two corrections this page had been rendering: the rows
+ * are `Button`s (the design's `GIEVA Button` instances) rather than hand-rolled anchors with a
+ * hand-drawn arrow, and the heading is `u-h2` rather than `u-section-title`. Both are measured
+ * off the live frame; see the component for the evidence.
  */
 import BaseLayout from '@layouts/BaseLayout.astro';
 import Button from '@components/Button.astro';
 import PartnersMarquee from '@components/PartnersMarquee.astro';
+import NgoCtaSection from '@components/NgoCtaSection.astro';
+import ArticleCard from '@components/ArticleCard.astro';
+import { getArticles } from '@lib/articles';
 import { Image } from 'astro:assets';
 // Both homes share the same real partner set (node 12023:32440); the NGO-specific glob was
 // removed as its per-logo identities were unverified placeholders.
@@ -29,12 +38,28 @@ const stats = [
   { value: '98%', label: 'Success Rate' },
 ];
 
+/**
+ * The four program cards (node 5990:3672). Titles and descriptions are the design's, verbatim.
+ *
+ * The hrefs are ours, and only two of the four can be deep-linked honestly. `/ngo/program`
+ * details THREE programmes — STEP, HEALS, GVP (node 7447:6027) — so STEP and GVP get the
+ * matching `#step` / `#gvp` anchors added to that page. The other two do not resolve:
+ *   - CHOICES has no section on the Programs page at all.
+ *   - PARTNERSHIP PROGRAMS is titled for partnerships but its *description* is HEALS's
+ *     expansion ("Holistic Education Advising and Learning Services"), so #heals and
+ *     /ngo/partners are both defensible and neither is confirmed.
+ * Both are the design's own inconsistency, not a translation slip — the Home node contains
+ * "CHOICES" and "PARTNERSHIP PROGRAMS" and no "HEALS", the Program node the reverse. Guessing an
+ * anchor would silently pick a reading for the client, so those two keep pointing at the
+ * Programs page root: a real destination, just not a precise one. Awaiting client confirmation
+ * (docs/ngo-build-plan.md, "Cross-page link map").
+ */
 const programs = [
   {
     title: 'STEP',
     description:
       "Strategic Transformative Education Program — leadership pathways for tomorrow's changemakers.",
-    href: '/ngo/program',
+    href: '/ngo/program#step',
   },
   {
     title: 'CHOICES',
@@ -46,7 +71,7 @@ const programs = [
     title: 'GVP',
     description:
       'GIEVA Volunteer Project — connecting young Nigerians with meaningful community service.',
-    href: '/ngo/program',
+    href: '/ngo/program#gvp',
   },
   {
     title: 'PARTNERSHIP PROGRAMS',
@@ -64,18 +89,18 @@ const testimonial = {
   detail: 'Admitted to University of Michigan',
 };
 
-const news = Array.from({ length: 3 }, () => ({
-  tag: 'Publication',
-  title: 'PSPBA Hosts Plateau Peace Architecture Forum PPAF 2025',
-  date: '17th October 2025',
-  href: '/ngo/resources',
-}));
-
-const ctaLinks = [
-  { label: 'Volunteer', href: '/ngo/get-involved' },
-  { label: 'Donate', href: '/ngo/donate' },
-  { label: 'Other Partnership Opportunities', href: '/ngo/partners' },
-];
+/**
+ * The three most recent NGO articles, from the CMS at build time.
+ *
+ * Was three copies of one hard-coded placeholder ("PSPBA Hosts Plateau Peace Architecture Forum
+ * PPAF 2025", tag "Publication", all three linking to `/ngo/resources`) transcribed from the
+ * frame's text runs. Now real content, and each card links to its own article — which closes
+ * four of the eleven inbound links to `/ngo/resources` that had nowhere to land.
+ *
+ * `getArticles` returns the API's own ordering (pinned, then featuredOrder, then publishedAt
+ * desc), so `slice(0, 3)` is "the three the client has chosen to surface", not merely the newest.
+ */
+const news = (await getArticles('ngo')).slice(0, 3);
 ---
 
 <BaseLayout
@@ -103,7 +128,10 @@ const ctaLinks = [
 
       <div class="hero__visual">
         <Image src={ngoHeroRing} alt="" width={818} height={818} class="hero__ring" />
-        <a class="hero__cross-link" href="/"> Explore Consultancy </a>
+        {
+          /* The "Explore Consultancy" pill (node 5990:4604) now lives in BrandSwitchLink.astro,
+            rendered by BaseLayout on every route. */
+        }
       </div>
     </div>
 
@@ -234,92 +262,48 @@ const ctaLinks = [
     </div>
   </section>
 
-  <!-- ── Recent News ──────────────────────────────────────────────────────────── -->
-  <section class="section news">
-    <div class="container">
-      <div class="news__panel">
-        <div class="news__intro">
-          <p class="u-eyebrow">Recent News</p>
-          <h2 class="u-section-title">
-            Keep Up <em class="u-accent-em">With Us</em>
-          </h2>
-          <p class="u-body-lg">
-            Community-centered, measurable, and designed for long-term change across Nigeria.
-          </p>
+  <!-- ── Recent News ──────────────────────────────────────────────────────────────
+       The whole section is conditional on there being articles. The design always draws three
+       cards, but the CMS starts empty and this is Home — an intro reading "Keep Up With Us"
+       above an empty grid and a "See all news" button leading to an empty index is worse than
+       not running the section at all. With content, it renders exactly as the frame does. -->
+  {
+    news.length > 0 && (
+      <section class="section news">
+        <div class="container">
+          <div class="news__panel">
+            <div class="news__intro">
+              <p class="u-eyebrow">Recent News</p>
+              <h2 class="u-section-title">
+                Keep Up <em class="u-accent-em">With Us</em>
+              </h2>
+              <p class="u-body-lg">
+                Community-centered, measurable, and designed for long-term change across
+                Nigeria.
+              </p>
+            </div>
+
+            <ul role="list" class="news__grid">
+              {news.map((article) => (
+                <ArticleCard article={article} basePath="/ngo/resources" headingLevel={3} />
+              ))}
+            </ul>
+
+            <div class="news__more">
+              <Button variant="primary" href="/ngo/resources">
+                See all news
+              </Button>
+            </div>
+          </div>
         </div>
+      </section>
+    )
+  }
 
-        <ul role="list" class="news__grid">
-          {
-            news.map((item) => (
-              <li class="news__card">
-                <a class="news__card-link" href={item.href}>
-                  <span class="news__media">
-                    <Image src={boatPhoto} alt="" width={395} height={320} class="news__img" />
-                    <span class="news__tag">{item.tag}</span>
-                  </span>
-                  <span class="news__card-body">
-                    <span class="news__title">{item.title}</span>
-                    <span class="news__date">{item.date}</span>
-                  </span>
-                </a>
-              </li>
-            ))
-          }
-        </ul>
-
-        <div class="news__more">
-          <Button variant="primary" href="/ngo/resources">See all news</Button>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ── CTA ──────────────────────────────────────────────────────────────────── -->
+  <!-- ── CTA (node 5990:4479) — shared with /ngo/about, see NgoCtaSection.astro ── -->
   <section class="section cta">
     <div class="container">
-      <div class="cta__card">
-        <Image src={boatPhoto} alt="" width={656} height={676} class="cta__photo" />
-        <div class="cta__panel surface-inverse" data-surface="inverse">
-          <div class="cta__text">
-            <p class="u-eyebrow">Get Involved</p>
-            <h2 class="u-section-title">
-              Ready to Join the <em class="u-accent-em">Movement?</em>
-            </h2>
-            <p class="u-body-lg">
-              Volunteer, donate, or partner — every form of support transforms a young
-              Nigerian's future.
-            </p>
-          </div>
-          <ul role="list" class="cta__links">
-            {
-              ctaLinks.map((link) => (
-                <li>
-                  <a class="cta__link" href={link.href}>
-                    <span>{link.label}</span>
-                    <svg
-                      class="cta__link-arrow"
-                      width="15"
-                      height="13"
-                      viewBox="0 0 15 13"
-                      fill="none"
-                      aria-hidden="true"
-                      focusable="false"
-                    >
-                      <path
-                        d="M8.5 1L14 6.5M14 6.5L8.5 12M14 6.5H1"
-                        stroke="currentColor"
-                        stroke-width="1.6"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                      />
-                    </svg>
-                  </a>
-                </li>
-              ))
-            }
-          </ul>
-        </div>
-      </div>
+      <NgoCtaSection />
     </div>
   </section>
 </BaseLayout>
@@ -389,29 +373,7 @@ const ctaLinks = [
     height: auto;
     margin-inline-end: calc(-1 * var(--container-gutter));
   }
-  .hero__cross-link {
-    /* Persistent cross-site switcher: fixed to the viewport's bottom-right so it stays
-       reachable as the page scrolls. Mirrors the Consultancy home's Explore-NGO button. */
-    position: fixed;
-    right: var(--space-lg);
-    bottom: var(--space-lg);
-    z-index: 45; /* above page content, below the sticky header (50) and skip link (100) */
-    display: inline-flex;
-    align-items: center;
-    padding: var(--space-xs) var(--space-lg);
-    border-radius: var(--radius-sm);
-    background: #f5baa6;
-    border: 1px solid var(--color-accent-warm);
-    color: var(--color-accent-warm);
-    font-weight: var(--font-weight-bold);
-    font-size: var(--type-body-lg-size);
-    text-decoration: none;
-    box-shadow: 0 2px 12px rgb(88 28 255 / 0.18); /* legibility when overlapping content */
-  }
-  .hero__cross-link:hover {
-    background: var(--color-accent-warm);
-    color: var(--color-white);
-  }
+  /* The cross-site "Explore Consultancy" pill's styles moved to BrandSwitchLink.astro. */
 
   /* ── Who We Are ─────────────────────────────────────────────────────────── */
   .who__grid {
@@ -477,7 +439,11 @@ const ctaLinks = [
   .programs__intro {
     display: grid;
     gap: var(--space-sm);
-    max-width: 42rem;
+    /* node 5990:4336 is a FIXED 674px column — not a round rem value, so it stays literal
+       (same one-off as /ngo/program's intro). The 2px matters: the lead's natural width
+       measures 672.39px, so a 42rem/672px column overflows it by 0.39px and wraps a
+       single-line paragraph onto two. */
+    max-width: 42.125rem;
     margin-inline: auto;
     margin-bottom: var(--space-4xl);
     text-align: center;
@@ -498,9 +464,45 @@ const ctaLinks = [
     flex-direction: column;
     align-items: center;
     gap: var(--space-xl);
-    padding: var(--space-2xl);
+    /* node 7403:5261 padding is 48 block / 32 inline, NOT 48 all round — the inline 32 is what
+       gives the copy its 572px measure (636 − 2 × 32). /ngo/program's identical card already
+       had this right; Home was the outlier. */
+    padding: var(--space-2xl) var(--space-lg);
     border-radius: var(--radius-md);
     text-align: center;
+
+    /* Over the flat teal sits the design's GLASS overlay (node 12330:13796, the same
+       `GLASS` component 5892:5757 the Consultancy service cards use): ten equal vertical
+       panes, each a white→black→#626262 gradient at ~25% opacity in OVERLAY blend, with a
+       2px black-at-2% divider down its right edge. The panes are `flex: 1` in the design,
+       hence 10% tiles rather than fixed widths.
+
+       Precomputed, not layered: the backdrop is one flat fill (--color-surface-inverse,
+       #0E3E40), so the overlay result is a constant — no mix-blend-mode layer and no
+       stacking context needed. Stops below are that constant, and the model was checked
+       against the live Figma render at six positions across a tile, agreeing to within
+       1/255 everywhere. The design's darkest stop lands at 73.00% here; the Consultancy
+       card's comment says 74.56% for the same component, so one of the two is off — see
+       the design-pass hand-off.
+
+       The design also puts a 2.5px backdrop blur on each pane. Dropped for the same reason
+       it was dropped on Consultancy: the panes sit above an opaque fill, so there is
+       nothing behind them to blur — it would cost 40 backdrop-filter layers per section
+       and change not one pixel.
+
+       Only `background-image` is set here; the teal fill still comes from `.surface-inverse`
+       (which also drives the on-inverse token flip), and this scoped rule outranks it, so
+       the shorthand there no longer clears the overlay. */
+    background-image:
+      linear-gradient(
+        to right,
+        transparent 0,
+        transparent calc(100% - 2px),
+        rgb(0 0 0 / 0.02) calc(100% - 2px)
+      ),
+      linear-gradient(to right, #114d50 0%, #0b2f30 73%, #0d3a3c 100%);
+    background-size: 10% 100%;
+    background-repeat: repeat;
   }
   .programs__card-head {
     display: grid;
@@ -524,6 +526,17 @@ const ctaLinks = [
   }
   .programs__card-desc {
     color: var(--color-text-inverse);
+    /* The design fixes this box at 71px with the copy vertically centred in it (node
+       7403:5273: layoutSizingVertical FIXED, textAlignVertical CENTER) — all four cards
+       carry the same 71, which is what makes the row's "Learn more" links line up and the
+       card reach its designed 311px height. Reserved as a MIN height, not a fixed one:
+       the design's box is `textAutoResize: TRUNCATE`, so copy longer than the box is
+       clipped there, and we'd rather real copy grow the row than disappear. Same call, and
+       the same reasoning, as .services__card's min-height on Consultancy. */
+    min-height: 71px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
   }
 
   /* ── Success Stories ───────────────────────────────────────────────────── */
@@ -650,116 +663,16 @@ const ctaLinks = [
     grid-template-columns: repeat(3, 1fr);
     gap: var(--space-2xl);
   }
-  .news__card {
-    border-radius: var(--radius-md);
-    overflow: hidden;
-    background: var(--color-surface-default);
-    box-shadow: 0 1px 2px rgb(0 0 0 / 0.06);
-  }
-  .news__card-link {
-    display: grid;
-    text-decoration: none;
-    color: inherit;
-    height: 100%;
-  }
-  .news__media {
-    position: relative;
-    display: block;
-  }
-  .news__img {
-    width: 100%;
-    height: auto;
-    aspect-ratio: 395 / 320;
-    object-fit: cover;
-    display: block;
-  }
-  .news__tag {
-    position: absolute;
-    top: var(--space-md);
-    left: var(--space-md);
-    display: inline-block;
-    padding: var(--space-3xs) var(--space-md);
-    border-radius: var(--radius-pill);
-    background: var(--color-white);
-    color: var(--color-accent-warm);
-    font-size: var(--type-body-size);
-    font-weight: var(--font-weight-bold);
-    letter-spacing: var(--type-eyebrow-tracking);
-  }
-  .news__card-body {
-    display: grid;
-    gap: var(--space-lg);
-    padding: var(--space-lg);
-  }
-  .news__title {
-    font-weight: var(--font-weight-bold);
-    font-size: var(--type-lead-size);
-    line-height: var(--type-lead-line);
-    letter-spacing: var(--letter-spacing-lead);
-    color: var(--color-text-default);
-  }
-  .news__date {
-    font-size: var(--type-body-size);
-    color: var(--color-text-default);
-  }
-  .news__card-link:hover .news__title {
-    text-decoration: underline;
-  }
+  /* The news card's own CSS (node 5990:3672 — media 395×320, the tag pill, title and date) now
+     lives in ArticleCard.astro, shared with /ngo/resources and the article page. Only the grid
+     and the row's framing stay here, because they belong to this section rather than the card. */
   .news__more {
     display: flex;
     justify-content: center;
   }
 
-  /* ── CTA ────────────────────────────────────────────────────────────────── */
-  .cta__card {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    border-radius: var(--radius-md);
-    overflow: hidden;
-  }
-  .cta__photo {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
-  }
-  .cta__panel {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-3xl);
-    padding: var(--space-3xl);
-  }
-  .cta__text {
-    display: grid;
-    gap: var(--space-md);
-  }
-  .cta__text h2 {
-    color: var(--color-text-inverse);
-  }
-  .cta__text p.u-body-lg {
-    color: var(--color-text-inverse);
-  }
-  .cta__links {
-    display: grid;
-    border-bottom: 1px solid var(--color-border-on-inverse);
-  }
-  .cta__link {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-sm);
-    padding-block: var(--space-md);
-    border-top: 1px solid var(--color-border-on-inverse);
-    color: var(--color-text-inverse);
-    font-size: var(--type-body-lg-size);
-    text-decoration: none;
-    width: fit-content;
-  }
-  .cta__link:hover {
-    text-decoration: underline;
-  }
-  .cta__link-arrow {
-    flex: none;
-  }
+  /* The CTA card's CSS (node 5990:4479) now lives in NgoCtaSection.astro, shared with
+     /ngo/about. */
 
   /* ── Responsive ─────────────────────────────────────────────────────────── */
   @media (max-width: 1024px) {
@@ -790,9 +703,6 @@ const ctaLinks = [
     }
     .testimonial__photo {
       aspect-ratio: 16 / 10;
-    }
-    .cta__card {
-      grid-template-columns: 1fr;
     }
   }
   @media (max-width: 640px) {

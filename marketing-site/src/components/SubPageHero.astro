@@ -15,27 +15,34 @@
  * a named role rather than the one-off it was first recorded as.
  *
  * The heading renders as <h1>: this is the page's document title on every route that uses it.
+ *
+ * NGO reuses this. The 2026-08 redesign of the NGO About frame (12330:13416) replaced its white
+ * breadcrumb header with this exact treatment — same 1440×670 frame, same `SOLID rgb(0,0,0) @
+ * opacity 0.25` overlay, same 120px bottom inset, same 64/56/700/−0.26 centred title — but with
+ * its OWN photo (`imageRef` 8ab4e0ec…, not 55fffb0d…). Hence `photo`: the geometry is the
+ * constant, the image is not. Consultancy's seven routes pass nothing and render unchanged.
+ * The NGO Partners and Program frames have since grown the same hero. Program was brought over on
+ * 2026-08-07 and shares About's photo exactly (`ngoHeroPhoto`, byte-identical fills), so both
+ * pass the same prop. Partners still renders the old breadcrumb header in code — see the
+ * design-pass hand-off.
  */
 import { Image } from 'astro:assets';
+import type { ImageMetadata } from 'astro';
 import { servicesHeroPhoto } from '@lib/services-images';
 
 interface Props {
   /** The hero headline — the *category* name ("Test Registration"), not the page's own. */
   title: string;
+  /** Defaults to the Consultancy sub-page photo, the only image the seven original nodes use. */
+  photo?: ImageMetadata;
 }
 
-const { title } = Astro.props;
+const { title, photo = servicesHeroPhoto } = Astro.props;
 ---
 
 <section class="subpage-hero">
   <div class="subpage-hero__media">
-    <Image
-      src={servicesHeroPhoto}
-      alt=""
-      width={1440}
-      height={670}
-      class="subpage-hero__photo"
-    />
+    <Image src={photo} alt="" width={1440} height={670} class="subpage-hero__photo" />
     <div class="subpage-hero__scrim" aria-hidden="true"></div>
   </div>
   <div class="container subpage-hero__content">

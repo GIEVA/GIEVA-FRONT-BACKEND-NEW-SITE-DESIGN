@@ -44,13 +44,13 @@ read-frame-then-slice discipline. One page = one session is a hard rule.
 Statuses: `pending` → `ingested` (node.json + frame.png + assets committed) → `built` →
 `verified` (parity + a11y + Lighthouse pass, route in `tests/routes.ts`).
 
-| Page       | Route           | Figma node-id | Status   | Notes                                                                                                                                                                                                                |
-| ---------- | --------------- | ------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Home       | `/ngo`          | `5990-3672`   | verified | Built Phase 1 — parity + a11y + Lighthouse pass, route in `tests/routes.ts` + `lighthouserc.json` (see Phase 1 note)                                                                                                 |
-| About      | `/ngo/about`    | `7429-5025`   | verified | Built Phase 3 — "ABOUT PAGE NGO" confirmed the genuine About page; parity + a11y + Lighthouse pass, route in `tests/routes.ts` + `lighthouserc.json` (see Phase 3 note)                                              |
-| Partners   | `/ngo/partners` | `7434-8750`   | verified | Built Phase 2 — node-id confirmed correct (frame is mislabeled "ABOUT PAGE NGO" but is the real Partners page); parity + a11y + Lighthouse pass, route in `tests/routes.ts` + `lighthouserc.json` (see Phase 2 note) |
-| Program    | `/ngo/program`  | `7447-6027`   | verified | Built Phase 4 — "PROGRAM PAGE NGO" confirmed by frame name (no collision); parity + a11y + Lighthouse pass, route in `tests/routes.ts` + `lighthouserc.json` (see Phase 4 note)                                      |
-| Contact us | `/ngo/contact`  | `7461-5854`   | verified | Built Phase 5 — "CONTACT US PAGE NGO" confirmed by frame name; parity + a11y + Lighthouse pass, route in `tests/routes.ts` + `lighthouserc.json` (see Phase 5 note)                                                  |
+| Page       | Route           | Figma node-id | Status   | Notes                                                                                                                                                                                                                    |
+| ---------- | --------------- | ------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Home       | `/ngo`          | `5990-3672`   | verified | Built Phase 1 — parity + a11y + Lighthouse pass, route in `tests/routes.ts` + `lighthouserc.json` (see Phase 1 note)                                                                                                     |
+| About      | `/ngo/about`    | `7429-5025`   | built    | Built Phase 3; **rebuilt 2026-08-07** against the redesigned frame (see the Design-pass note below). a11y passes and N11 is now closed; CI visual baselines need regenerating, so not back to `verified` yet             |
+| Partners   | `/ngo/partners` | `7434-8750`   | verified | Built Phase 2 — node-id confirmed correct (frame is mislabeled "ABOUT PAGE NGO" but is the real Partners page); parity + a11y + Lighthouse pass, route in `tests/routes.ts` + `lighthouserc.json` (see Phase 2 note)     |
+| Program    | `/ngo/program`  | `7447-6027`   | built    | Built Phase 4; **rebuilt 2026-08-07** against the redesigned frame (see the Design-pass note below). a11y passes and N12/N13 are now closed; CI visual baselines need regenerating, so not back to `verified` yet        |
+| Contact us | `/ngo/contact`  | `7461-5854`   | built    | Built Phase 5; **rebuilt 2026-08-07** against the redesigned frame (see the Design-pass note below). a11y passes, N16 is now closed and N20 opened; CI visual baselines need regenerating, so not back to `verified` yet |
 
 > **Phase 0A note (recorded during 0B).** Phase 0A had not actually landed when 0B began — the
 > `design/figma/**` tree held only the _Consultancy_ nodes, and the status table read `pending`.
@@ -229,7 +229,181 @@ builds, **not** a second design system:
 >   `partners-form*` classes can't swallow the Consultancy page's passing nodes. Everything
 >   structural (landmarks, heading order, keyboard, focus, reduced-motion) passes clean.
 
-> **Phase 3 — About decisions recorded (done).** Built `src/pages/ngo/about.astro` against node
+> **Design pass — About rebuilt 2026-08-07 (done).** Node `7429:5025` was **redesigned after the
+> Phase 3 build**, so most of the Phase 3 record below now describes a frame that no longer
+> exists. The committed `design/figma/…/7429-5025/node.json` is the 2026-07-20 fetch and is
+> **stale** (5547px tall; the live frame is 4066px). This pass read the live node through the
+> Figma MCP; only the new hero fill (`fill-8ab4e0ec…`, imageRef read off node 12330:13417) was
+> added to the snapshot, by hand, because no `FIGMA_API_KEY` was available. **Re-run
+> `npm run figma:fetch -- "<about-url>"` to resync `node.json` before trusting it again.**
+>
+> - **What the redesign changed:** a full-bleed photo hero + "Who We Are" h1 replaced the
+>   "HOME / ABOUT" breadcrumb header (which is gone entirely, closing a11y issue N11); the boat
+>   photo that opened the intro was dropped; Core Values became five title-case headings with
+>   descriptive paragraphs in a 2-col grid, with the source typos fixed upstream
+>   ("INTERGRITY"→"Integrity", "EMPOERMENT"→"Empowerment", and "INCLUSIVENESS"→"Inclusivity", a
+>   different word); and the whole Core Team section — eyebrow, "Every Major Test. One Trusted
+>   Partner.", lead paragraph and 8 portrait cards — was deleted, taking its documented
+>   green/orange accent inversion with it. **"Mision" was NOT fixed** and stays verbatim.
+> - **Reuse:** the hero is Consultancy's `SubPageHero`, which grew a `photo` prop — the redesign
+>   gave NGO the identical 1440×670 / 25%-scrim / bottom-120 / `u-page-title` treatment with a
+>   different image. The CTA rows are real `GIEVA Button` instances in the design and now render
+>   as `Button` (new `on-inverse` variant), retiring one of the three hand-drawn arrow copies
+>   Button.astro's header tracks.
+> - **Type correction:** the section headings moved from `u-section-title` to `u-h2`. The design's
+>   `GIEVA.org/Arial/Heading 2` tracks −0.26px; `u-section-title` resolves to
+>   `--letter-spacing-display` (−3.3px, the 110px display step) and rendered visibly tighter.
+>   Fixed page-locally — **`--type-section-title-tracking` looks wrong at the token layer, which
+>   would affect all 18 routes; deliberately not changed here.**
+> - **Known residual:** the CTA panel measures 686px against the design's 676. The three row
+>   buttons render 54px (NGO's `--control-padding-block`, calibrated against NGO's own button
+>   instances) where these three instances measure 52px. Left as-is rather than overriding the
+>   shared component for one page — the design's own button heights disagree between instances.
+> - **Sibling drift, NOT addressed:** the Partners (`7434:8750`) and Program (`7447:6027`) frames
+>   have grown the same photo hero and still render the old breadcrumb header in code. Contact
+>   not checked. `/ngo/about` is currently the only NGO route in the new style.
+>   **Program has since been done — see the note below. Partners and Contact are still open.**
+>
+> **Design pass — Program rebuilt 2026-08-07 (done).** Node `7447:6027` was **redesigned after the
+> Phase 4 build**, the same sweep that hit About, so much of the Phase 4 record below now
+> describes a frame that no longer exists. The committed `design/figma/…/7447-6027/node.json` is
+> the 2026-07-20 fetch and is **stale** (4593px tall; the live frame is 4264px). This pass read
+> the live node through the Figma MCP; only the re-cropped detail fill
+> (`fill-1b88c3421e…-cropped.png`) was added to the snapshot, by hand, because no `FIGMA_API_KEY`
+> was available. **Re-run `npm run figma:fetch -- "<program-url>"` to resync `node.json` before
+> trusting it again.**
+>
+> - **What the redesign changed:** a full-bleed photo hero + "Our Programs" h1 replaced the
+>   "HOME / PROGRAMS" breadcrumb header (gone entirely, closing a11y issue N12); and the whole
+>   **Partner Programs** block — centred intro plus the three deep-teal cards of the old node
+>   `7447:6518` — was **deleted**, closing N13. The design now runs GVP straight into "Contact Us
+>   Now" with no section between them and no replacement. Deleting live copy off one frame was
+>   flagged for sign-off and confirmed by the user before removal.
+> - **Reuse:** the hero is `SubPageHero` with the shared `ngoHeroPhoto`. The Program and About
+>   hero fills are **byte-identical** (diffed at equal size, RMSE exactly 0), so
+>   `src/lib/ngo-about-images.ts` was renamed `ngo-hero-images.ts` and its export
+>   `aboutHeroPhoto` → `ngoHeroPhoto`. That also retires a genuine name collision: Consultancy's
+>   `src/lib/about-images.ts` exports a _different_ photo under the same old name.
+> - **Detail photos, three corrections:** the design gives them **no corner radius** (confirmed by
+>   cropping the rendered node's corners — "rounded-rectangle" in the metadata is just Figma's
+>   node type, not a radius), **mirrors** them (`scaleX(-1)`), and aligns the fill to
+>   `object-position: bottom`. The fill also carries a **crop transform** (~0.7 zoom, offset
+>   down/right) that `figma-fetch` does not download — it fetches the raw imageRef — so the raw
+>   file frames the shot wider than any frame ever shows it. The MCP-exported cropped file is now
+>   what `ngo-program-images.ts` imports; the raw fill stays in the directory as the true export.
+> - **Copy-column spacing:** the two gaps in the column differ in the design and had been built as
+>   one. Heading→copy is 40px (node `7463:5841`), paragraph→button is 64px (node `7463:5844`);
+>   both were `--space-lg` (32px). The column also carries 40px block padding.
+> - **Contact panel row height — a real parity bug, not a redesign change.** The panel measured
+>   **796px** against the frame's **1020px**. Its seven rows are a fixed **74px** in the design
+>   (the input box is only 42px of that; the remaining 32px is empty), but the CSS let them size
+>   to content and they collapsed to 42px — 224px of missing panel. Now `grid-auto-rows: 74px`
+>   with `align-items: start` and an 8px label offset. Arithmetic reconciles: 7 × 74 + 6 × 16 =
+>   614 (node `7447:6451`) and 64 + 96 + 64 + 614 + 64 + 54 + 64 = 1020.
+> - **Type, deliberately NOT changed:** "Contact Us Now" keeps `u-section-title`. About moved its
+>   headings to `u-h2` because _About's_ specify tracking −0.26 — but this frame's h2
+>   (node `7447:6448`) really does carry **−3.3px**, which is what `u-section-title` resolves to.
+>   Do not propagate About's fix here.
+> - **Verified geometry (rendered, not eyeballed):** hero 1440×670 with the title 427×56 at
+>   x=506; details 1312×450 at 120px intervals; copy column 40/92/40/120/64/54/40 = 450; contact
+>   panel 1312×1020. Document height 4366 = the design's 4264 + our 102px in-flow header, i.e.
+>   the shell-level header-overlay gap and nothing else.
+> - **Sibling drift, NOT addressed:** `/ngo/partners` carries a byte-identical copy of the contact
+>   form's CSS (`align-items: center`, content-sized rows) and so almost certainly has the same
+>   74px row bug — but its own frame (`7434:8750`) was not measured in this pass, so it was left
+>   alone rather than changed blind. **Measure `7434:8750` before assuming the fix transfers.**
+>   Partners and Contact also still render the old breadcrumb header.
+>   **Contact has since been done — see the note below. Partners is the last one open.**
+>
+> **Design pass — Contact rebuilt 2026-08-07 (done).** Triggered by a review of node `7447:6444`,
+> which turned out to be _Program's_ "Contact Us Now" panel rather than anything on
+> `/ngo/contact` — the real frame is `7461:5854`, and it had been **redesigned after the Phase 5
+> build**, the same sweep that hit About and Program. The committed
+> `design/figma/…/7461-5854/node.json` is the 2026-07-20 fetch and is **stale** (2660px tall; the
+> live frame is 2974px). This pass read the live node through the Figma MCP and added no new
+> assets — the hero photo is already in the tree. **Re-run
+> `npm run figma:fetch -- "<contact-url>"` to resync `node.json` before trusting it again.**
+>
+> - **What the redesign changed — one thing only:** a full-bleed photo hero + "Contact" h1 (node
+>   `12330:13424`) replaced the "HOME / PROGRAMS" breadcrumb header, closing a11y issue N16
+>   exactly as N11/N12 closed on About/Program. Note the title is **"Contact"**, not "Contact Us"
+>   — the design shortened it. The contact-info block and the form panel are the same nodes at
+>   the same sizes; everything else below is a parity bug this pass caught, not a redesign delta.
+> - **Reuse:** the hero is `SubPageHero` with the shared `ngoHeroPhoto` — the Contact fill is
+>   **byte-identical** to About's and Program's (4096×3067, diffed at equal size, RMSE exactly 0),
+>   so all three NGO sub-pages now pass the same prop and no fourth asset was committed.
+> - **Contact panel row height — the same 74px bug that was fixed on Program**, and the reason
+>   that fix's hand-off said to check the siblings. The panel measured **796px** against the
+>   frame's **1020px**: its seven rows are a fixed 74px in the design (the input box is only 42px;
+>   the remaining 32px is empty) but the CSS let them size to content. Now `grid-auto-rows: 74px`
+>   with `align-items: start` and an 8px label offset. Arithmetic reconciles: 7 × 74 + 6 × 16 =
+>   614 (node `7461:5944`) and 64 + 96 + 64 + 614 + 64 + 54 + 64 = 1020.
+> - **Contact-info block — four small misses, all now fixed.** (a) The micro-labels are the
+>   design's named style "GIEVA.org/Arial/Narrow" (Arial Narrow 14/20/−0.14), which is exactly the
+>   `--type-label-*` role — they were hand-rolled on the base family, so they now use **`.u-label`**.
+>   (b) Each label+row group carries an **8px horizontal inset** (node `7461:6194` etc.) that was
+>   missing, so the whole block sat 8px left of the design. (c) The location pin was authored
+>   **16×20** with its glyph in the bottom 15px — a 24-space icon in the wrong viewBox — rendering
+>   ~4px low and reserving 20px of row; re-anchored to 16×16 by shifting every y by −4, which
+>   reproduces the export's 8.33%/37.5% insets exactly. (d) The phone/email/hours rows are
+>   `items-center` in the design, not `items-start`; only the three (two-line) address rows are
+>   start-aligned, with a 4px pin offset. The call/mail/clock paths were re-diffed against the
+>   design's own SVG exports and match character-for-character, float rounding aside.
+> - **Input padding is asymmetric on purpose:** 8px top, 10px bottom (node `7461:5949`), which is
+>   what makes the box 42px around a 24px line. It had been an even 8/8.
+> - **Placeholder opacity — a deviation the client chose knowingly.** The design's "Your Answer"
+>   runs sit at `opacity: 0.5` (node `7461:5950`); we shipped full-opacity white. Matching it was
+>   flagged as the one change that _introduces_ a contrast gap — white at 50% over the teal is
+>   `#879FA0`, **4.21:1**, against 11.79:1 for the full-opacity white it replaces — with a
+>   recommendation to leave it. The client asked for it anyway, so it is matched and tracked as
+>   **N20**, with the revert path recorded. **N20 has no `tests/a11y.spec.ts` allowlist entry and
+>   needs none:** axe-core's `color-contrast` rule does not evaluate `::placeholder` text at all
+>   (verified against the rebuilt page — 16 contrast nodes reported, no `<input>` among them).
+> - **Verified geometry (rendered, not eyeballed):** hero 1440×670, body 1680 (120 + info 300 +
+>   120 + panel 1020 + 120), info block 1312×300, panel 1312×1020, footer 624 — every one matching
+>   the live node. Document height 3076 = the design's 2974 + our 102px in-flow header, i.e. the
+>   shell-level header-overlay gap and nothing else.
+> - **Still open, deliberately:** `/ngo/partners` is now the **last** NGO route on the old
+>   breadcrumb header, and it carries a byte-identical copy of this form's CSS — so it almost
+>   certainly has the same 74px row bug, and its design almost certainly has the same 50%
+>   placeholder. Its frame (`7434:8750`) was not measured in this pass either, so it was again
+>   left alone rather than changed blind. Program's and Partners' placeholders remain at full
+>   opacity; only Contact was changed, since only Contact was measured and signed off.
+>
+> **CTA unified into `NgoCtaSection.astro` — 2026-08-08 (done).** Client-reported: the closing
+> "Ready to Join the Movement?" panel behaved differently on `/ngo` than on `/ngo/about` (visible
+> on hover), and they preferred About's button treatment. Both pages now render one component.
+>
+> - **Home's rows were a translation gap, not a design difference.** The About design pass had
+>   recorded that Home's CTA was "a DIFFERENT (older) shape … its links are not button instances"
+>   and left it alone on that basis. **That was wrong.** Home's three rows are the same
+>   `GIEVA Button` instances (`componentId 5995:7321`, `Type: "NGO Tetiary"`, 52px, arrow shown)
+>   — in the live frame read through the Figma MCP (node `5990:4479`) _and_ in Home's own
+>   committed `node.json`, which has said so since the 2026-07-20 fetch. So Home's hand-rolled
+>   anchors (text-width hit target, a hover underline the design never specifies, the hand-drawn
+>   15×13 stroked arrow that is ~11% small and ~28% heavy) are now `Button variant="on-inverse"`,
+>   matching About. This retires the second of the three hand-drawn arrow copies Button.astro
+>   tracked; only `SiteFooter.astro` still carries one.
+> - **Home's CTA heading moves `u-section-title` → `u-h2`, measured off the live frame.** Both
+>   CTA headings render their first line **340px wide** (Home's node screenshot at 1:1; About's at
+>   0.579 → 197/0.579 = 340.1), so both track **−0.26px**, not the −3.3px display step. Home's
+>   committed `node.json` still reports −3.3 for `5990:4488` — it predates the redesign sweep, so
+>   trusting it here would have shipped visibly tighter type. Same page-local correction About and
+>   Program already made; `--type-section-title-tracking` remains suspect at the token layer and is
+>   still deliberately unchanged.
+> - **Copy block regrouped on both pages.** The source nests eyebrow + heading in one auto-layout
+>   frame (16px gap) and sets 32px from that frame to the body paragraph (nodes `5990:4482` /
+>   `5990:4485`). Both pages had flattened it to a single 24px gap; the component restores the
+>   two-group structure, the same fix `CtaSection.astro` documents for Consultancy.
+> - **`cta__panel` kept deliberately.** `tests/a11y.spec.ts` matches tracked contrast issues N4
+>   (orange eyebrow) and N7 (green "Movement?") on that class name, so renaming it would silently
+>   un-allowlist two signed-off gaps. `npx playwright test tests/a11y.spec.ts -g "ngo"` green on
+>   all six routes.
+> - **Baselines:** `/ngo` and `/ngo/about` both change visibly (row treatment, arrow glyph, Home's
+>   heading tracking, copy-block spacing) — **CI visual baselines for both need regenerating.**
+>
+> **Phase 3 — About decisions recorded (superseded by the design pass above).** Built
+> `src/pages/ngo/about.astro` against node
 > `7429:5025` ("ABOUT PAGE NGO" — confirmed the genuine About page, "Our Story"; the sibling
 > `7434:8750`, also named "ABOUT PAGE NGO", is the real Partners page, resolved in Phase 2).
 >
@@ -278,7 +452,7 @@ builds, **not** a second design system:
 >   Everything structural (landmarks, heading order, keyboard, focus, reduced-motion) passes
 >   clean.
 
-> **Phase 4 — Program decisions recorded (done).** Built `src/pages/ngo/program.astro` +
+> **Phase 4 — Program decisions recorded (superseded by the design pass above).** Built `src/pages/ngo/program.astro` +
 > `src/lib/ngo-program-images.ts` against node `7447:6027` ("PROGRAM PAGE NGO" — confirmed by
 > frame name, no collision to resolve unlike About/Partners). The most net-new NGO page, as
 > expected — no direct Consultancy analog — but it recombines established NGO patterns rather than
@@ -382,6 +556,34 @@ builds, **not** a second design system:
 > **All five NGO pages are now verified — Phase 6 (cross-page parity sweep + enhancement) is
 > unblocked.**
 
+> **Shell change — cross-site switcher promoted to all 18 routes (AWAITING CLIENT SIGN-OFF).**
+> The "Explore Consultancy" / "Explore NGO" pill was authored into each Home hero, so the other
+> 16 routes had no visible way across — worse on NGO, where `ngoPrimaryNav` is flat and
+> Consultancy's header at least carries a "Switch GIEVA" dropdown on every page. The two copies
+> had also drifted (a stray arrow glyph on Consultancy, different padding, different shadow,
+> different fill opacity).
+>
+> - **Collapsed into `src/components/BrandSwitchLink.astro`**, rendered by `BaseLayout` after the
+>   footer (outside `<main>`, so it stays out of the pagefind index). Both source instances are
+>   the _same_ Figma component — `GIEVA Button`, `Type: "C Secondary"`, `Show ArrowRight: false`,
+>   radius 8, padding 12/32, 1px stroke, fill @ 0.75, 18px Bold — nodes **5986:3665**
+>   (Consultancy Home 5891:4663) and **5990:4604** (NGO Home 5990:3672).
+> - **Deviation 1 — reach.** The design only _places_ the pill on the two Home frames, though
+>   both nodes are `isFixed: true` / `scrollBehavior: FIXED`, i.e. drawn as viewport-pinned
+>   chrome rather than hero content. Rendering it everywhere is our call and needs sign-off.
+> - **Deviation 2 — box-shadow.** Not in either node (`effects: []`). Kept, and now more load-
+>   bearing than before: the pill floats over 18 pages of arbitrary content, not two hero toruses.
+> - **Two slips corrected, not deviations.** Consultancy's copy carried an arrow glyph although
+>   `Show ArrowRight` is `false` on both instances; NGO's fill was flat `#f5baa6` although the
+>   node specifies 0.75 opacity. Correcting the alpha _improved_ NGO's tracked contrast ratio
+>   from 2.22:1 to 2.53:1.
+> - **Gates:** all 18 a11y routes pass. The Consultancy half now fails `color-contrast` where it
+>   previously read as passing (3.34:1 — it only escaped axe on Home because the torus behind it
+>   made the background indeterminate), so the tracked entry is now cross-brand: **issue 7 / N5**
+>   in `docs/a11y-known-issues.md`, allowlisted once as `['brand-switch']`. Lighthouse is
+>   unaffected (every route already sat at 0.96). **All 18 visual baselines need regenerating in
+>   the canonical container** — the pill is a visible change on 16 routes.
+
 ### Phases 1–5 — one NGO page per session
 
 Recommended order — Home first to establish patterns; Partners early as the cheap
@@ -419,6 +621,173 @@ reuse-validation win (mirrors how Consultancy built its reusable template early)
 
 Cross-page consistency pass, then the deferred motion/craft layer — exact-replica first,
 delight second (`CLAUDE.md` non-negotiable #1), in separate commits.
+
+#### Masthead fit ladder — authored, 2026-08-03
+
+The design authorises exactly one width (1440) and there is no NGO mobile frame, so everything
+between 1440 and the disclosure is ours. It was previously `flex-wrap: wrap` with the disclosure
+at 900px — and because the lockup and the actions group are both `flex: none`, the nav was the
+only thing in the pill that could give. Below **1420px** it broke the five labels onto two and
+three rows and grew the pill from 86px to 120px. 1366px, the most common laptop width, sat
+squarely in that band. `SiteHeader` had the same defect with a 1303px floor.
+
+Both mastheads now step down through measured tiers instead (`NgoSiteHeader.astro` /
+`SiteHeader.astro`, `@media` block at the foot of each stylesheet), pinned by
+`tests/header-fit.spec.ts`:
+
+|                         | NGO                | Consultancy                         |
+| ----------------------- | ------------------ | ----------------------------------- |
+| design-exact            | ≥1420 (floor 1414) | ≥1300 (floor 1287)                  |
+| cells hug their labels  | ≥1340 (floor 1321) | — no per-cell `minWidth` to give up |
+| our own slack comes off | ≥1260 (floor 1241) | ≥1230 (floor 1215)                  |
+| disclosure              | <1260              | <1230                               |
+
+Two things worth knowing before touching this:
+
+- **Nothing in the ladder fires at 1440**, so parity with `7429:5891` is untouched. Tier A is
+  deliberately the tightest (6px headroom) — every pixel below 1420 that stays in Tier A is a
+  pixel of design fidelity, and the 90.64px cells are what produce the design's label rhythm.
+- **The failure mode is invisible.** With `justify-content: space-between`, content that exceeds
+  the pill silently eats the pill's own padding rather than overlapping or scrolling the page —
+  it never looks broken. That is why the spec asserts SLACK ≥ 0 and not just "no overflow"; a
+  hand sweep of the range missed Consultancy overflowing by 6.8px at 1280 and 14.8px at 1200.
+  If a nav label or button word legitimately grows, re-measure and move the threshold rather
+  than widening the tolerance.
+
+#### `Button` arrow box — corrected, 2026-08-03
+
+The arrow was drawn at 15×13, the size of the glyph. All **103** `ArrowRight` nodes across every
+ingested frame are a 20×20 frame wrapping a 15.00×12.50 vector — the transparent margin is part
+of the component's metrics. Every arrow-bearing button on both sites was therefore 5px narrow:
+NGO's header measured 154.1/196.1 against the design's 160/202, and the 11.8px shortfall in the
+actions group pushed the whole nav 6.4px right of its designed position via `space-between`.
+Now 159.1/201.1 and the nav is within 1.4px — the residue is Liberation Sans standing in for
+Arial (~1px per string), not a layout error.
+
+Not replicated, deliberately: the design's Donate arrow vector is `#292929` while its label is
+green — an unoverridden component default, not an intent. Ours stays `currentColor`.
+
+## Cross-page link map
+
+Added 2026-08-08. The NGO site's internal links were audited end to end; this section is the
+durable record of what was found, what was fixed, and what is still open. **Read it before
+adding or repointing any NGO link.**
+
+### Routes that are linked but do not exist
+
+Three `/ngo/*` paths were referenced from built pages and 404ed. None has a Figma frame — the
+file holds five NGO frames (see the page index above) and no Resources, Donate or Get-Involved
+screen — so none can be built exact-replica-first. They are listed here rather than papered
+over, and the count is why they matter:
+
+| Missing route        | Inbound links | Linked from                                                                                   |
+| -------------------- | ------------- | --------------------------------------------------------------------------------------------- |
+| ~~`/ngo/resources`~~ | ~~11~~        | **BUILT 2026-08-11** — see "NGO Resources" below. Still no frame; built as a design proposal. |
+| `/ngo/donate`        | 6             | NGO masthead ×2, Home hero secondary, `NgoCtaSection` row 2 (`/ngo` + `/ngo/about`)           |
+| `/ngo/get-involved`  | 6             | NGO masthead ×2, Home hero primary, `NgoCtaSection` "Volunteer" row (`/ngo` + `/ngo/about`)   |
+
+`/terms`, `/privacy` (footer bottom bar) and `/resources` (footer Consultancy column) are the
+same class of gap, site-wide rather than NGO-specific.
+
+**Open question for the client**, in priority order: (1) ~~does a Resources/news system exist to
+design against, or is it CMS-backed~~ — **answered 2026-08-11: CMS-backed.** The handoff repo's
+backend already ships the article store, a public read API and an admin dashboard; the marketing
+site now consumes it. (2) is "Donate" a real payment flow — if so it is a backend integration,
+not a marketing page, and should be scoped that way rather than built as a screen; (3) Get
+Involved is the only one the existing component set could carry as-is. Until (2) and (3) are
+answered the masthead's "Donate" CTA, on every NGO page, still leads nowhere.
+
+## NGO Resources — CMS-backed, and a design proposal (2026-08-11)
+
+`/ngo/resources` and `/ngo/resources/[slug]` are built. **Neither has a Figma frame**, so both
+are **design proposals awaiting client sign-off**, assembled the same way `/404` was: only out of
+vocabulary the design already confirms. Read this before changing either page.
+
+**Where the content comes from.** The handoff repo's backend (`GIEVA/…`, `backend/`) owns the
+articles: `Article` model, a public read API at `/api/public/articles*`, and the
+`AdminArticles`/`CreateArticle`/`EditArticle` dashboard. `src/lib/articles.ts` is the only module
+that knows the API exists. Fetching happens **at build time**, keeping the zero-JS baseline, full
+SEO, and Pagefind coverage of article bodies — the trade is that publishing needs a rebuild, so
+the dashboard must fire a deploy webhook. `GIEVA_API_URL` selects the backend; **unset, the build
+runs on fixtures**, which is how dev machines and CI work and what gives the two routes stable
+visual baselines.
+
+**What was borrowed, not invented.** Hero: `SubPageHero` + `ngoHeroPhoto`. Intro: Home's
+"Recent News" block. Cards: `ArticleCard`, which IS Home's news card (node 5990:3672) lifted into
+a component — Home now renders it too, replacing three copies of one hard-coded placeholder, so
+the row's design is unchanged but its content is real and each card deep-links to its article.
+Closing CTA: `NgoCtaSection`.
+
+**The authored decisions, i.e. what to actually review:**
+
+- **The reading measure** — `50rem` (~800px, ~85 characters at the 18px body). Nothing in the
+  design speaks to long-form running text; the bare 1200px container would set ~150 characters.
+  Widened from a narrower first pass on client direction 2026-08-11.
+- **In-article heading sizes** — body `h2` takes the design's 24px "lead" step, not
+  `--type-h2-size` (48px). 48px is the full-width section-title scale and competes with the 64px
+  article title inside the measure. The scale jumps 48 → 24 with nothing between; `h3` and deeper
+  all land on 18px bold, a documented limitation rather than an invented step.
+- **Author-entered headings are demoted** to start at `h2` (`@lib/article-html`), because Tiptap
+  lets authors pick `h1` and the page already has one — otherwise a CMS edit could red the axe
+  gate on a page nobody touched.
+- **CMS HTML is sanitised at build** against the editor's real extension set. Nothing sanitises
+  in the API. YouTube embeds degrade to links rather than shipping a third-party iframe.
+- **Empty states are real** — the listing says so plainly, and Home's whole news section is
+  suppressed when there are no articles rather than framing an empty grid.
+- **Deferred:** category filtering (zero-JS means a route per category — scope that should follow
+  a design, not precede it) and cover-image optimisation (remote URLs need
+  `image.remotePatterns`, and the CDN host isn't confirmed).
+
+**Contrast:** both routes extend tracked issue N3 (orange `#E65320` on white, 3.73:1) — the same
+confirmed pairing already accepted on Home. See `docs/a11y-known-issues.md`.
+
+**Asks outstanding on the backend dev:** an explicit `site` column so brand filtering isn't
+overloaded onto `category` (currently keyed on `tags`, which is a fuzzy `LIKE` match); moving the
+`views` increment off `GET /articles/slug/:slug`, which mutates on read and is inflated by every
+build and crawler; and the publish→rebuild webhook.
+
+### Fixed 2026-08-08
+
+- **`/ngo/program` detail sections carry `id`s** (`#step`, `#heals`, `#gvp`), and Home's program
+  cards deep-link to them. Previously all four cards pointed at the page root.
+- **The three "Learn more about us" buttons on `/ngo/program` pointed at `/ngo/program`** — the
+  page rendering them. Now `/ngo/about`, which is what the design's own label names.
+- **`scroll-padding-top` on `<html>`** (`src/styles/base.css`) so anchored sections clear the
+  sticky masthead (98px Consultancy / 102px NGO wrapper) instead of landing behind it. Global on
+  purpose — per-section `scroll-margin-top` drifts.
+- **Anchor targets added** for cross-page CTAs: `#become-a-partner` (`/ngo/partners`) and
+  `#contact-form` (`/ngo/contact` and `/ngo/program`).
+- **`/404` now exists** (`src/pages/404.astro`), in `tests/routes.ts`. No frame exists for it, so
+  it is built only from confirmed primitives and adds no new visual vocabulary — replace it with
+  a real frame if one is drawn, don't reconcile the two. It is `data-pagefind-ignore`d so it
+  can't surface in site search, and it lists both sites' real routes because a static 404 is
+  built once at `/404` and so always resolves to `data-brand="consultancy"`.
+
+### Deliberate deviations awaiting sign-off
+
+- **Footer NGO column carries a fourth item, "Partners"** (`src/lib/nav.ts`). The design gives
+  every footer column exactly three. `/ngo/partners` is a built, verified route that the design
+  places in no persistent navigation at all — not the 5-item masthead (7417:7718), not the
+  footer — leaving `NgoCtaSection`'s "Other Partnership Opportunities" row, present on only 2 of
+  6 NGO pages, as its single inbound link. **This changes the footer on all 18 routes, so every
+  committed visual baseline needs regenerating in the pinned container.**
+- **Two of Home's four program cards still point at `/ngo/program` root**, not an anchor. The
+  design's own two frames disagree about the programme set: Home names STEP · CHOICES · GVP ·
+  PARTNERSHIP PROGRAMS (node 5990:3672), Programs details STEP · HEALS · GVP (node 7447:6027).
+  CHOICES has no section anywhere; PARTNERSHIP PROGRAMS is titled for partnerships but carries
+  HEALS's description verbatim. Both readings are defensible, neither is confirmed, so no anchor
+  was guessed. **Client question: which is right — is CHOICES retired, or is HEALS missing from
+  Home, or are Home's four cards meant to be four separate programme pages?**
+
+### Known, out of scope for this pass
+
+The **Consultancy** nav's seven anchor links are all dead: `/services#heals`,
+`#admission-processing`, `#scholarship-advising`, `#career-guidance`,
+`#tuition-acceptance-fee-payments`, and `/services/professional-development#teacher-training`,
+`#technology-training`. Neither `src/pages/services.astro` nor
+`src/pages/services/professional-development.astro` defines a single `id`, so every one of them
+lands at the top of the page. Same class of bug as the NGO anchors, fixed the same way — logged
+in `docs/consultancy-build-plan.md`, not fixed here.
 
 ## Verification checklist (run every phase — non-negotiable)
 
