@@ -11,7 +11,7 @@ import {
   Tooltip, Dialog, DialogTitle, DialogContent,
   DialogActions, Alert, Snackbar, Divider, Switch,
   FormControlLabel, Table, TableBody, TableCell,
-  TableHead, TableRow, Collapse,
+  TableHead, TableRow, Collapse, InputAdornment,
 } from "@mui/material";
 
 import {
