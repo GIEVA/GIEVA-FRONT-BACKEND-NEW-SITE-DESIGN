@@ -55,7 +55,7 @@ const STATUS_CONFIG = {
 };
 
 const fmt = (n) =>
-  new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN", minimumFractionDigits: 0 })
+  new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2 })
     .format(n);
 
 // ─── Empty field template ─────────────────────────────────────
@@ -242,11 +242,14 @@ const PricingConfig = ({ pricingType, flatPrice, priceVariants, onChange }) => {
       </TextField>
 
       {pricingType === "flat" && (
-        <TextField fullWidth size="small" type="number" label="Price (NGN) *"
+        <TextField fullWidth size="small" type="number" label="Price (USD) *"
           value={flatPrice}
           onChange={(e) => onChange("flatPrice", Number(e.target.value))}
-          InputProps={{ inputProps: { min: 0 } }}
-          helperText={flatPrice > 0 ? `= ${fmt(flatPrice)}` : ""}
+          InputProps={{
+            inputProps: { min: 0, step: 0.01 },
+            startAdornment: <InputAdornment position="start">$</InputAdornment>,
+          }}
+          helperText={flatPrice > 0 ? fmt(flatPrice) : ""}
           sx={{ "& fieldset": { borderColor: BORDER } }} />
       )}
 
@@ -277,9 +280,13 @@ const PricingConfig = ({ pricingType, flatPrice, priceVariants, onChange }) => {
                     sx={{ "& fieldset": { borderColor: BORDER } }} />
                 </Grid>
                 <Grid item xs={12} sm={4}>
-                  <TextField fullWidth size="small" type="number" label="Price (NGN)"
+                  <TextField fullWidth size="small" type="number" label="Price (USD)"
                     value={pv.price}
                     onChange={(e) => updateVariant(pv._id || pv.key, "price", Number(e.target.value))}
+                    InputProps={{
+                      inputProps: { min: 0, step: 0.01 },
+                      startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                    }}
                     helperText={pv.price > 0 ? fmt(pv.price) : ""}
                     sx={{ "& fieldset": { borderColor: BORDER } }} />
                 </Grid>
