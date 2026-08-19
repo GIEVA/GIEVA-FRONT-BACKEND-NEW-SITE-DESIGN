@@ -283,7 +283,7 @@ export default function ConsultationBookingPage() {
                              mb: 1.5, lineHeight: 1.2,
                              // dark section like the screenshot
                              background: NAVY, px: 3, py: 2, borderRadius: 2, display: "inline-block" }}>
-            CONSULATIONS
+            CONSULTATIONS
           </Typography>
           <Typography sx={{ fontSize: 15, color: TEXT, maxWidth: 700, mt: 2, lineHeight: 1.7 }}>
             Need a personalized roadmap? Speak 1-on-1 with an academic advisor to plan your future.

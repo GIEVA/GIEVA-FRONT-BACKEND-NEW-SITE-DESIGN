@@ -7,9 +7,12 @@ import {
     Stack,
     CircularProgress,
     Alert,
+    Button,
 } from "@mui/material";
+import { useNavigate } from "react-router-dom";
 import ArrowBackIosNewRoundedIcon from "@mui/icons-material/ArrowBackIosNewRounded";
 import ArrowForwardIosRoundedIcon from "@mui/icons-material/ArrowForwardIosRounded";
+import ArrowForwardRoundedIcon from "@mui/icons-material/ArrowForwardRounded";
 import FacebookIcon from "@mui/icons-material/Facebook";
 import LinkedInIcon from "@mui/icons-material/LinkedIn";
 import XIcon from "@mui/icons-material/X";
@@ -27,10 +30,16 @@ const socialIconMap = {
     youtube: <YouTubeIcon sx={{ fontSize: 14 }} />,
 };
 
+const AUTO_SLIDE_INTERVAL = 3500; // ms between auto-advances
+const SCROLL_AMOUNT = 320;
+
 export default function Staff({ sx = {} }) {
+    const navigate = useNavigate();
     const scrollRef = useRef(null);
+    const autoSlideRef = useRef(null);
     const [canScrollLeft, setCanScrollLeft] = useState(false);
     const [canScrollRight, setCanScrollRight] = useState(true);
+    const [isPaused, setIsPaused] = useState(false);
 
     const [data, setData] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -64,10 +73,30 @@ export default function Staff({ sx = {} }) {
     const scroll = (direction) => {
         const el = scrollRef.current;
         if (!el) return;
-        const amount = 320;
-        el.scrollBy({ left: direction === "left" ? -amount : amount, behavior: "smooth" });
+        el.scrollBy({ left: direction === "left" ? -SCROLL_AMOUNT : SCROLL_AMOUNT, behavior: "smooth" });
         setTimeout(checkScroll, 350);
     };
+
+    // ── Auto-slide ──────────────────────────────────────────
+    useEffect(() => {
+        if (loading || error || data.length === 0 || isPaused) return;
+
+        autoSlideRef.current = setInterval(() => {
+            const el = scrollRef.current;
+            if (!el) return;
+
+            const atEnd = el.scrollLeft >= el.scrollWidth - el.clientWidth - 10;
+            if (atEnd) {
+                // loop back to start
+                el.scrollTo({ left: 0, behavior: "smooth" });
+            } else {
+                el.scrollBy({ left: SCROLL_AMOUNT, behavior: "smooth" });
+            }
+            setTimeout(checkScroll, 350);
+        }, AUTO_SLIDE_INTERVAL);
+
+        return () => clearInterval(autoSlideRef.current);
+    }, [loading, error, data, isPaused]);
 
     return (
         <Section sx={{ ...sx, py: { xs: 8, md: 12 } }}>
@@ -108,18 +137,34 @@ export default function Staff({ sx = {} }) {
                     </Typography>
                 </Box>
 
-                <Typography
-                    sx={{
-                        fontSize: 16,
-                        lineHeight: 1.75,
-                        color: "text.secondary",
-                        pt: { md: 5 },
-                        maxWidth: 420,
-                    }}
-                >
-                    At GIEVA, we are led by visionary individuals who are passionate about
-                    youth development and educational empowerment.
-                </Typography>
+                <Box sx={{ pt: { md: 5 }, display: "flex", flexDirection: "column", gap: 2.5, alignItems: "flex-start" }}>
+                    <Typography
+                        sx={{
+                            fontSize: 16,
+                            lineHeight: 1.75,
+                            color: "text.secondary",
+                            maxWidth: 420,
+                        }}
+                    >
+                        At GIEVA, we are led by visionary individuals who are passionate about
+                        youth development and educational empowerment.
+                    </Typography>
+
+                    <Button
+                        onClick={() => navigate("/our-team")}
+                        endIcon={<ArrowForwardRoundedIcon sx={{ fontSize: 18 }} />}
+                        sx={{
+                            textTransform: "none",
+                            fontWeight: 700,
+                            fontSize: 14.5,
+                            color: "#F97316",
+                            px: 0,
+                            "&:hover": { bgcolor: "transparent", color: "#ea580c" },
+                        }}
+                    >
+                        See All Staff
+                    </Button>
+                </Box>
             </Box>
 
             {loading ? (
@@ -131,7 +176,11 @@ export default function Staff({ sx = {} }) {
                     {error}
                 </Alert>
             ) : (
-                <Box sx={{ position: "relative" }}>
+                <Box
+                    sx={{ position: "relative" }}
+                    onMouseEnter={() => setIsPaused(true)}
+                    onMouseLeave={() => setIsPaused(false)}
+                >
                     {canScrollLeft && (
                         <IconButton
                             onClick={() => scroll("left")}
@@ -189,10 +238,12 @@ export default function Staff({ sx = {} }) {
                         {data.map((person) => (
                             <Box
                                 key={person.id}
+                                onClick={() => navigate(`/team/${person.id}`)}
                                 sx={{
                                     flex: "0 0 auto",
                                     width: { xs: 240, sm: 260, md: 280 },
                                     scrollSnapAlign: "start",
+                                    cursor: "pointer",
                                 }}
                             >
                                 <Box
@@ -203,6 +254,10 @@ export default function Staff({ sx = {} }) {
                                         mb: 2,
                                         bgcolor: "#F1F5F9",
                                         boxShadow: "0 8px 24px rgba(15,23,42,0.08)",
+                                        transition: "box-shadow 0.3s ease",
+                                        "&:hover": {
+                                            boxShadow: "0 12px 32px rgba(15,23,42,0.14)",
+                                        },
                                     }}
                                 >
                                     <Box
@@ -227,7 +282,11 @@ export default function Staff({ sx = {} }) {
                                     {person.role}
                                 </Typography>
 
-                                <Stack direction="row" spacing={1}>
+                                <Stack
+                                    direction="row"
+                                    spacing={1}
+                                    onClick={(e) => e.stopPropagation()} // keep social icons independently clickable
+                                >
                                     {Object.entries(person.socials || {}).map(([key, url]) => (
                                         url ? (
                                             <IconButton

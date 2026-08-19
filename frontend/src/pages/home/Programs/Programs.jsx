@@ -94,7 +94,7 @@ function ProgramCard({ program }) {
     return (
         <Box
             component={RouterLink}
-            to={`/programs/${program.slug}`}
+            to={`/our-programs/${program.slug}`}
             onMouseEnter={() => setHover(true)}
             onMouseLeave={() => setHover(false)}
             sx={{

@@ -24,7 +24,7 @@ const GREEN = "#1E7F4F";
 const NAVY  = "#0B1F3A";
 
 const formatPrice = (amount) =>
-  new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN", minimumFractionDigits: 0 })
+  new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2 })
     .format(amount);
 
 // ─── Single dynamic field ─────────────────────────────────────
@@ -222,7 +222,7 @@ export default function DynamicExamRegistrationForm() {
     <Container maxWidth="md" sx={{ py: 6 }}>
       {/* Header */}
       <Box mb={4}>
-        <Button onClick={() => navigate("/exam-register")}
+        <Button onClick={() => navigate("/exam-catalog")}
           sx={{ mb: 2, color: NAVY, textTransform: "none", pl: 0 }}>
           ← Back to catalog
         </Button>

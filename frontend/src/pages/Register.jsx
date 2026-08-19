@@ -603,6 +603,40 @@ const Register = () => {
         </Box>
 
 
+        {/* CONSENT NOTICE */}
+          <Typography
+            variant="body2"
+            textAlign="center"
+            mt={2.5}
+            color="text.secondary"
+            sx={{ fontSize: 12.5, lineHeight: 1.6 }}
+          >
+            By creating an account, you agree to GIEVA's{" "}
+            <Link
+              to="/terms"
+              style={{
+                color: "#1E7F4F",
+                fontWeight: 600,
+                textDecoration: "none",
+              }}
+            >
+              Terms and Conditions
+            </Link>{" "}
+            and{" "}
+            <Link
+              to="/privacy"
+              style={{
+                color: "#1E7F4F",
+                fontWeight: 600,
+                textDecoration: "none",
+              }}
+            >
+              Privacy Policy
+            </Link>
+            .
+          </Typography>
+
+
 
         {/* FOOTER */}
 

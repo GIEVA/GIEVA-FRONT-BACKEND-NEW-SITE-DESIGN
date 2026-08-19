@@ -140,6 +140,8 @@ import Projects from "./pages/Projects";
 //import ProjectDetail from "./pages/ProjectDetail";
 import AdminProjects from "./pages/AdminProjects";
 import OurPartners from "./pages/OurPartners";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import TermsOfService from "./pages/TermsOfService";
 
 
 
@@ -216,6 +218,8 @@ function App() {
         <Route path="/faqs" element={<FaqPage />} />
         <Route path="/ngo" element={<Projects />} />
         <Route path="/our-partners" element={<OurPartners />} />
+        <Route path="/privacy" element={<PrivacyPolicy />} />
+        <Route path="/terms" element={<TermsOfService />} />
 
 
          <Route

@@ -56,15 +56,12 @@ export default function ExamCard({
           justifyContent="space-between"
           alignItems="center"
         >
-          <Typography
-            variant="h6"
-            color="primary"
-            fontWeight={700}
-          >
-            ₦
-            {Number(
-              exam.amount
-            ).toLocaleString()}
+          <Typography variant="h6" color="primary" fontWeight={700}>
+            {new Intl.NumberFormat("en-US", {
+              style: "currency",
+              currency: "USD",
+              minimumFractionDigits: 2,
+            }).format(Number(exam.amount))}
           </Typography>
 
           <Button

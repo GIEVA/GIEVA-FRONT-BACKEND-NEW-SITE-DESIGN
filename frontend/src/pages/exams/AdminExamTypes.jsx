@@ -623,7 +623,7 @@ export default function AdminExamTypes() {
                       </Stack>
                       <Typography sx={{ fontSize: 13, color: MUTED, mt: 0.25 }} noWrap>
                         {exam.pricingType === "flat"
-                          ? `${new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN", minimumFractionDigits: 0 }).format(exam.flatPrice)}`
+                          ? fmt(exam.flatPrice)
                           : `Variants: ${(exam.priceVariants || []).map((v) => v.label).join(", ")}`}
                         {" · "}
                         {fieldCount} form field{fieldCount !== 1 ? "s" : ""}
