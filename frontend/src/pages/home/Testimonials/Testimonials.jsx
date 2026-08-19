@@ -95,7 +95,7 @@ export default function Testimonials({ data = testimonialData, sx = {} }) {
 
                     <Button
                         component={RouterLink}
-                        to="/feedback"
+                        to="/contact"
                         variant="contained"
                         endIcon={<ArrowForwardIcon />}
                         sx={{
