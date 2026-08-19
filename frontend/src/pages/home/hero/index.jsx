@@ -17,7 +17,7 @@ export default function HomeHero() {
             actions={{
                 primary: {
                     label: "Book Consultancy",
-                    href: "/book-consultancy",
+                    href: "/consultations",
                     color: "warning",        // Orange
                 },
                 secondary: {
