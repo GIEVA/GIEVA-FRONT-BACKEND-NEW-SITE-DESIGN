@@ -136,7 +136,8 @@ app.use((req, res, next) => {
 });
 
     // Routes
-    app.use("/api/gieva/history", historyRoutes);
+app.use("/api/gieva/history", historyRoutes);
+app.use("/api/admin/heals", adminHealsRoutes);
 app.use("/api/service", serviceRoutes);
 app.use(
   "/api/campaigns",
@@ -206,7 +207,7 @@ app.use(
 
 
 
-app.use("/api/admin/heals", adminHealsRoutes);
+
 
 // ...then your existing generic /api/admin mounts below
 // app.use(
