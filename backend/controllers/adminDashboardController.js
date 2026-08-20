@@ -3,6 +3,7 @@ from "../models/index.js";
 
 import { Op }
 from "sequelize";
+import { sequelize } from "../config/db.js";
 
 const {
 
