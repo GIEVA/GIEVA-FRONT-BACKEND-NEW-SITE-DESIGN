@@ -3,9 +3,12 @@ from "../models/index.js";
 
 import { Op }
 from "sequelize";
-import { sequelize } from "../config/db.js";
+
+import sequelize from "../config/db.js";
 
 const {
+
+  
 
   User,
   TutorProfile,
@@ -600,43 +603,6 @@ export const getAdminDashboardSummary =
       }
 
       // ======================================================
-      // STATUS PIE ARRAYS (reshaping existing flat numbers)
-      // ======================================================
-
-      const examStatusPie = [
-        { name: "Submitted", value: submittedExamRegistrations },
-        { name: "Under Review", value: underReviewExamRegistrations },
-        { name: "Processing", value: processingExamRegistrations },
-        { name: "Completed", value: completedExamRegistrations },
-        { name: "Rejected", value: rejectedExamRegistrations },
-        { name: "Cancelled", value: cancelledExamRegistrations },
-      ].filter((r) => r.value > 0);
-
-      const healsStatusPie = [
-        { name: "Pending", value: pendingApplications },
-        { name: "Approved", value: approvedApplications },
-        { name: "Completed", value: completedApplications },
-        { name: "Rejected", value: rejectedApplications },
-        { name: "Processing", value: processingApplications },
-      ].filter((r) => r.value > 0);
-
-      const paymentStatusPie = [
-        { name: "Successful", value: totalSuccessfulPayments },
-        { name: "Pending", value: totalPendingPayments },
-        { name: "Failed", value: totalFailedPayments },
-      ].filter((r) => r.value > 0);
-
-      const consultationStatusPie = [
-        { name: "Pending", value: pendingConsultations },
-        { name: "Confirmed", value: confirmedConsultations },
-        { name: "Completed", value: completedConsultations },
-        { name: "Cancelled", value: cancelledConsultations },
-        { name: "No Show", value: noShowConsultations },
-      ].filter((r) => r.value > 0);
-
-
-
-      // ======================================================
       // LMS PAYMENTS
       // ======================================================
 
@@ -861,6 +827,43 @@ export const getAdminDashboardSummary =
             ).toFixed(2)
 
           : 0;
+
+      // ======================================================
+      // STATUS PIE ARRAYS (reshaping existing flat numbers)
+      // ======================================================
+      // Moved here: every value referenced below (exam-status counts,
+      // and total*Payments) is only defined by this point in the function.
+
+      const examStatusPie = [
+        { name: "Submitted", value: submittedExamRegistrations },
+        { name: "Under Review", value: underReviewExamRegistrations },
+        { name: "Processing", value: processingExamRegistrations },
+        { name: "Completed", value: completedExamRegistrations },
+        { name: "Rejected", value: rejectedExamRegistrations },
+        { name: "Cancelled", value: cancelledExamRegistrations },
+      ].filter((r) => r.value > 0);
+
+      const healsStatusPie = [
+        { name: "Pending", value: pendingApplications },
+        { name: "Approved", value: approvedApplications },
+        { name: "Completed", value: completedApplications },
+        { name: "Rejected", value: rejectedApplications },
+        { name: "Processing", value: processingApplications },
+      ].filter((r) => r.value > 0);
+
+      const paymentStatusPie = [
+        { name: "Successful", value: totalSuccessfulPayments },
+        { name: "Pending", value: totalPendingPayments },
+        { name: "Failed", value: totalFailedPayments },
+      ].filter((r) => r.value > 0);
+
+      const consultationStatusPie = [
+        { name: "Pending", value: pendingConsultations },
+        { name: "Confirmed", value: confirmedConsultations },
+        { name: "Completed", value: completedConsultations },
+        { name: "Cancelled", value: cancelledConsultations },
+        { name: "No Show", value: noShowConsultations },
+      ].filter((r) => r.value > 0);
 
 
           const recentExamRegistrations =
@@ -1677,14 +1680,6 @@ const examTypeAnalytics =
 
 
         analytics: {
-
-          newUsersThisMonth,
-          newEnrollmentsThisMonth,
-          newApplicationsThisMonth,
-
-          topCountries,
-          topFields,
-          examTypeAnalytics,
 
           newUsersThisMonth,
           newEnrollmentsThisMonth,
