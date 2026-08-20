@@ -38,7 +38,6 @@ export const adminGetApplications = async (req, res) => {
       where[Op.or] = [
         { fullName: { [Op.like]: `%${search}%` } },
         { email: { [Op.like]: `%${search}%` } },
-        { phone: { [Op.like]: `%${search}%` } },
         { applicationCode: { [Op.like]: `%${search}%` } },
         { desiredCountry: { [Op.like]: `%${search}%` } },
       ];
@@ -53,7 +52,7 @@ export const adminGetApplications = async (req, res) => {
         {
           model: User,
           as: "applicant",
-          attributes: ["id", "fullName", "email", "phone"],
+          attributes: ["id", "fullName", "email", ],
         },
       ],
     });
@@ -85,7 +84,7 @@ export const adminGetApplicationById = async (req, res) => {
         {
           model: User,
           as: "applicant",
-          attributes: ["id", "fullName", "email", "phone"],
+          attributes: ["id", "fullName", "email", ],
         },
         {
           model: HealsPayment,
