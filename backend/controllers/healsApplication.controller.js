@@ -7,6 +7,7 @@ import {
   approvalTemplate,
   rejectionTemplate,
   infoRequestTemplate,
+  paymentRequestTemplate
 } from "../utils/emailTemplates.js";
 import { cloudinary } from "../config/cloudinary.js";
 import { applicationSchema } from "../service/healsValidationSchema.js";

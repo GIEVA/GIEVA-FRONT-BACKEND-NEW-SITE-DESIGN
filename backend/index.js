@@ -95,7 +95,7 @@ import adminFaqRoutes from "./routes/adminFaq.routes.js"
 import faqRoutes from "./routes/faq.routes.js"
 import adminProjectRoutes from "./routes/adminProject.routes.js"
 import projectRoutes from "./routes/project.routes.js"
-
+import adminHealsRoutes from "./routes/adminHeals.routes.js";
 
 
 
@@ -204,6 +204,11 @@ app.use(
   adminCampaignRegistrationRoutes
 );
 
+
+
+app.use("/api/admin/heals", adminHealsRoutes);
+
+// ...then your existing generic /api/admin mounts below
 // app.use(
 //   "/api/campaigns",
 //   campaignRoutes
