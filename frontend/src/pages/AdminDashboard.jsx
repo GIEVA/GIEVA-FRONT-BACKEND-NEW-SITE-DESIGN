@@ -16,6 +16,8 @@ import DashboardStatCard          from "../components/DashboardStatCard";
 import TopCampaignsTable          from "../components/TopCampaignsTable";
 import RecentCampaignRegistrations from "../components/RecentCampaignRegistrations";
 import { getAdminDashboardSummary } from "../services/adminDashboardService";
+import TimeSeriesChart from "../components/dashboard/TimeSeriesChart";
+import StatusPieChart from "../components/dashboard/StatusPieChart";
 
 // ─────────────────────────────────────────────────────────────
 // DESIGN TOKENS  (matching your existing pages)
@@ -154,6 +156,7 @@ const AdminDashboard = () => {
 
   const overview                  = data?.overview                  || {};
   const topCampaigns              = data?.topCampaigns              || [];
+  const analytics = data?.analytics || {};
   const recentApplications        = data?.recentApplications        || [];
   const recentCampaignRegistrations = data?.recentCampaignRegistrations || [];
 
@@ -206,7 +209,10 @@ const AdminDashboard = () => {
                                                                                       icon: <Payments />,      color: "#7C3AED"   },
             { title: "Messages",       value: overview.totalCampaignMessages    ?? 0, icon: <Email />,         color: "#D32F2F"   },
             { title: "Notifications",  value: overview.unreadNotifications      ?? 0, icon: <Notifications />, color: NAVY        },
-          ].map((card) => (
+            { title: "Consultations", value: overview.totalConsultations ?? 0, icon: <Public />, color: "#0EA5E9" },
+            { title: "Contact Messages", value: overview.totalContactMessages ?? 0, icon: <Email />, color: "#DC2626" },
+            { title: "Staff", value: overview.totalStaff ?? 0, icon: <People />, color: GOLD },
+            ].map((card) => (
             <Grid item xs={6} sm={6} md={4} lg={2} key={card.title}>
               <DashboardStatCard {...card} />
             </Grid>
@@ -242,6 +248,66 @@ const AdminDashboard = () => {
             </SectionCard>
           </Grid>
 
+          {/* ══════════════════════════════════════════════════════
+              TIME-SERIES ANALYTICS
+          ══════════════════════════════════════════════════════ */}
+          <Grid container spacing={3} mb={4}>
+            <Grid item xs={12} md={6}>
+              <SectionCard title="New Users (Last 30 Days)">
+                <TimeSeriesChart data={analytics.usersPerDay || []} color={NAVY} />
+              </SectionCard>
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <SectionCard title="Successful Payments (Last 30 Days)">
+                <TimeSeriesChart data={analytics.paymentsPerDay || []} color={GREEN} />
+              </SectionCard>
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <SectionCard title="Exam Registrations (Last 30 Days)">
+                <TimeSeriesChart data={analytics.examsPerDay || []} color={GOLD} />
+              </SectionCard>
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <SectionCard title="Live Sessions Created (Last 30 Days)">
+                <TimeSeriesChart data={analytics.sessionsPerDay || []} color="#7C3AED" />
+              </SectionCard>
+            </Grid>
+          </Grid>
+
+          <Grid container spacing={3} mb={4}>
+            <Grid item xs={12}>
+              <SectionCard title="New Users — Last 6 Months">
+                <TimeSeriesChart data={analytics.usersPerMonth || []} xKey="month" color={NAVY} />
+              </SectionCard>
+            </Grid>
+          </Grid>
+
+          {/* ══════════════════════════════════════════════════════
+              STATUS BREAKDOWNS
+          ══════════════════════════════════════════════════════ */}
+          <Grid container spacing={3} mb={4}>
+            <Grid item xs={12} sm={6} md={3}>
+              <SectionCard>
+                <StatusPieChart title="Exam Status" data={analytics.examStatusPie || []} />
+              </SectionCard>
+            </Grid>
+            <Grid item xs={12} sm={6} md={3}>
+              <SectionCard>
+                <StatusPieChart title="HEALS Status" data={analytics.healsStatusPie || []} />
+              </SectionCard>
+            </Grid>
+            <Grid item xs={12} sm={6} md={3}>
+              <SectionCard>
+                <StatusPieChart title="Payment Status" data={analytics.paymentStatusPie || []} />
+              </SectionCard>
+            </Grid>
+            <Grid item xs={12} sm={6} md={3}>
+              <SectionCard>
+                <StatusPieChart title="Consultation Status" data={analytics.consultationStatusPie || []} />
+              </SectionCard>
+            </Grid>
+          </Grid>
+
           {/* LMS */}
           <Grid item xs={12} lg={6}>
             <SectionCard
@@ -263,6 +329,25 @@ const AdminDashboard = () => {
               <MetricRow label="Attendance Records"  value={overview.totalAttendance}    isBold />
               <Divider />
               <MetricRow label="Published Courses"   value={overview.publishedCourses}   isBold />
+            </SectionCard>
+          </Grid>
+        </Grid>
+
+        <Grid container spacing={3} mb={4}>
+          <Grid item xs={12} md={6}>
+            <SectionCard>
+              <StatusPieChart title="Users by Role" data={analytics.userRoleAnalytics || []} />
+            </SectionCard>
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <SectionCard title="Consultations">
+              <MetricRow label="Pending" value={overview.pendingConsultations} chipColor="warning" />
+              <Divider />
+              <MetricRow label="Confirmed" value={overview.confirmedConsultations} chipColor="info" />
+              <Divider />
+              <MetricRow label="Completed" value={overview.completedConsultations} chipColor="success" />
+              <Divider />
+              <MetricRow label="Cancelled / No-show" value={(overview.cancelledConsultations ?? 0) + (overview.noShowConsultations ?? 0)} chipColor="error" />
             </SectionCard>
           </Grid>
         </Grid>

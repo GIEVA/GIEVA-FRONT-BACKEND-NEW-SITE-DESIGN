@@ -132,7 +132,7 @@ export const guestActions = [
 
   {
     label: "Book Consultancy",
-    path: "/book-consultancy",
+    path: "/consultations",
     variant: "contained",
   },
 ];
@@ -333,7 +333,7 @@ export const portalNavigation = [
 
       {
         label: "Consultancy",
-        path: "/consultancy",
+        path: "/consultations",
       },
 
     ],
