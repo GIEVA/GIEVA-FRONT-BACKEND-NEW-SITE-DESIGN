@@ -72,7 +72,7 @@ export const initializeExamPayment = async (req, res) => {
         registrationId,
         userId,
         amount: registration.amount,
-        currency: "NGN",
+        currency: "USD",
         paymentMethod: "paystack",
         transactionRef,
         status: "pending",

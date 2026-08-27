@@ -14,7 +14,7 @@ const { ActivityLog, User, TutorProfile, StudentProfile, Notification } = models
 
 dotenv.config();
 
-const FRONTEND_URL= "http://localhost:3000"
+const FRONTEND_URL= "https://gieva-front-backend-new-site-design-production.up.railway.app"
 
 // ---------------- CREATE USER ----------------
 

@@ -21,7 +21,7 @@ export const publicNavigation = [
         label: "Study Abroad",
         description:
           "Admissions and international placement support.",
-        path: "/study-abroad",
+        path: "/consultations",
       },
       {
         label: "Visa Assistance",
@@ -86,7 +86,7 @@ export const publicNavigation = [
     {
       label: "Visa Processing",
       description: "Professional visa guidance and processing.",
-      path: "/services/visa",
+      path: "/services",
     },
   ],
 },
