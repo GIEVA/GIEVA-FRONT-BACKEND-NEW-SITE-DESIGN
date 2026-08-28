@@ -142,6 +142,7 @@ import AdminProjects from "./pages/AdminProjects";
 import OurPartners from "./pages/OurPartners";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
+import ExamPaymentInitiate from "./pages/exams/ExamPaymentInitiate";
 
 
 
@@ -340,6 +341,15 @@ function App() {
             <DynamicExamRegistrationPage />
           }
         />
+
+      
+
+          <Route
+            path="/exam-register/payment/:id"
+            element={<ExamPaymentInitiate />}
+          />
+
+
 
           <Route
             path="/exam-payment/callback"
