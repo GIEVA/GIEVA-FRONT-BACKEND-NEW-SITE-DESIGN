@@ -54,7 +54,7 @@ const VerifyEmail = () => {
         // browser can return a cached 304 for the exact same URL on
         // a later visit instead of re-hitting the server (confirmed
         // in the network log: status 304, served from cache).
-        const res = await API.get(`/api/verify/${token}`, {
+        const res = await API.get(`/api/users/verify/${token}`, {
           params: { _t: Date.now() },
         });
 
