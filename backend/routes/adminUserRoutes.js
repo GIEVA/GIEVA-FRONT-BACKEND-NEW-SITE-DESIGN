@@ -7,6 +7,8 @@ import {
   getUsers,
   toggleUserStatus,
   updateUserRole,
+  verifyUserByAdmin,
+  deleteUserByAdmin,
 
 } from "../controllers/adminUser.controller.js";
 
@@ -25,7 +27,7 @@ const router =
 
 
 // ======================================================
-// ADMIN ACCESS
+// ADMIN ACCESS (admin + superadmin)
 // ======================================================
 
 router.use(
@@ -80,6 +82,29 @@ router.put(
 router.put(
   "/users/:id/role",
   updateUserRole
+);
+
+
+
+// ======================================================
+// VERIFY USER
+// ======================================================
+
+router.put(
+  "/users/:id/verify",
+  verifyUserByAdmin
+);
+
+
+
+// ======================================================
+// DELETE USER — SUPERADMIN ONLY
+// ======================================================
+
+router.delete(
+  "/users/:id",
+  authorizeRoles("superadmin"), // stacks on top of the router-level admin+superadmin check
+  deleteUserByAdmin
 );
 
 

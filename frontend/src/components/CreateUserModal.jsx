@@ -11,6 +11,8 @@ import {
   TextField,
   MenuItem,
   Button,
+  Alert,
+  CircularProgress,
 
 } from "@mui/material";
 
@@ -18,7 +20,14 @@ import {
   createUser,
 } from "../services/adminUserService";
 
+const NAVY = "#0B1F3A";
 
+const initialForm = {
+  fullName: "",
+  email: "",
+  password: "",
+  role: "student",
+};
 
 export default function
 CreateUserModal({
@@ -31,29 +40,77 @@ CreateUserModal({
 
   const [form,
     setForm] =
-      useState({
+      useState(initialForm);
 
-        fullName: "",
+  const [submitting,
+    setSubmitting] =
+      useState(false);
 
-        email: "",
+  const [error,
+    setError] =
+      useState("");
 
-        password: "",
 
-        role: "student",
-      });
+
+  const handleClose = () => {
+
+    // Don't let the user dismiss mid-submit and lose track
+    // of whether the create actually went through.
+    if (submitting) return;
+
+    setForm(initialForm);
+    setError("");
+    onClose();
+  };
 
 
 
   const handleSubmit =
     async () => {
 
-      await createUser(
-        form
-      );
+      setError("");
 
-      refresh();
+      if (
 
-      onClose();
+        !form.fullName ||
+
+        !form.email ||
+
+        !form.password
+      ) {
+
+        return setError(
+          "Full name, email, and password are required"
+        );
+      }
+
+      try {
+
+        setSubmitting(true);
+
+        await createUser(
+          form
+        );
+
+        setForm(initialForm);
+
+        refresh();
+
+        onClose();
+
+      } catch (err) {
+
+        setError(
+
+          err.response?.data?.message ||
+
+          "Failed to create user"
+        );
+
+      } finally {
+
+        setSubmitting(false);
+      }
     };
 
 
@@ -62,7 +119,7 @@ CreateUserModal({
 
     <Dialog
       open={open}
-      onClose={onClose}
+      onClose={handleClose}
       fullWidth
       maxWidth="sm"
     >
@@ -82,11 +139,24 @@ CreateUserModal({
           mt={1}
         >
 
+          {error && (
+
+            <Alert
+              severity="error"
+            >
+              {error}
+            </Alert>
+          )}
+
+
+
           <TextField
 
             label="Full Name"
 
             fullWidth
+
+            disabled={submitting}
 
             value={
               form.fullName
@@ -110,6 +180,8 @@ CreateUserModal({
             label="Email"
 
             fullWidth
+
+            disabled={submitting}
 
             value={
               form.email
@@ -136,6 +208,8 @@ CreateUserModal({
 
             fullWidth
 
+            disabled={submitting}
+
             value={
               form.password
             }
@@ -160,6 +234,8 @@ CreateUserModal({
             label="Role"
 
             fullWidth
+
+            disabled={submitting}
 
             value={form.role}
 
@@ -198,12 +274,31 @@ CreateUserModal({
 
             variant="contained"
 
+            disabled={submitting}
+
+            sx={{
+              bgcolor: NAVY,
+              py: 1.2,
+            }}
+
             onClick={
               handleSubmit
             }
           >
 
-            Create User
+            {submitting ? (
+
+              <CircularProgress
+                size={22}
+                sx={{
+                  color: "#fff",
+                }}
+              />
+
+            ) : (
+
+              "Create User"
+            )}
 
           </Button>
 

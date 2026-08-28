@@ -76,14 +76,73 @@ export const createUser = async (req, res) => {
       });
     }
 
-    // ---------------- CHECK EXISTING USER ----------------
+// ---------------- CHECK EXISTING USER ----------------
     const existingUser = await User.findOne({ where: { email } });
 
     if (existingUser) {
-      return res.status(400).json({
-        message: "User already exists",
+      if (existingUser.isVerified) {
+        return res.status(400).json({
+          message: "User already exists",
+        });
+      }
+
+      // ---------------- UNVERIFIED USER: RE-ISSUE VERIFICATION ----------------
+      // Don't create a duplicate row — update the existing one with a fresh
+      // token/password and resend the email instead.
+      const passwordHash = await bcrypt.hash(password, 12);
+      const verificationToken = crypto.randomBytes(32).toString("hex");
+      const verificationTokenExpiry = new Date(Date.now() + 1000 * 60 * 60); // 1 hour
+
+      existingUser.fullName = fullName;
+      existingUser.passwordHash = passwordHash;
+      existingUser.role = role || existingUser.role;
+      existingUser.verificationToken = verificationToken;
+      existingUser.verificationTokenExpiry = verificationTokenExpiry;
+      await existingUser.save();
+
+        // ---------------- GUARD: ENSURE STUDENT PROFILE EXISTS ----------------
+        // Covers the case where the original registration's StudentProfile.create()
+        // never happened (e.g. it errored silently, or role changed to "student"
+        // on this re-register).
+        if (existingUser.role === "student") {
+          const hasProfile = await StudentProfile.findOne({ where: { userId: existingUser.id } });
+          if (!hasProfile) {
+            await StudentProfile.create({
+              userId: existingUser.id,
+              fullName: existingUser.fullName,
+              email: existingUser.email,
+            });
+          }
+        }
+
+      await ActivityLog.create({
+        userId: existingUser.id,
+        action: "USER_REREGISTERED_UNVERIFIED",
+        meta: { email: existingUser.email, role: existingUser.role },
+      });
+
+      const verifyLink = `${FRONTEND_URL}/verify/${verificationToken}`;
+
+      await sendEmail(
+        existingUser.email,
+        "Verify Your Account",
+        verificationTemplate(existingUser.fullName, verifyLink)
+      );
+
+      const safeUser = existingUser.toJSON();
+      delete safeUser.passwordHash;
+      delete safeUser.verificationToken;
+      delete safeUser.resetToken;
+      delete safeUser.resetTokenExpiry;
+
+      return res.status(200).json({
+        message:
+          "This email is already registered but not verified. We've sent a new verification link — please check your email.",
+        user: safeUser,
       });
     }
+
+
 
     // ---------------- HASH PASSWORD ----------------
     const passwordHash = await bcrypt.hash(password, 12); // stronger salt

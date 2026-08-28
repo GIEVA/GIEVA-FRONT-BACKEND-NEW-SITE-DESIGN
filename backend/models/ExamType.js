@@ -131,9 +131,9 @@ export default (sequelize) => {
       foreignKey: "createdBy",
       as:         "creator",
     });
-    ExamType.hasMany(models.ExamRegistration, {
-      foreignKey: "examTypeId",
-    });
+    // ExamType.hasMany(models.ExamRegistration, {
+    //   foreignKey: "examTypeId",
+    // });
   };
 
   return ExamType;

@@ -1,136 +1,91 @@
+// controllers/examRegistration.controller.js
 import crypto from "crypto";
 import models from "../models/index.js";
-import { EXAM_PRICES } from "../config/examPrices.js";
 const {
   ExamRegistration,
-  ExamPayment,
   ActivityLog,
-  User,
+  ExamType,
 } = models;
 
-
-export const createRegistration = async (
-  req,
-  res
-) => {
+export const createRegistration = async (req, res) => {
   try {
     const userId = req.user.id;
 
-    const {
-      examType,
-      data,
-    } = req.body;
+    // Frontend sends `formData`, not `data` — this was the bug causing
+    // your "Registration data is required" 400.
+    const { examType, examTypeId, formData, priceVariant } = req.body;
 
     if (!examType) {
-      return res.status(400).json({
-        message: "Exam type is required",
-      });
+      return res.status(400).json({ message: "Exam type is required" });
     }
 
-    if (
-      !data ||
-      typeof data !== "object"
-    ) {
-      return res.status(400).json({
-        message:
-          "Registration data is required",
-      });
+    if (!formData || typeof formData !== "object") {
+      return res.status(400).json({ message: "Registration data is required" });
     }
 
+    // ---------------- LOOK UP THE EXAM TYPE (source of truth for price + schema) ----------------
+    const examTypeRecord = examTypeId
+      ? await ExamType.findByPk(examTypeId)
+      : await ExamType.findOne({ where: { examType } });
+
+    if (!examTypeRecord || examTypeRecord.status !== "published") {
+      return res.status(400).json({ message: "Invalid or unavailable exam type" });
+    }
+
+    // ---------------- RECOMPUTE AMOUNT SERVER-SIDE — never trust client's `amount` ----------------
     let amount;
 
-    switch (examType) {
-      case "SAT":
-        amount = EXAM_PRICES.SAT;
-        break;
-
-      case "GRE":
-        amount = EXAM_PRICES.GRE;
-        break;
-
-      case "IELTS":
-        amount = EXAM_PRICES.IELTS;
-        break;
-
-      case "TOEFL":
-        amount = EXAM_PRICES.TOEFL;
-        break;
-
-      case "ACT":
-        amount =
-          EXAM_PRICES.ACT[
-            data?.examSpecific
-              ?.package || "standard"
-          ];
-        break;
-
-      case "SEVIS":
-        amount =
-          EXAM_PRICES.SEVIS[
-            data?.sevisInfo
-              ?.category || "F1"
-          ];
-        break;
-
-      default:
-        return res.status(400).json({
-          message:
-            "Invalid exam type",
-        });
+    if (examTypeRecord.pricingType === "flat") {
+      amount = Number(examTypeRecord.flatPrice);
+    } else if (examTypeRecord.pricingType === "variants") {
+      const variant = (examTypeRecord.priceVariants || []).find((v) => v.key === priceVariant);
+      if (!variant) {
+        return res.status(400).json({ message: "Please select a valid package/variant" });
+      }
+      amount = Number(variant.price);
     }
 
-    if (
-      !amount ||
-      Number(amount) <= 0
-    ) {
+    if (!amount || amount <= 0) {
+      return res.status(400).json({ message: "Invalid exam amount configuration" });
+    }
+
+    // ---------------- VALIDATE REQUIRED FIELDS AGAINST THE ADMIN-DEFINED SCHEMA ----------------
+    const missing = (examTypeRecord.fieldSchema || [])
+      .filter((f) => f.required && !formData[f.key]?.toString().trim())
+      .map((f) => f.label);
+
+    if (missing.length > 0) {
       return res.status(400).json({
-        message:
-          "Invalid exam amount configuration",
+        message: `Missing required fields: ${missing.join(", ")}`,
       });
     }
 
     const registrationCode =
-      `${examType}-${Date.now()}-${crypto
-        .randomBytes(3)
-        .toString("hex")
-        .toUpperCase()}`;
+      `${examTypeRecord.examType}-${Date.now()}-${crypto.randomBytes(3).toString("hex").toUpperCase()}`;
 
-    const registration =
-      await ExamRegistration.create({
-        userId,
-        registrationCode,
-        examType,
-        amount,
-        status: "payment_pending",
-        paymentStatus: "pending",
-        data,
-      });
+    const registration = await ExamRegistration.create({
+      userId,
+      registrationCode,
+      examType: examTypeRecord.examType,
+      amount,
+      status: "payment_pending",
+      paymentStatus: "pending",
+      data: formData, // stored in the `data` JSON column
+    });
 
     await ActivityLog.create({
       userId,
-      action:
-        "EXAM_REGISTRATION_CREATED",
-      meta: {
-        registrationId:
-          registration.id,
-        examType,
-      },
+      action: "EXAM_REGISTRATION_CREATED",
+      meta: { registrationId: registration.id, examType: examTypeRecord.examType },
     });
 
     return res.status(201).json({
-      message:
-        "Registration created successfully",
-
+      message: "Registration created successfully",
       registration,
     });
-
   } catch (error) {
     console.error(error);
-
-    return res.status(500).json({
-      message:
-        "Failed to create registration",
-    });
+    return res.status(500).json({ message: "Failed to create registration" });
   }
 };
 

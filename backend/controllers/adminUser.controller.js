@@ -585,3 +585,176 @@ export const updateUserRole =
         });
     }
   };
+
+  // ======================================================
+// VERIFY USER (ADMIN)
+// ======================================================
+
+export const verifyUserByAdmin =
+  async (req, res) => {
+
+    try {
+
+      const user =
+        await User.findByPk(
+          req.params.id
+        );
+
+      if (!user) {
+
+        return res.status(404)
+          .json({
+            message:
+              "User not found",
+          });
+      }
+
+      if (user.isVerified) {
+
+        return res.status(400)
+          .json({
+            message:
+              "User is already verified",
+          });
+      }
+
+      user.isVerified = true;
+      user.verificationToken = null;
+      user.verificationTokenExpiry = null;
+
+      await user.save();
+
+      await ActivityLog.create({
+
+        userId:
+          req.user.id,
+
+        action:
+          "ADMIN_VERIFIED_USER",
+
+        meta: {
+
+          targetUserId:
+            user.id,
+
+          targetUserEmail:
+            user.email,
+        },
+      });
+
+      const safeUser =
+        user.toJSON();
+
+      delete safeUser.passwordHash;
+      delete safeUser.resetToken;
+
+      return res.json({
+
+        message:
+          "User verified successfully",
+
+        user:
+          safeUser,
+      });
+
+    } catch (error) {
+
+      console.error(error);
+
+      return res.status(500)
+        .json({
+          message:
+            "Server error",
+        });
+    }
+  };
+
+
+// ======================================================
+// DELETE USER (SUPERADMIN ONLY — enforced at route level too)
+// ======================================================
+
+export const deleteUserByAdmin =
+  async (req, res) => {
+
+    try {
+
+      // Defense in depth: route middleware should already
+      // block non-superadmins from reaching here, but never
+      // trust a single layer for a destructive action.
+      if (req.user.role !== "superadmin") {
+
+        return res.status(403)
+          .json({
+            message:
+              "Only super admins can permanently delete users",
+          });
+      }
+
+      const user =
+        await User.findByPk(
+          req.params.id
+        );
+
+      if (!user) {
+
+        return res.status(404)
+          .json({
+            message:
+              "User not found",
+          });
+      }
+
+      // Prevent a superadmin from deleting their own account
+      // through this endpoint (avoids accidental lockout).
+      if (user.id === req.user.id) {
+
+        return res.status(400)
+          .json({
+            message:
+              "You cannot delete your own account",
+          });
+      }
+
+      const deletedEmail = user.email;
+      const deletedRole = user.role;
+
+      await user.destroy();
+
+      await ActivityLog.create({
+
+        userId:
+          req.user.id,
+
+        action:
+          "ADMIN_DELETED_USER",
+
+        meta: {
+
+          deletedUserId:
+            req.params.id,
+
+          deletedUserEmail:
+            deletedEmail,
+
+          deletedUserRole:
+            deletedRole,
+        },
+      });
+
+      return res.json({
+        message:
+          "User deleted permanently",
+      });
+
+    } catch (error) {
+
+      console.error(error);
+
+      return res.status(500)
+        .json({
+          message:
+            "Server error",
+        });
+    }
+  };
