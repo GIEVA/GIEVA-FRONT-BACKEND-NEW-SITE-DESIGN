@@ -14,7 +14,7 @@ const { ActivityLog, User, TutorProfile, StudentProfile, Notification } = models
 
 dotenv.config();
 
-const FRONTEND_URL= "https://gieva-front-backend-new-site-design-production.up.railway.app"
+const FRONTEND_URL= "https://gieva-front-backend-new-site-design.vercel.app"
 
 // ---------------- CREATE USER ----------------
 
@@ -121,7 +121,8 @@ export const createUser = async (req, res) => {
         meta: { email: existingUser.email, role: existingUser.role },
       });
 
-      const verifyLink = `${FRONTEND_URL}/verify/${verificationToken}`;
+      // ---------------- SEND VERIFICATION EMAIL ----------------
+      const verifyLink = `${process.env.FRONTEND_URL}/verify/${verificationToken}`;
 
       await sendEmail(
         existingUser.email,
