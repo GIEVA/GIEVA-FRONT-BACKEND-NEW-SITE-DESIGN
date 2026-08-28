@@ -10,7 +10,7 @@ import axios from "axios";
 import crypto from "crypto";
 import sequelize from "../config/db.js";
 import { generateReceiptPDF } from "../utils/generateReceipt.js";
-
+import { convertUsdToNgn } from "../utils/exchangeRate.js";
 
 const {
   ExamPayment,
@@ -29,138 +29,119 @@ const PAYSTACK_BASE =
   "https://api.paystack.co";
 
 
+
+
 export const initializeExamPayment = async (req, res) => {
   try {
     const { registrationId } = req.body;
-
     const userId = req.user.id;
 
-    const registration =
-      await ExamRegistration.findByPk(registrationId);
+    const registration = await ExamRegistration.findByPk(registrationId);
 
     if (!registration) {
-      return res.status(404).json({
-        message: "Registration not found",
-      });
+      return res.status(404).json({ message: "Registration not found" });
     }
 
-    // ownership check
     if (registration.userId !== userId) {
-      return res.status(403).json({
-        message: "Unauthorized",
-      });
+      return res.status(403).json({ message: "Unauthorized" });
     }
 
-    // already submitted
-    if (
-      registration.paymentStatus === "success"
-    ) {
-      return res.status(400).json({
-        message:
-          "Registration already paid",
-      });
+    if (registration.paymentStatus === "success") {
+      return res.status(400).json({ message: "Registration already paid" });
     }
 
     const user = await User.findByPk(userId);
 
-    const transactionRef =
-      "EXAM-" +
-      crypto.randomBytes(8).toString("hex");
-
-    const payment =
-      await ExamPayment.create({
-        registrationId,
-        userId,
-        amount: registration.amount,
-        currency: "USD",
-        paymentMethod: "paystack",
-        transactionRef,
-        status: "pending",
+    // ---------------- CONVERT USD → NGN AT THE CURRENT LIVE RATE ----------------
+    let ngnAmount, rate;
+    try {
+      ({ ngnAmount, rate } = await convertUsdToNgn(registration.amount));
+    } catch (rateErr) {
+      console.error("Rate conversion failed:", rateErr.message);
+      return res.status(503).json({
+        message: "Unable to fetch current exchange rate. Please try again shortly.",
       });
+    }
+
+    // Paystack expects kobo (smallest NGN unit). Round FIRST, then store
+    // that exact rounded value as the charged amount — this keeps
+    // verifyExamPayment's amount-match check exact later, since Paystack
+    // will echo back precisely what we send here.
+    const amountInKobo = Math.round(ngnAmount * 100);
+    const chargedNgnAmount = amountInKobo / 100;
+
+    const transactionRef =
+      "EXAM-" + crypto.randomBytes(8).toString("hex");
+
+    const payment = await ExamPayment.create({
+      registrationId,
+      userId,
+      amount: chargedNgnAmount,   // what's actually charged, in NGN
+      currency: "NGN",
+      paymentMethod: "paystack",
+      transactionRef,
+      status: "pending",
+    });
 
     const payload = {
       email: user.email,
-      amount:
-        Math.round(
-          Number(registration.amount) * 100
-        ),
+      amount: amountInKobo,
+      currency: "NGN",
 
       callback_url:
         `${process.env.FRONTEND_URL}/exam-payment/callback`,
 
       metadata: {
         paymentId: payment.id,
-        registrationId:
-          registration.id,
-
-        examType:
-          registration.examType,
-
+        registrationId: registration.id,
+        examType: registration.examType,
         userId,
+        amountUSD: registration.amount,
+        exchangeRate: rate,
       },
     };
 
-    const response =
-      await axios.post(
-        `${PAYSTACK_BASE}/transaction/initialize`,
-        payload,
-        {
-          headers: {
-            Authorization:
-              `Bearer ${PAYSTACK_SECRET}`,
+    const response = await axios.post(
+      `${PAYSTACK_BASE}/transaction/initialize`,
+      payload,
+      {
+        headers: {
+          Authorization: `Bearer ${PAYSTACK_SECRET}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
 
-            "Content-Type":
-              "application/json",
-          },
-        }
-      );
+    const paystackData = response.data.data;
 
-    const paystackData =
-      response.data.data;
-
-    payment.transactionRef =
-      paystackData.reference;
-
+    payment.transactionRef = paystackData.reference;
     await payment.save();
 
     await ActivityLog.create({
       userId,
-      action:
-        "EXAM_PAYMENT_INITIALIZED",
-
+      action: "EXAM_PAYMENT_INITIALIZED",
       meta: {
         paymentId: payment.id,
         registrationId,
-        examType:
-          registration.examType,
+        examType: registration.examType,
+        amountUSD: registration.amount,
+        amountNGN: chargedNgnAmount,
+        exchangeRate: rate,
       },
     });
 
     return res.json({
-      message:
-        "Payment initialized",
-
+      message: "Payment initialized",
       paymentId: payment.id,
-
-      authorization_url:
-        paystackData.authorization_url,
-
-      reference:
-        paystackData.reference,
-
-      amount:
-        registration.amount,
+      authorization_url: paystackData.authorization_url,
+      reference: paystackData.reference,
+      amountUSD: registration.amount,
+      amountNGN: chargedNgnAmount,
+      exchangeRate: rate,
     });
   } catch (err) {
-    console.error(
-      err.response?.data ||
-      err.message
-    );
-
-    return res.status(500).json({
-      message:
-        "Payment initialization failed",
-    });
+    console.error(err.response?.data || err.message);
+    return res.status(500).json({ message: "Payment initialization failed" });
   }
 };
 
