@@ -1,14 +1,12 @@
 import axios from "axios";
 
-// exchangerate.host — free, real-time, no API key required.
-// If you later get a paid key (Open Exchange Rates, currencyapi.com, etc.)
-// for higher reliability, just swap this URL — nothing else changes.
-const RATE_API_URL =
-  "https://api.exchangerate.host/latest?base=USD&symbols=NGN";
+// open.er-api.com — genuinely free, no API key required, no rate limit
+// for reasonable use. Updates daily, which is fine for exam pricing.
+// (exchangerate.host now requires a paid key as of its APILayer acquisition —
+// that's what was causing the 503s.)
+const RATE_API_URL = "https://open.er-api.com/v6/latest/USD";
 
-// Rates don't move fast enough to justify hitting the API on every
-// single payment request — cache for 30 minutes.
-const CACHE_TTL_MS = 1000 * 60 * 30;
+const CACHE_TTL_MS = 1000 * 60 * 30; // 30 minutes
 
 let cache = { rate: null, fetchedAt: 0 };
 
@@ -21,6 +19,11 @@ export const getUsdToNgnRate = async () => {
 
   try {
     const { data } = await axios.get(RATE_API_URL, { timeout: 8000 });
+
+    if (data?.result !== "success") {
+      throw new Error(`API returned non-success result: ${data?.result}`);
+    }
+
     const rate = data?.rates?.NGN;
 
     if (!rate || typeof rate !== "number") {
@@ -32,7 +35,6 @@ export const getUsdToNgnRate = async () => {
   } catch (err) {
     console.error("Exchange rate fetch failed:", err.message);
 
-    // A slightly stale rate is better than blocking payment entirely.
     if (cache.rate) {
       console.warn(`Falling back to stale cached rate: ${cache.rate}`);
       return cache.rate;
