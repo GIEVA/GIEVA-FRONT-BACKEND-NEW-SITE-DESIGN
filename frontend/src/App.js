@@ -143,7 +143,8 @@ import OurPartners from "./pages/OurPartners";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
 import ExamPaymentInitiate from "./pages/exams/ExamPaymentInitiate";
-
+import AdminQuizManager from "./pages/AdminQuizManager";
+import ParticipantQuizPage from "./pages/ParticipantQuizPage";
 
 
 
@@ -221,6 +222,10 @@ function App() {
         <Route path="/our-partners" element={<OurPartners />} />
         <Route path="/privacy" element={<PrivacyPolicy />} />
         <Route path="/terms" element={<TermsOfService />} />
+
+          <Route path="/public-meet/:roomName" element={<PublicMeetingRedirect />} />
+          <Route path="/quiz/join" element={<ParticipantQuizPage />} />
+          <Route path="/quiz/join/:code" element={<ParticipantQuizPage />} />
 
 
          <Route
@@ -381,6 +386,15 @@ function App() {
 
               <AdminDashboard />
 
+            </AdminLayout>
+          }
+        />
+
+          <Route
+          path="/admin/quiz-events"
+          element={
+            <AdminLayout>
+              <AdminQuizManager />
             </AdminLayout>
           }
         />

@@ -52,6 +52,7 @@ import {
   HelpOutline,
   AccountTree,
   ChevronLeft,
+  EmojiEvents,
 } from "@mui/icons-material";
 
 import { useState } from "react";
@@ -109,6 +110,7 @@ export default function AdminSidebar({
     { label: "Dashboard",          icon: <Dashboard />,     path: "/admin/dashboard"          },
     { label: "Users",              icon: <People />,        path: "/admin/users"              },
     { label: "Manage Courses",     icon: <School />,        path: "/admin/add-courses"        },
+    { label: "Quiz Events",        icon: <EmojiEvents />,   path: "/admin/quiz-events"        },
     { label: "Tutor KYC",          icon: <VerifiedUser />,  path: "/admin/tutor-kyc"          },
     { label: "Tutor Assignments",  icon: <AssignmentInd />, path: "/admin/tutor-assignments"  },
     { label: "HEALS Dashboard",    icon: <Dashboard />,     path: "/admin/heals/dashboard"    },

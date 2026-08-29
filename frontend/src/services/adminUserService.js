@@ -86,3 +86,9 @@ export const updateUserRole =
 
     return res.data;
   };
+
+  export const verifyUser = (id) =>
+  API.put(`/api/admin/users/${id}/verify`).then((r) => r.data);
+
+export const deleteUser = (id) =>
+  API.delete(`/api/admin/users/${id}`).then((r) => r.data);

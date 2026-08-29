@@ -98,6 +98,13 @@ import projectRoutes from "./routes/project.routes.js"
 import adminHealsRoutes from "./routes/adminHeals.routes.js";
 
 
+import { createServer } from "http";
+import { Server } from "socket.io";
+import { initQuizSocket } from "./socket/quizSocket.js";
+
+import liveQuizeRoutes from "./routes/quizRoutes.js"
+
+
 
 
 
@@ -123,7 +130,7 @@ startCampaignEmailScheduler();
 startEmailScheduler();
 
 
-app.use(bodyParser.json());
+// app.use(bodyParser.json());
 app.use(express.json());
 
 const startServer = async () => {
@@ -143,6 +150,9 @@ app.use(
   "/api/campaigns",
   campaignRoutes
 );
+
+app.use("/api/live/quiz", liveQuizeRoutes);
+
 
 app.use('/api/users', registerUserRoute);
 app.use('/api', studentProfileRoutes);
@@ -289,9 +299,16 @@ app.use("/api/projects/all", projectRoutes);
     await sequelize.sync();
     console.log("🚀 Sequelize models synced");
 
-    app.listen(PORT , () => {
-      console.log(`Server running on http://localhost:${PORT}`);
-    });
+  const httpServer = createServer(app);
+const io = new Server(httpServer, {
+  cors: { origin: process.env.FRONTEND_URL, credentials: true },
+});
+app.set("io", io);           // lets you access io from req.app.get("io") in route handlers if needed
+initQuizSocket(io);
+
+httpServer.listen(PORT, () => {
+  console.log(`Server running on http://localhost:${PORT}`);
+});
   } catch (error) {
     console.error("❌ Server start failed:", error);
   }

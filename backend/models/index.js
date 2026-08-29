@@ -44,6 +44,19 @@ import HistoryPageModel from './HistoryPage.js';
 import PartnerModel from './Partner.js';
 import FaqModel from './Faq.js';
 import ProjectModel from './Project.js';
+import QuizEventModel from './QuizEvent.js';
+import QuizParticipantModel from './QuizParticipant.js';
+import QuizQuestionModel from './QuizQuestion.js'
+import QuizRoundModel from './QuizRound.js'
+import QuizEventAnswerModel from './QuizRoundAnswer.js'
+import QuizRoundQuestionModel from './QuizRoundQuestion.js'
+import QuizScoreModel from './QuizScore.js'
+import QuizPanelistModel from './QuizSupportModels.js'
+import QuizAuditEventModel    from './QuizAuditEvent.js';
+import TechnicalIncidentModel from './TechnicalIncident.js';
+
+
+
 
 
 
@@ -92,6 +105,16 @@ const HistoryPage = HistoryPageModel(sequelize)
 const Partner = PartnerModel(sequelize)
 const Faq = FaqModel(sequelize)
 const Project = ProjectModel(sequelize)
+const QuizEvent = QuizEventModel(sequelize)
+const QuizParticipant = QuizParticipantModel(sequelize)
+const QuizQuestion = QuizQuestionModel(sequelize)
+const QuizRound = QuizRoundModel(sequelize)
+const QuizEventAnswer   = QuizEventAnswerModel(sequelize);
+const QuizRoundQuestion = QuizRoundQuestionModel(sequelize);
+const QuizScore         = QuizScoreModel(sequelize);
+const QuizPanelist      = QuizPanelistModel(sequelize);
+const QuizAuditEvent    = QuizAuditEventModel(sequelize);
+const TechnicalIncident = TechnicalIncidentModel(sequelize);
 
 // Collect models
 export const models = {
@@ -140,6 +163,17 @@ export const models = {
   Partner,
   Faq,
   Project,
+  QuizEvent,
+  QuizParticipant,
+  QuizQuestion,
+  QuizRound,
+  QuizEventAnswer,
+  QuizRoundQuestion,
+  QuizScore,
+  QuizPanelist,
+  QuizAuditEvent,
+  TechnicalIncident,
+
 };
 
 // Run associations

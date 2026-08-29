@@ -8,7 +8,7 @@ import models  from "../models/index.js";
 
 const {
   QuizEvent, QuizParticipant, QuizQuestion, QuizRound,
-  QuizRoundQuestion, QuizAnswer, QuizScore, QuizAuditEvent,
+  QuizRoundQuestion, QuizEventAnswer, QuizScore, QuizAuditEvent,
 } = models;
 
 const audit = async (eventId, userId, action, extras = {}) => {
@@ -113,18 +113,22 @@ export const joinEvent = async (req, res) => {
 // GET LIVE EVENT STATE (participant polls this)
 // GET /api/quiz/events/:eventId/state/:participantId
 // ======================================================
+
 export const getEventState = async (req, res) => {
   try {
     const { eventId, participantId } = req.params;
 
-    const [event, participant] = await Promise.all([
+       const [event, participant] = await Promise.all([
       QuizEvent.findByPk(eventId, {
         attributes: [
           "id","name","status","activeRound","currentQuestionIdx",
           "questionTimerSeconds","immediateFeedback","subjectOrder",
         ],
       }),
-      QuizParticipant.findByPk(participantId),
+      // Scoped to eventId so a participant from one event can't poll
+      // state under a different event's id and get back a participantStatus/
+      // myScore that was never actually computed against that event.
+      QuizParticipant.findOne({ where: { id: participantId, eventId } }),
     ]);
 
     if (!event)       return res.status(404).json({ message: "Event not found" });
@@ -183,7 +187,7 @@ export const getEventState = async (req, res) => {
           }
 
           // Participant's answer for this question
-          myAnswer = await QuizAnswer.findOne({
+          myAnswer = await QuizEventAnswer.findOne({
             where: { participantId, roundQuestionId: rq.id },
             attributes: ["id","selectedOption","submittedAt","isCorrect","marksEarned","lockReason"],
           });
@@ -253,17 +257,25 @@ export const submitAnswer = async (req, res) => {
     if (!participant)
       return res.status(403).json({ message: "Participant not found or not active in this event" });
 
-    // Verify the question is still open
-    const rq = await QuizRoundQuestion.findByPk(roundQuestionId, {
-      include: [{ model: QuizQuestion, attributes: ["id","marks"] }],
+      // Verify the question exists AND belongs to this event's round — without
+    // this join, a valid roundQuestionId from a *different* event (or a
+    // stale round in this one) would be accepted as long as participantId
+    // checked out, since QuizRoundQuestion has no eventId of its own.
+    const rq = await QuizRoundQuestion.findOne({
+      where: { id: roundQuestionId },
+      include: [
+        { model: QuizQuestion, attributes: ["id","marks"] },
+        { model: QuizRound,    attributes: ["id","eventId"] },
+      ],
     });
-    if (!rq)
+    if (!rq || rq.QuizRound?.eventId !== Number(eventId))
       return res.status(404).json({ message: "Question not found" });
     if (rq.status !== "open")
       return res.status(409).json({ message: "This question is no longer accepting answers" });
 
+
     // Check if already answered (allow change while open)
-    const existing = await QuizAnswer.findOne({
+    const existing = await QuizEventAnswer.findOne({
       where: { participantId, roundQuestionId },
     });
 
@@ -289,7 +301,7 @@ export const submitAnswer = async (req, res) => {
     }
 
     // First submission
-    const answer = await QuizAnswer.create({
+    const answer = await QuizEventAnswer.create({
       participantId,
       questionId:      rq.questionId,
       roundQuestionId: rq.id,
@@ -336,7 +348,7 @@ export const getMyResults = async (req, res) => {
       const score = await QuizScore.findOne({
         where: { eventId, roundId: round.id, participantId },
       });
-      const answers = await QuizAnswer.findAll({
+      const answers = await QuizEventAnswer.findAll({
         where: { eventId, participantId },
         include: [{
           model: QuizRoundQuestion,

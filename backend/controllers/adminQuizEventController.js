@@ -9,7 +9,7 @@ import { nanoid } from "nanoid";
 
 const {
   QuizEvent, QuizParticipant, QuizQuestion, QuizRound,
-  QuizRoundQuestion, QuizAnswer, QuizScore, QuizPanelist,
+  QuizRoundQuestion, QuizEventAnswer, QuizScore, QuizPanelist,
   QuizAuditEvent, TechnicalIncident, User, sequelize,
 } = models;
 
@@ -40,6 +40,72 @@ const scoreAnswer = (selectedOption, correctAnswer, marks, negativeMarkValue, ne
     isCorrect:   false,
     marksEarned: negativeMarking ? -Math.abs(Number(negativeMarkValue)) : 0,
   };
+};
+
+// Rebuild QuizScore rows for a round from scratch, based on the
+// current set of non-voided QuizAnswer rows. Call this any time
+// historical answers change after scores were first computed —
+// e.g. after voiding a question — so totals never drift from reality.
+const recalculateScores = async (eventId, roundId) => {
+  const round = await QuizRound.findByPk(roundId);
+  if (!round) return;
+
+  // Eligible participant set differs for tiebreak rounds (roundNumber 99),
+  // which only ever cover the tied subset, not every active participant.
+  const participantWhere = { eventId };
+  if (round.roundNumber === 99) {
+    participantWhere.id = { [Op.in]: round.tiebreakParticipants || [] };
+  } else {
+    participantWhere.status = {
+      [Op.in]: ["active", "qualified_round2", "tiebreak", "completed"],
+    };
+  }
+  const participants = await QuizParticipant.findAll({ where: participantWhere });
+
+  // Only count answers against round questions that haven't been voided.
+  const roundQuestionIds = (
+    await QuizRoundQuestion.findAll({
+      where: { roundId, status: { [Op.ne]: "voided" } },
+      attributes: ["id"],
+    })
+  ).map((rq) => rq.id);
+
+  for (const p of participants) {
+    const answers = roundQuestionIds.length
+      ? await QuizEventAnswer.findAll({
+          where: { participantId: p.id, roundQuestionId: { [Op.in]: roundQuestionIds } },
+        })
+      : [];
+
+    let totalMarks = 0, correctCount = 0, incorrectCount = 0, unansweredCount = 0;
+    for (const a of answers) {
+      totalMarks += Number(a.marksEarned) || 0;
+      if (a.isCorrect)          correctCount++;
+      else if (a.selectedOption) incorrectCount++;
+      else                        unansweredCount++;
+    }
+
+    const [score] = await QuizScore.findOrCreate({
+      where:    { eventId, roundId, participantId: p.id },
+      defaults: { totalMarks: 0, correctCount: 0, incorrectCount: 0, unansweredCount: 0 },
+    });
+
+    // Don't silently clobber a manual adjustment — flag it instead so an
+    // admin re-reviews rather than losing the override without knowing.
+    if (score.adjustmentNote) {
+      console.warn(
+        `[recalculateScores] participant ${p.id} in round ${roundId} has a manual ` +
+        `adjustment ("${score.adjustmentNote}") — skipping auto-recalc for this row.`
+      );
+      continue;
+    }
+
+    score.totalMarks      = totalMarks;
+    score.correctCount    = correctCount;
+    score.incorrectCount  = incorrectCount;
+    score.unansweredCount = unansweredCount;
+    await score.save();
+  }
 };
 
 // ======================================================
@@ -443,18 +509,25 @@ export const lockQuestion = async (req, res) => {
     rq.lockedAt = new Date();
     await rq.save();
 
-    // Auto-score all answers for this question
-    const activeParticipants = await QuizParticipant.findAll({
-      where: { eventId: event.id, status: { [Op.in]: ["active","qualified_round2","tiebreak"] } },
-    });
+       // Auto-score all answers for this question. Tiebreak rounds (roundNumber
+    // 99) only ever include the tied subset — scoring the full active/
+    // qualified pool here would create spurious QuizScore rows for
+    // participants who aren't in the tiebreak at all.
+    const participantWhere = { eventId: event.id };
+    if (event.activeRound === 99) {
+      participantWhere.id = { [Op.in]: round.tiebreakParticipants || [] };
+    } else {
+      participantWhere.status = { [Op.in]: ["active","qualified_round2","tiebreak"] };
+    }
+    const activeParticipants = await QuizParticipant.findAll({ where: participantWhere });
 
     for (const p of activeParticipants) {
-      let answer = await QuizAnswer.findOne({
+      let answer = await QuizEventAnswer.findOne({
         where: { participantId: p.id, roundQuestionId: rq.id },
       });
       if (!answer) {
         // Create unanswered record
-        answer = await QuizAnswer.create({
+        answer = await QuizEventAnswer.create({
           participantId:   p.id,
           questionId:      rq.questionId,
           roundQuestionId: rq.id,
@@ -826,15 +899,21 @@ export const pauseEvent = async (req, res) => {
     if (!event) return res.status(404).json({ message: "Event not found" });
     if (event.status === "paused") return res.status(400).json({ message: "Already paused" });
 
-    event.pausedFromStatus = event.status;
+      event.pausedFromStatus = event.status;
     event.status           = "paused";
     await event.save();
 
-    // Also pause any open question timer
-    await QuizRoundQuestion.update(
-      { pausedAt: new Date() },
-      { where: { status: "open" } }
-    );
+    // Also pause any open question timer — scoped to this event's active
+    // round only, so pausing one event can't touch another event's timers.
+    const activeRound = await QuizRound.findOne({
+      where: { eventId: event.id, roundNumber: event.activeRound },
+    });
+    if (activeRound) {
+      await QuizRoundQuestion.update(
+        { pausedAt: new Date() },
+        { where: { roundId: activeRound.id, status: "open" } }
+      );
+    }
 
     await audit(event.id, req.user.id, "event_paused", {
       reason: req.body.reason || "Administrator paused the event",
@@ -893,13 +972,11 @@ export const voidQuestion = async (req, res) => {
     );
 
     // Remove all answers for this question (everyone gets 0 — fair)
-    await QuizAnswer.destroy({ where: { roundQuestionId: rq.id } });
+      // Remove all answers for this question (everyone gets 0 — fair)
+    await QuizEventAnswer.destroy({ where: { roundQuestionId: rq.id } });
 
-    // Recalculate all scores for this round
-    const answers = await QuizAnswer.findAll({
-      where: { eventId: req.params.id },
-      include: [{ model: QuizRoundQuestion, where: { status: { [Op.ne]: "voided" } } }],
-    });
+    // Rebuild scores for the round now that this question's answers are gone
+    await recalculateScores(Number(req.params.id), rq.roundId);
     // (full score recalculation happens via the recalculateScores helper below)
 
     await audit(Number(req.params.id), req.user.id, "question_voided", {
@@ -1045,11 +1122,11 @@ export const getPanelistDashboard = async (req, res) => {
     // Per-question results for the current question (after locked/revealed)
     let questionResults = null;
     if (currentRQ && ["locked","revealed"].includes(currentRQ.status)) {
-      const answers = await QuizAnswer.findAll({
-        where:   { roundQuestionId: currentRQ.id },
-        include: [{ model: QuizParticipant, attributes: ["id","name","displayNumber"] }],
-      });
-      questionResults = answers.map((a) => ({
+      const answers = await QuizEventAnswer.findAll({
+          where:   { roundQuestionId: currentRQ.id },
+          include: [{ model: QuizParticipant, attributes: ["id","name","displayNumber"] }],
+        });
+        questionResults = answers.map((a) => ({
         participantId:   a.participantId,
         participantName: a.QuizParticipant?.name,
         displayNumber:   a.QuizParticipant?.displayNumber,
@@ -1092,7 +1169,7 @@ export const exportResults = async (req, res) => {
                   include: [{ model: QuizQuestion }] }],
     });
 
-    const allAnswers = await QuizAnswer.findAll({
+    const allAnswers = await QuizEventAnswer.findAll({
       where:   { eventId: event.id },
       include: [
         { model: QuizParticipant, attributes: ["id","name","school"] },
