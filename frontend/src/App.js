@@ -143,9 +143,9 @@ import OurPartners from "./pages/OurPartners";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
 import ExamPaymentInitiate from "./pages/exams/ExamPaymentInitiate";
-import AdminQuizManager from "./pages/AdminQuizManager";
-import ParticipantQuizPage from "./pages/ParticipantQuizPage";
 
+import AdminQuizManager from "./pages/AdminQuizManager";
+import ParticipantQuizPage from "./pages/ParticipantLiveQuizPage";
 
 
 

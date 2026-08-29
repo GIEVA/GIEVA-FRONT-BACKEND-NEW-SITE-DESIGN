@@ -19,10 +19,11 @@ import {
   CheckCircle, Cancel, WifiOff, EmojiEvents, HelpOutline,
   PauseCircle, Announcement,
 } from "@mui/icons-material";
-import {
-  joinEvent, getEventState, submitAnswer, getMyResults, sendHeartbeat,
-} from "../../services/quizService";
-import API from "../../services/api";
+
+
+import { getEventState, joinEvent, submitAnswer, getMyResults, sendHeartbeat, } from "../services/liveQuizService";
+
+import API from "../services/api";
 
 // ─── Design tokens (matches AdminQuizManager) ─────────────────
 const NAVY   = "#0B1F3A";

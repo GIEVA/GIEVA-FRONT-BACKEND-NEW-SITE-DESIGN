@@ -103,6 +103,7 @@ import { Server } from "socket.io";
 import { initQuizSocket } from "./socket/quizSocket.js";
 
 import liveQuizeRoutes from "./routes/quizRoutes.js"
+import courseQuizRoutes from "./routes/courseQuizRoutes.js";
 
 
 
@@ -164,6 +165,7 @@ app.use('/api/payments', paymentRoutes);
 app.use('/api/webhooks', livekitRoutes);
 app.use('/api', quizRoutes);
 app.use('/api/lessons', lessonRoutes);
+app.use("/api/course-quizzes", courseQuizRoutes);
 app.use('/api', enrollmentRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api', tutorPrivilegeRoutes);

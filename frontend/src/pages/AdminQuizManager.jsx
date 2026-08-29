@@ -26,7 +26,7 @@ import {
   completeRound, pauseEvent, resumeEvent, completeEvent,
   getEliminationReview, confirmElimination, startTiebreak,
   voidQuestion, adjustScore, getPanelistDashboard, exportResults,
-} from "../../services/quizService";
+} from "../services/liveQuizService";
 
 // ─── Design tokens ────────────────────────────────────────────
 const NAVY   = "#0B1F3A";

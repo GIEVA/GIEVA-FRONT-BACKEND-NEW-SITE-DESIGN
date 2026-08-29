@@ -12,7 +12,7 @@ import {
 import {
   createQuiz,
   addQuestion,
-} from "../services/quizService";
+} from "../services/courseQuizService";
 
 import {
   Box,

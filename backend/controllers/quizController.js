@@ -243,8 +243,8 @@ export const submitQuiz = async (req, res) => {
 
       await models.ActivityLog.create({
         userId,
-        action: "QUIZ_SUBMITTTED",
-        meta: { quizId },
+        action: "QUIZ_SUBMITTED",
+        meta: { quizId: attempt.quizId },
       });
 
       await QuizAnswer.create({
