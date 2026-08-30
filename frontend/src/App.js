@@ -265,13 +265,13 @@ function App() {
           />
 
           <Route
-  path="/quiz/panel/:code"
-  element={
-    <ProtectedRoute>
-      <PanelistQuizPage />
-    </ProtectedRoute>
-  }
-/>
+            path="/quiz/panel/:code"
+            element={
+              <ProtectedRoute>
+                <PanelistQuizPage />
+              </ProtectedRoute>
+            }
+          />
 
           <Route
             path="/tutor/profile"
