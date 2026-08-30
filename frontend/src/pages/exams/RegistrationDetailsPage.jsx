@@ -388,7 +388,7 @@ export default function RegistrationDetailsPage() {
             <Typography
               variant="h6"
             >
-              ₦
+              $
               {Number(
                 registration.amount
               ).toLocaleString()}

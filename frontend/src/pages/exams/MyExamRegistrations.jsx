@@ -226,7 +226,7 @@ export default function MyExamRegistrations() {
                   variant="h6"
                   mt={3}
                 >
-                  ₦
+                  $
                   {Number(
                     registration.amount ||
                       0
