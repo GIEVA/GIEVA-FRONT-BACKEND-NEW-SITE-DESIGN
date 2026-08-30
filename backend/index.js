@@ -105,6 +105,10 @@ import { initQuizSocket } from "./socket/quizSocket.js";
 import liveQuizeRoutes from "./routes/quizRoutes.js"
 import courseQuizRoutes from "./routes/courseQuizRoutes.js";
 
+import { recoverPendingTimers } from "./service/quizFlowEngine.js";
+
+
+
 
 
 
@@ -308,6 +312,8 @@ const io = new Server(httpServer, {
 app.set("io", io);           // lets you access io from req.app.get("io") in route handlers if needed
 initQuizSocket(io);
 
+await recoverPendingTimers(io); 
+
 httpServer.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });
@@ -317,3 +323,6 @@ httpServer.listen(PORT, () => {
 };
 
 startServer();
+
+
+

@@ -6,6 +6,8 @@
 import { Op }  from "sequelize";
 import models  from "../models/index.js";
 
+import { checkEarlyLock } from "../service/quizFlowEngine.js";
+
 const {
   QuizEvent, QuizParticipant, QuizQuestion, QuizRound,
   QuizRoundQuestion, QuizEventAnswer, QuizScore, QuizAuditEvent,
@@ -300,6 +302,9 @@ export const submitAnswer = async (req, res) => {
         hasAnswered:   true,
         changedAnswer: existing.changedAnswer,
       });
+
+    const io = req.app.get("io");
+    await checkEarlyLock(io, eventId, roundQuestionId);
 
       return res.json({ message: "Answer updated", answerId: existing.id });
     }

@@ -6,6 +6,9 @@
 import { Op }  from "sequelize";
 import models  from "../models/index.js";
 import { nanoid } from "nanoid";
+import { openNextQuestion as engineOpenNext, lockQuestion as engineLock, revealResult as engineReveal, cancelAutoFlow } from "../service/quizFlowEngine.js";
+
+
 
 const {
   QuizEvent, QuizParticipant, QuizQuestion, QuizRound,
@@ -438,167 +441,255 @@ export const startEvent = async (req, res) => {
 // OPEN NEXT QUESTION
 // PATCH /api/quiz/events/:id/next-question
 // ======================================================
+// export const openNextQuestion = async (req, res) => {
+//   try {
+//     if (!isAdmin(req.user)) return res.status(403).json({ message: "Unauthorized" });
+
+//     const event = await QuizEvent.findByPk(req.params.id);
+//     if (!event) return res.status(404).json({ message: "Event not found" });
+
+//     const validStates = ["round1_intro","round1_result_revealed","round2_intro","round2_result_revealed","tiebreak_active"];
+//     if (!validStates.includes(event.status))
+//       return res.status(400).json({ message: `Cannot open next question from state: ${event.status}` });
+
+//     const round = await QuizRound.findOne({
+//       where: { eventId: event.id, roundNumber: event.activeRound },
+//     });
+
+//     const nextIdx = (event.currentQuestionIdx || 0);
+//     const rq = await QuizRoundQuestion.findOne({
+//       where: { roundId: round.id, sequenceNumber: nextIdx + 1 },
+//       include: [{ model: QuizQuestion }],
+//     });
+//     if (!rq) return res.status(400).json({ message: "No more questions in this round" });
+
+//     // Lock any currently open question first (safety)
+//     await QuizRoundQuestion.update(
+//       { status: "locked", lockedAt: new Date() },
+//       { where: { roundId: round.id, status: "open" } }
+//     );
+
+//     rq.status   = "open";
+//     rq.openedAt = new Date();
+//     await rq.save();
+
+//     event.currentQuestionIdx = nextIdx + 1;
+//     event.status = event.activeRound === 1
+//       ? "round1_question_open"
+//       : (event.activeRound === 99 ? "tiebreak_active" : "round2_question_open");
+//     await event.save();
+
+//     await audit(event.id, req.user.id, "question_opened", {
+//       relatedQuestionId: rq.questionId,
+//       relatedRoundId:    round.id,
+//       description:       `Q${nextIdx + 1} opened`,
+//     });
+
+//     // Broadcast question to all — WITHOUT correct answer
+//     const { correctAnswer, ...safeQuestion } = rq.QuizQuestion.dataValues;
+//     broadcast(req, event.id, "quiz:question_open", {
+//       roundQuestionId: rq.id,
+//       sequenceNumber:  rq.sequenceNumber,
+//       question:        safeQuestion,
+//       timerSeconds:    event.questionTimerSeconds,
+//       openedAt:        rq.openedAt,
+//     });
+
+//     res.json({ message: `Question ${nextIdx + 1} opened`, roundQuestion: rq });
+//   } catch (err) {
+//     console.error("openNextQuestion:", err);
+//     res.status(500).json({ message: "Failed to open question" });
+//   }
+// };
+
+// ======================================================
+// LOCK QUESTION (close submissions)
+// PATCH /api/quiz/events/:id/lock-question
+// ======================================================
+// export const lockQuestion = async (req, res) => {
+//   try {
+//     if (!isAdmin(req.user)) return res.status(403).json({ message: "Unauthorized" });
+
+//     const event = await QuizEvent.findByPk(req.params.id);
+//     if (!event) return res.status(404).json({ message: "Event not found" });
+
+//     const round = await QuizRound.findOne({
+//       where: { eventId: event.id, roundNumber: event.activeRound },
+//     });
+//     const rq = await QuizRoundQuestion.findOne({
+//       where: { roundId: round.id, status: "open" },
+//       include: [{ model: QuizQuestion }],
+//     });
+//     if (!rq) return res.status(400).json({ message: "No open question to lock" });
+
+//     rq.status   = "locked";
+//     rq.lockedAt = new Date();
+//     await rq.save();
+
+//        // Auto-score all answers for this question. Tiebreak rounds (roundNumber
+//     // 99) only ever include the tied subset — scoring the full active/
+//     // qualified pool here would create spurious QuizScore rows for
+//     // participants who aren't in the tiebreak at all.
+//     const participantWhere = { eventId: event.id };
+//     if (event.activeRound === 99) {
+//       participantWhere.id = { [Op.in]: round.tiebreakParticipants || [] };
+//     } else {
+//       participantWhere.status = { [Op.in]: ["active","qualified_round2","tiebreak"] };
+//     }
+//     const activeParticipants = await QuizParticipant.findAll({ where: participantWhere });
+
+//     for (const p of activeParticipants) {
+//       let answer = await QuizEventAnswer.findOne({
+//         where: { participantId: p.id, roundQuestionId: rq.id },
+//       });
+//       if (!answer) {
+//         // Create unanswered record
+//         answer = await QuizEventAnswer.create({
+//           participantId:   p.id,
+//           questionId:      rq.questionId,
+//           roundQuestionId: rq.id,
+//           eventId:         event.id,
+//           selectedOption:  null,
+//           isCorrect:       false,
+//           marksEarned:     0,
+//           lockedAt:        new Date(),
+//           lockReason:      "timer_expired",
+//         });
+//       } else {
+//         const scored = scoreAnswer(
+//           answer.selectedOption,
+//           rq.QuizQuestion.correctAnswer,
+//           rq.QuizQuestion.marks,
+//           event.negativeMarkValue,
+//           event.negativeMarking
+//         );
+//         answer.isCorrect   = scored.isCorrect;
+//         answer.marksEarned = scored.marksEarned;
+//         answer.lockedAt    = new Date();
+//         answer.lockReason  = answer.submittedAt ? "submitted" : "timer_expired";
+//         await answer.save();
+//       }
+
+//       // Update round score
+//       const [score] = await QuizScore.findOrCreate({
+//         where:    { eventId: event.id, roundId: round.id, participantId: p.id },
+//         defaults: { totalMarks: 0, correctCount: 0, incorrectCount: 0, unansweredCount: 0 },
+//       });
+//       if (answer.isCorrect) {
+//         score.correctCount++;
+//         score.totalMarks = Number(score.totalMarks) + Number(answer.marksEarned);
+//       } else if (answer.selectedOption) {
+//         score.incorrectCount++;
+//         score.totalMarks = Number(score.totalMarks) + Number(answer.marksEarned);
+//       } else {
+//         score.unansweredCount++;
+//       }
+//       await score.save();
+//     }
+
+//     const stateMap = {
+//       1:  "round1_question_locked",
+//       2:  "round2_question_locked",
+//       99: "tiebreak_active",
+//     };
+//     event.status = stateMap[event.activeRound] || "round1_question_locked";
+//     await event.save();
+
+//     await audit(event.id, req.user.id, "question_locked", {
+//       relatedQuestionId: rq.questionId,
+//       description: `Q${rq.sequenceNumber} locked and scored`,
+//     });
+
+//     broadcast(req, event.id, "quiz:question_locked", { roundQuestionId: rq.id });
+
+//     res.json({ message: "Question locked and scored" });
+//   } catch (err) {
+//     console.error("lockQuestion:", err);
+//     res.status(500).json({ message: "Failed to lock question" });
+//   }
+// };
+
+// ======================================================
+// REVEAL RESULT
+// PATCH /api/quiz/events/:id/reveal-result
+// ======================================================
+// export const revealResult = async (req, res) => {
+//   try {
+//     if (!isAdmin(req.user)) return res.status(403).json({ message: "Unauthorized" });
+
+//     const event = await QuizEvent.findByPk(req.params.id);
+//     if (!event) return res.status(404).json({ message: "Event not found" });
+
+//     const round = await QuizRound.findOne({
+//       where: { eventId: event.id, roundNumber: event.activeRound },
+//     });
+//     const rq = await QuizRoundQuestion.findOne({
+//       where: { roundId: round.id, status: "locked" },
+//       include: [{ model: QuizQuestion }],
+//       order: [["sequenceNumber","DESC"]],
+//     });
+//     if (!rq) return res.status(400).json({ message: "No locked question to reveal" });
+
+//     rq.status     = "revealed";
+//     rq.revealedAt = new Date();
+//     await rq.save();
+
+//     const stateMap = { 1: "round1_result_revealed", 2: "round2_result_revealed" };
+//     event.status = stateMap[event.activeRound] || "round1_result_revealed";
+//     await event.save();
+
+//     // Get all scores for panelist dashboard
+//     const scores = await QuizScore.findAll({
+//       where:   { eventId: event.id, roundId: round.id },
+//       include: [{ model: QuizParticipant }],
+//       order:   [["totalMarks","DESC"]],
+//     });
+
+//     await audit(event.id, req.user.id, "result_revealed", {
+//       relatedQuestionId: rq.questionId,
+//     });
+
+//     // Broadcast INCLUDES correct answer now (question is closed)
+//     broadcast(req, event.id, "quiz:result_revealed", {
+//       roundQuestionId: rq.id,
+//       correctAnswer:   rq.QuizQuestion.correctAnswer,
+//       explanation:     rq.QuizQuestion.explanation,
+//       scores,
+//     });
+
+//     res.json({
+//       message:       "Result revealed",
+//       correctAnswer: rq.QuizQuestion.correctAnswer,
+//       explanation:   rq.QuizQuestion.explanation,
+//       scores,
+//     });
+//   } catch (err) {
+//     console.error("revealResult:", err);
+//     res.status(500).json({ message: "Failed to reveal result" });
+//   }
+// };
+
+
+
 export const openNextQuestion = async (req, res) => {
   try {
     if (!isAdmin(req.user)) return res.status(403).json({ message: "Unauthorized" });
-
-    const event = await QuizEvent.findByPk(req.params.id);
-    if (!event) return res.status(404).json({ message: "Event not found" });
-
-    const validStates = ["round1_intro","round1_result_revealed","round2_intro","round2_result_revealed","tiebreak_active"];
-    if (!validStates.includes(event.status))
-      return res.status(400).json({ message: `Cannot open next question from state: ${event.status}` });
-
-    const round = await QuizRound.findOne({
-      where: { eventId: event.id, roundNumber: event.activeRound },
-    });
-
-    const nextIdx = (event.currentQuestionIdx || 0);
-    const rq = await QuizRoundQuestion.findOne({
-      where: { roundId: round.id, sequenceNumber: nextIdx + 1 },
-      include: [{ model: QuizQuestion }],
-    });
-    if (!rq) return res.status(400).json({ message: "No more questions in this round" });
-
-    // Lock any currently open question first (safety)
-    await QuizRoundQuestion.update(
-      { status: "locked", lockedAt: new Date() },
-      { where: { roundId: round.id, status: "open" } }
-    );
-
-    rq.status   = "open";
-    rq.openedAt = new Date();
-    await rq.save();
-
-    event.currentQuestionIdx = nextIdx + 1;
-    event.status = event.activeRound === 1
-      ? "round1_question_open"
-      : (event.activeRound === 99 ? "tiebreak_active" : "round2_question_open");
-    await event.save();
-
-    await audit(event.id, req.user.id, "question_opened", {
-      relatedQuestionId: rq.questionId,
-      relatedRoundId:    round.id,
-      description:       `Q${nextIdx + 1} opened`,
-    });
-
-    // Broadcast question to all — WITHOUT correct answer
-    const { correctAnswer, ...safeQuestion } = rq.QuizQuestion.dataValues;
-    broadcast(req, event.id, "quiz:question_open", {
-      roundQuestionId: rq.id,
-      sequenceNumber:  rq.sequenceNumber,
-      question:        safeQuestion,
-      timerSeconds:    event.questionTimerSeconds,
-      openedAt:        rq.openedAt,
-    });
-
-    res.json({ message: `Question ${nextIdx + 1} opened`, roundQuestion: rq });
+    const io = req.app.get("io");
+    const result = await engineOpenNext(io, req.params.id, req.user.id);
+    if (!result.ok) return res.status(400).json({ message: result.message });
+    res.json({ message: "Question opened", roundQuestion: result.roundQuestion });
   } catch (err) {
     console.error("openNextQuestion:", err);
     res.status(500).json({ message: "Failed to open question" });
   }
 };
 
-// ======================================================
-// LOCK QUESTION (close submissions)
-// PATCH /api/quiz/events/:id/lock-question
-// ======================================================
 export const lockQuestion = async (req, res) => {
   try {
     if (!isAdmin(req.user)) return res.status(403).json({ message: "Unauthorized" });
-
-    const event = await QuizEvent.findByPk(req.params.id);
-    if (!event) return res.status(404).json({ message: "Event not found" });
-
-    const round = await QuizRound.findOne({
-      where: { eventId: event.id, roundNumber: event.activeRound },
-    });
-    const rq = await QuizRoundQuestion.findOne({
-      where: { roundId: round.id, status: "open" },
-      include: [{ model: QuizQuestion }],
-    });
-    if (!rq) return res.status(400).json({ message: "No open question to lock" });
-
-    rq.status   = "locked";
-    rq.lockedAt = new Date();
-    await rq.save();
-
-       // Auto-score all answers for this question. Tiebreak rounds (roundNumber
-    // 99) only ever include the tied subset — scoring the full active/
-    // qualified pool here would create spurious QuizScore rows for
-    // participants who aren't in the tiebreak at all.
-    const participantWhere = { eventId: event.id };
-    if (event.activeRound === 99) {
-      participantWhere.id = { [Op.in]: round.tiebreakParticipants || [] };
-    } else {
-      participantWhere.status = { [Op.in]: ["active","qualified_round2","tiebreak"] };
-    }
-    const activeParticipants = await QuizParticipant.findAll({ where: participantWhere });
-
-    for (const p of activeParticipants) {
-      let answer = await QuizEventAnswer.findOne({
-        where: { participantId: p.id, roundQuestionId: rq.id },
-      });
-      if (!answer) {
-        // Create unanswered record
-        answer = await QuizEventAnswer.create({
-          participantId:   p.id,
-          questionId:      rq.questionId,
-          roundQuestionId: rq.id,
-          eventId:         event.id,
-          selectedOption:  null,
-          isCorrect:       false,
-          marksEarned:     0,
-          lockedAt:        new Date(),
-          lockReason:      "timer_expired",
-        });
-      } else {
-        const scored = scoreAnswer(
-          answer.selectedOption,
-          rq.QuizQuestion.correctAnswer,
-          rq.QuizQuestion.marks,
-          event.negativeMarkValue,
-          event.negativeMarking
-        );
-        answer.isCorrect   = scored.isCorrect;
-        answer.marksEarned = scored.marksEarned;
-        answer.lockedAt    = new Date();
-        answer.lockReason  = answer.submittedAt ? "submitted" : "timer_expired";
-        await answer.save();
-      }
-
-      // Update round score
-      const [score] = await QuizScore.findOrCreate({
-        where:    { eventId: event.id, roundId: round.id, participantId: p.id },
-        defaults: { totalMarks: 0, correctCount: 0, incorrectCount: 0, unansweredCount: 0 },
-      });
-      if (answer.isCorrect) {
-        score.correctCount++;
-        score.totalMarks = Number(score.totalMarks) + Number(answer.marksEarned);
-      } else if (answer.selectedOption) {
-        score.incorrectCount++;
-        score.totalMarks = Number(score.totalMarks) + Number(answer.marksEarned);
-      } else {
-        score.unansweredCount++;
-      }
-      await score.save();
-    }
-
-    const stateMap = {
-      1:  "round1_question_locked",
-      2:  "round2_question_locked",
-      99: "tiebreak_active",
-    };
-    event.status = stateMap[event.activeRound] || "round1_question_locked";
-    await event.save();
-
-    await audit(event.id, req.user.id, "question_locked", {
-      relatedQuestionId: rq.questionId,
-      description: `Q${rq.sequenceNumber} locked and scored`,
-    });
-
-    broadcast(req, event.id, "quiz:question_locked", { roundQuestionId: rq.id });
-
+    const io = req.app.get("io");
+    const result = await engineLock(io, req.params.id, req.user.id);
+    if (!result.ok) return res.status(400).json({ message: result.message });
     res.json({ message: "Question locked and scored" });
   } catch (err) {
     console.error("lockQuestion:", err);
@@ -606,60 +697,13 @@ export const lockQuestion = async (req, res) => {
   }
 };
 
-// ======================================================
-// REVEAL RESULT
-// PATCH /api/quiz/events/:id/reveal-result
-// ======================================================
 export const revealResult = async (req, res) => {
   try {
     if (!isAdmin(req.user)) return res.status(403).json({ message: "Unauthorized" });
-
-    const event = await QuizEvent.findByPk(req.params.id);
-    if (!event) return res.status(404).json({ message: "Event not found" });
-
-    const round = await QuizRound.findOne({
-      where: { eventId: event.id, roundNumber: event.activeRound },
-    });
-    const rq = await QuizRoundQuestion.findOne({
-      where: { roundId: round.id, status: "locked" },
-      include: [{ model: QuizQuestion }],
-      order: [["sequenceNumber","DESC"]],
-    });
-    if (!rq) return res.status(400).json({ message: "No locked question to reveal" });
-
-    rq.status     = "revealed";
-    rq.revealedAt = new Date();
-    await rq.save();
-
-    const stateMap = { 1: "round1_result_revealed", 2: "round2_result_revealed" };
-    event.status = stateMap[event.activeRound] || "round1_result_revealed";
-    await event.save();
-
-    // Get all scores for panelist dashboard
-    const scores = await QuizScore.findAll({
-      where:   { eventId: event.id, roundId: round.id },
-      include: [{ model: QuizParticipant }],
-      order:   [["totalMarks","DESC"]],
-    });
-
-    await audit(event.id, req.user.id, "result_revealed", {
-      relatedQuestionId: rq.questionId,
-    });
-
-    // Broadcast INCLUDES correct answer now (question is closed)
-    broadcast(req, event.id, "quiz:result_revealed", {
-      roundQuestionId: rq.id,
-      correctAnswer:   rq.QuizQuestion.correctAnswer,
-      explanation:     rq.QuizQuestion.explanation,
-      scores,
-    });
-
-    res.json({
-      message:       "Result revealed",
-      correctAnswer: rq.QuizQuestion.correctAnswer,
-      explanation:   rq.QuizQuestion.explanation,
-      scores,
-    });
+    const io = req.app.get("io");
+    const result = await engineReveal(io, req.params.id, req.user.id);
+    if (!result.ok) return res.status(400).json({ message: result.message });
+    res.json({ message: "Result revealed", correctAnswer: result.correctAnswer, explanation: result.explanation, scores: result.scores });
   } catch (err) {
     console.error("revealResult:", err);
     res.status(500).json({ message: "Failed to reveal result" });
@@ -717,6 +761,9 @@ export const completeRound = async (req, res) => {
     res.status(500).json({ message: "Failed to complete round" });
   }
 };
+
+
+
 
 // ======================================================
 // ELIMINATION REVIEW  (Round 1 → Round 2)
@@ -913,9 +960,12 @@ export const pauseEvent = async (req, res) => {
     if (!event) return res.status(404).json({ message: "Event not found" });
     if (event.status === "paused") return res.status(400).json({ message: "Already paused" });
 
-      event.pausedFromStatus = event.status;
-    event.status           = "paused";
+    cancelAutoFlow(event.id); // stop any pending auto-lock/reveal/advance while paused
+
+    event.pausedFromStatus = event.status;
+    event.status = "paused";
     await event.save();
+   
 
     // Also pause any open question timer — scoped to this event's active
     // round only, so pausing one event can't touch another event's timers.

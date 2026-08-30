@@ -288,7 +288,15 @@ function LiveControlPanel({ event, onRefresh }) {
     }
   };
 
-  const s = event.status;
+
+
+    // Falls back to event.status only until the first dashboard poll lands.
+  // Once auto-advance is live, the server changes state without any admin
+  // click, so these buttons must react to the polled dashboard, not just
+  // to onRefresh() (which only fires after this admin's own action).
+  const s = dashboard?.event?.status ?? event.status;
+  const activeRoundDisplay = dashboard?.event?.activeRound ?? event.activeRound;
+
   const isR1Open    = s === "round1_question_open";
   const isR2Open    = s === "round2_question_open";
   const isOpen      = isR1Open || isR2Open || s === "tiebreak_active";
@@ -298,13 +306,29 @@ function LiveControlPanel({ event, onRefresh }) {
   const isR1Done    = s === "round1_completed";
   const isR2Done    = s === "round2_completed";
   const isPaused    = s === "paused";
-  // The backend allows voiding a question in either "open" or "locked"
-  // state — keep this button's visibility window matching that, so a
-  // problem spotted during locked-answer review (before reveal) can
-  // still be corrected.
   const canVoid     = isOpen || isLocked;
 
   const cfg = STATUS_CFG[s] || STATUS_CFG.draft;
+
+  // const s = event.status;
+  // const isR1Open    = s === "round1_question_open";
+  // const isR2Open    = s === "round2_question_open";
+  // const isOpen      = isR1Open || isR2Open || s === "tiebreak_active";
+  // const isLocked    = s === "round1_question_locked" || s === "round2_question_locked";
+  // const isRevealed  = s === "round1_result_revealed"  || s === "round2_result_revealed";
+  // const isIntro     = s === "round1_intro" || s === "round2_intro";
+  // const isR1Done    = s === "round1_completed";
+  // const isR2Done    = s === "round2_completed";
+  // const isPaused    = s === "paused";
+  // // The backend allows voiding a question in either "open" or "locked"
+  // // state — keep this button's visibility window matching that, so a
+  // // problem spotted during locked-answer review (before reveal) can
+  // // still be corrected.
+  // const canVoid     = isOpen || isLocked;
+
+  // const cfg = STATUS_CFG[s] || STATUS_CFG.draft;
+
+
 
   return (
     <Box>
@@ -313,7 +337,8 @@ function LiveControlPanel({ event, onRefresh }) {
                                   display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 2 }}>
         <Stack direction="row" spacing={2} alignItems="center">
           <Chip label={cfg.label} sx={{ bgcolor: cfg.bg, color: cfg.color, fontWeight: 800 }} />
-          <Typography sx={{ fontSize: 14, color: MUTED }}>Round {event.activeRound}</Typography>
+          {/* <Typography sx={{ fontSize: 14, color: MUTED }}>Round {event.activeRound}</Typography> */}
+          <Typography sx={{ fontSize: 14, color: MUTED }}>Round {activeRoundDisplay}</Typography>
           <Typography sx={{ fontSize: 14, color: MUTED }}>Q {event.currentQuestionIdx || 0}</Typography>
         </Stack>
         <Stack direction="row" spacing={1}>
