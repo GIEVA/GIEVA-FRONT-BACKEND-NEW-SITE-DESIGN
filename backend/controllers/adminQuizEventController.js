@@ -208,6 +208,7 @@ export const getEvent = async (req, res) => {
         { model: QuizParticipant, as: "participants" },
         { model: QuizPanelist,    as: "panelists",
           include: [{ model: User, attributes: ["id","fullName","email"] }] },
+        { model: QuizQuestion, as: "questions" },
       ],
     });
     if (!event) return res.status(404).json({ message: "Event not found" });
