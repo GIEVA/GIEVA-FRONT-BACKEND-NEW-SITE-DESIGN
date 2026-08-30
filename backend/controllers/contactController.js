@@ -3,6 +3,7 @@
 import models    from "../models/index.js";
 import sendEmail from "../utils/sendMail.js";
 import { cloudinary } from "../config/cloudinary.js";
+import sequelize from "../config/db.js";
 
 const { ContactMessage, User } = models;
 
@@ -377,8 +378,7 @@ export const getContactSummary = async (req, res) => {
   try {
     if (!isAdmin(req.user)) return res.status(403).json({ message: "Unauthorized" });
 
-    const { Op } = await import("sequelize");
-    const { sequelize } = models;
+    
 
     const [total, byStatus, byCategory, recentUnreplied] = await Promise.all([
       ContactMessage.count(),

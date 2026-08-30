@@ -3,6 +3,7 @@
 import models    from "../models/index.js";
 import sendEmail from "../utils/sendMail.js";
 import { cloudinary } from "../config/cloudinary.js";
+import sequelize from "../config/db.js";
 
 const { ContactMessage, User } = models;
 
