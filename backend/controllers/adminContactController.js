@@ -4,7 +4,7 @@ import models    from "../models/index.js";
 import sendEmail from "../utils/sendMail.js";
 import { cloudinary } from "../config/cloudinary.js";
 import sequelize from "../config/db.js";
-
+import { Op } from "sequelize";
 const { ContactMessage, User } = models;
 
 const ADMIN_ROLES = ["admin", "superadmin", "operational_admin"];
@@ -27,10 +27,10 @@ export const listContactMessages = async (req, res) => {
     if (category) where.category = category;
 
     if (search) {
-      const { Op } = await import("sequelize");
-      const like   = { [Op.like]: `%${search}%` };
+      const like   = { [Op.like]: `%${search}%` };   // no more dynamic import needed
       where[Op.or] = [{ fullName: like }, { email: like }, { subject: like }];
     }
+
 
     const { count, rows } = await ContactMessage.findAndCountAll({
       where,
@@ -236,8 +236,7 @@ export const getContactSummary = async (req, res) => {
   try {
     if (!isAdmin(req.user)) return res.status(403).json({ message: "Unauthorized" });
 
-    const { Op } = await import("sequelize");
-    const { sequelize } = models;
+   
 
     const [total, byStatus, byCategory, recentUnreplied] = await Promise.all([
       ContactMessage.count(),
