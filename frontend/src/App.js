@@ -226,7 +226,7 @@ function App() {
         <Route path="/terms" element={<TermsOfService />} />
 
           <Route path="/public-meet/:roomName" element={<PublicMeetingRedirect />} />
-          <Route path="/quiz/join" element={<ParticipantQuizPage />} />
+          <Route path="/quiz/join/:code" element={<ParticipantQuizPage />} />
           <Route path="/quiz/join/:code" element={<ParticipantQuizPage />} />
           <Route path="/quiz/audience/:code" element={<AudienceQuizPage />} />
 
