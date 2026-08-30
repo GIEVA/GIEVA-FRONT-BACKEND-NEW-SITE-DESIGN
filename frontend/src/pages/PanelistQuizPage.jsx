@@ -1,4 +1,4 @@
-// pages/quiz/PanelistQuizPage.jsx
+// pages/PanelistQuizPage.jsx
 //
 // Panelist-facing live dashboard. Requires login (route wrapped in
 // ProtectedRoute) — panelists are platform staff accounts, not
@@ -10,13 +10,13 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import {
-  Box, Typography, Paper, Chip, Stack, Table, TableHead,
+  Box, Typography, Paper, Chip, Table, TableHead,
   TableBody, TableRow, TableCell, CircularProgress, Alert,
 } from "@mui/material";
 import { CheckCircle, Cancel } from "@mui/icons-material";
-import { getEventByCode, getPanelistDashboard } from "../../services/quizService";
+import { getEventByCode, getPanelistDashboard } from "../services/liveQuizService";
 
-const NAVY = "#0B1F3A", GREEN = "#1E7F4F", ORANGE = "#E8651A", RED = "#ef4444";
+const GREEN = "#1E7F4F", ORANGE = "#E8651A", RED = "#ef4444";
 const BORDER = "#E6E9F0", TEXT = "#0F172A", MUTED = "#64748B";
 const POLL_MS = 4000;
 
@@ -28,15 +28,11 @@ export default function PanelistQuizPage() {
   const [error, setError] = useState("");
 
   // Resolve code → id once
- useEffect(() => {
-    const savedCode = sessionStorage.getItem(STORAGE_KEY);
-    if (codeParam) {
-      attemptJoin(codeParam, true);
-    } else if (savedCode) {
-      attemptJoin(savedCode, true);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [codeParam]);
+  useEffect(() => {
+    getEventByCode(code)
+      .then((res) => { setEventId(res.event.id); setEventName(res.event.name); })
+      .catch((err) => setError(err?.response?.data?.message || "Event not found"));
+  }, [code]);
 
   const poll = useCallback(async () => {
     if (!eventId) return;
