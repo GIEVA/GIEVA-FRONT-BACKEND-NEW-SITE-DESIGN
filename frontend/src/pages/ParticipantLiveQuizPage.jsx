@@ -9,7 +9,14 @@
 // fallback safety net in case a socket event is ever missed —
 // matches the same pattern used in the admin Live Control panel.
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+} from "react";
+
+import { useParams } from "react-router-dom";
 import { io } from "socket.io-client";
 import {
   Box, Typography, Paper, Button, Chip, Stack, TextField,
