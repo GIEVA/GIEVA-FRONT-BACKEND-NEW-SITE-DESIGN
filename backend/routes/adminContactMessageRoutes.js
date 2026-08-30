@@ -1,8 +1,11 @@
-// routes/contactRoutes.js
+// routes/adminContactMessageRoutes.js
+//
+// Mounted in server.js as:
+//   app.use("/api/message-contacts/admin", adminContactMessageRoutes);
+// so paths here are relative to that — no "/admin" prefix needed.
 
 import express from "express";
 import {
-
   listContactMessages,
   getContactMessage,
   updateContactStatus,
@@ -16,20 +19,13 @@ import { authenticate } from "../middleware/auth.js";
 
 const router = express.Router();
 
-
-
-// ── Admin ─────────────────────────────────────────────────────
-router.get(   "/admin/summary",        authenticate, getContactSummary);
-router.get(   "/admin",                authenticate, listContactMessages);
-router.get(   "/admin/:id",            authenticate, getContactMessage);
-router.patch( "/admin/:id/status",     authenticate, updateContactStatus);
-router.patch( "/admin/:id/assign",     authenticate, assignContactMessage);
-router.post(  "/admin/:id/reply",      authenticate, replyToContactMessage);
-router.patch( "/admin/:id/note",       authenticate, addInternalNote);
-router.delete("/admin/:id",            authenticate, deleteContactMessage);
+router.get(   "/summary",     authenticate, getContactSummary);
+router.get(   "/",            authenticate, listContactMessages);
+router.get(   "/:id",         authenticate, getContactMessage);
+router.patch( "/:id/status",  authenticate, updateContactStatus);
+router.patch( "/:id/assign",  authenticate, assignContactMessage);
+router.post(  "/:id/reply",   authenticate, replyToContactMessage);
+router.patch( "/:id/note",    authenticate, addInternalNote);
+router.delete("/:id",         authenticate, deleteContactMessage);
 
 export default router;
-
-// ── Add to server.js / app.js ─────────────────────────────────
-// import contactRoutes from "./routes/contactRoutes.js";
-// app.use("/api/contact", contactRoutes);
