@@ -19,6 +19,23 @@ const TYPE_LABELS = {
   general:              "General Consultation",
 };
 
+// Formats a date for display in emails, respecting the booking's timezone.
+const fmtDate = (date, timezone) => {
+  if (!date) return "—";
+  try {
+    return new Date(date).toLocaleString("en-US", {
+      dateStyle: "medium",
+      timeStyle: "short",
+      timeZone: timezone || "UTC",
+    });
+  } catch {
+    // Falls back if timezone is an invalid/unrecognized IANA string
+    return new Date(date).toLocaleString("en-US", {
+      dateStyle: "medium",
+      timeStyle: "short",
+    });
+  }
+};
 
 // Booking confirmation email sent to the user
 const sendBookingEmail = async (booking, subject, bodyHtml) => {
