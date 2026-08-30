@@ -75,6 +75,7 @@ function CreateEventDialog({ open, onClose, onCreated }) {
   const [saving, setSaving] = useState(false);
   const [error,  setError]  = useState("");
 
+
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
   const handleSave = async () => {
@@ -581,19 +582,45 @@ export default function AdminQuizManager() {
   const [addQOpen,    setAddQOpen]    = useState(false);
   const [toast,       setToast]       = useState(null);
 
-  const loadEvents = useCallback(async () => {
-    try { setLoading(true); const r = await listEvents(); setEvents(r.events || []); }
-    catch { setToast({ msg: "Failed to load events", severity: "error" }); }
-    finally { setLoading(false); }
-  }, []);
+  const [selectedQIds, setSelectedQIds] = useState([]);
+  const [assigning, setAssigning] = useState(false);
+
+  const toggleSelect = (qId) => {
+    setSelectedQIds((ids) => ids.includes(qId) ? ids.filter((i) => i !== qId) : [...ids, qId]);
+  };
 
   const loadDetail = useCallback(async (id) => {
     try { const r = await getEvent(id); setEventDetail(r.event); }
     catch { setToast({ msg: "Failed to load event", severity: "error" }); }
   }, []);
 
+  const handleAssign = async (roundNumber) => {
+    const round = eventDetail.rounds?.find((r) => r.roundNumber === roundNumber);
+    if (!round) return setToast({ msg: `Round ${roundNumber} not found`, severity: "error" });
+    try {
+      setAssigning(true);
+      await assignQuestions(eventDetail.id, round.id, selectedQIds);
+      setToast({ msg: `${selectedQIds.length} questions assigned to Round ${roundNumber}`, severity: "success" });
+      setSelectedQIds([]);
+      loadDetail(eventDetail.id);
+    } catch (err) {
+      setToast({ msg: err?.response?.data?.message || "Failed to assign questions", severity: "error" });
+    } finally {
+      setAssigning(false);
+    }
+  };
+
+  const loadEvents = useCallback(async () => {
+    try { setLoading(true); const r = await listEvents(); setEvents(r.events || []); }
+    catch { setToast({ msg: "Failed to load events", severity: "error" }); }
+    finally { setLoading(false); }
+  }, []);
+
   useEffect(() => { loadEvents(); }, [loadEvents]);
   useEffect(() => { if (selectedEvt) loadDetail(selectedEvt); }, [selectedEvt, loadDetail]);
+  // Selections don't carry meaning across events — clear them whenever
+  // the admin switches which event is selected.
+  useEffect(() => { setSelectedQIds([]); }, [selectedEvt]);
 
   return (
     <Box sx={{ minHeight: "100vh", bgcolor: BG }}>
@@ -717,26 +744,26 @@ export default function AdminQuizManager() {
                       </Typography>
                       <Grid container spacing={1.5} mb={3}>
                         {(eventDetail.participants || []).map((p) => (
-  <Grid item xs={12} sm={6} md={4} key={p.id}>
-    <Paper elevation={0} sx={{ border: `1px solid ${BORDER}`, borderRadius: 2, p: 1.5 }}>
-      <Typography sx={{ fontWeight: 700, fontSize: 13, color: TEXT }}>{p.displayNumber}. {p.name}</Typography>
-      <Typography sx={{ fontSize: 11, color: MUTED }}>{p.school} · {p.participantCode}</Typography>
-      <Button
-        size="small"
-        onClick={() => {
-          navigator.clipboard.writeText(`${window.location.origin}/quiz/join/${p.participantCode}`);
-        }}
-        sx={{ mt: 0.5, textTransform: "none", fontSize: 10, p: 0, minWidth: 0, color: GREEN }}
-      >
-        Copy join link
-      </Button>
-      <Chip label={p.connectionStatus} size="small"
-        sx={{ mt: 0.5, height: 16, fontSize: 9, display: "block", width: "fit-content",
-              bgcolor: p.connectionStatus === "ready" ? `${GREEN}15` : "#F1F5F9",
-              color:   p.connectionStatus === "ready" ? GREEN : MUTED }} />
-    </Paper>
-  </Grid>
-))}
+                          <Grid item xs={12} sm={6} md={4} key={p.id}>
+                            <Paper elevation={0} sx={{ border: `1px solid ${BORDER}`, borderRadius: 2, p: 1.5 }}>
+                              <Typography sx={{ fontWeight: 700, fontSize: 13, color: TEXT }}>{p.displayNumber}. {p.name}</Typography>
+                              <Typography sx={{ fontSize: 11, color: MUTED }}>{p.school} · {p.participantCode}</Typography>
+                              <Button
+                                size="small"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(`${window.location.origin}/quiz/join/${p.participantCode}`);
+                                }}
+                                sx={{ mt: 0.5, textTransform: "none", fontSize: 10, p: 0, minWidth: 0, color: GREEN }}
+                              >
+                                Copy join link
+                              </Button>
+                              <Chip label={p.connectionStatus} size="small"
+                                sx={{ mt: 0.5, height: 16, fontSize: 9, display: "block", width: "fit-content",
+                                      bgcolor: p.connectionStatus === "ready" ? `${GREEN}15` : "#F1F5F9",
+                                      color:   p.connectionStatus === "ready" ? GREEN : MUTED }} />
+                            </Paper>
+                          </Grid>
+                        ))}
                       </Grid>
                       {["draft","published"].includes(eventDetail.status) && (
                         <AddParticipantInline eventId={eventDetail.id} onAdded={() => loadDetail(eventDetail.id)} />
@@ -765,20 +792,36 @@ export default function AdminQuizManager() {
                   {/* QUESTIONS TAB */}
                   {tab === 1 && (
                     <Box>
-                      <Box sx={{ display: "flex", justifyContent: "space-between", mb: 3 }}>
+                      <Box sx={{ display: "flex", justifyContent: "space-between", mb: 3, flexWrap: "wrap", gap: 1 }}>
                         <Typography sx={{ fontWeight: 800, fontSize: 15, color: TEXT }}>
                           Questions ({eventDetail.questions?.length || 0})
                         </Typography>
-                        <Button variant="contained" size="small" startIcon={<Add />}
-                          onClick={() => setAddQOpen(true)}
-                          sx={{ textTransform: "none", bgcolor: NAVY, fontWeight: 700, borderRadius: 2, "&:hover": { bgcolor: GREEN } }}>
-                          Add Question
-                        </Button>
+                        <Stack direction="row" spacing={1}>
+                          {selectedQIds.length > 0 && (
+                            <>
+                              <Button size="small" variant="outlined" disabled={assigning}
+                                onClick={() => handleAssign(1)}
+                                sx={{ textTransform: "none", borderColor: GREEN, color: GREEN, fontWeight: 700, borderRadius: 2 }}>
+                                Assign {selectedQIds.length} to Round 1
+                              </Button>
+                              <Button size="small" variant="outlined" disabled={assigning}
+                                onClick={() => handleAssign(2)}
+                                sx={{ textTransform: "none", borderColor: NAVY, color: NAVY, fontWeight: 700, borderRadius: 2 }}>
+                                Assign to Round 2
+                              </Button>
+                            </>
+                          )}
+                          <Button variant="contained" size="small" startIcon={<Add />}
+                            onClick={() => setAddQOpen(true)}
+                            sx={{ textTransform: "none", bgcolor: NAVY, fontWeight: 700, borderRadius: 2, "&:hover": { bgcolor: GREEN } }}>
+                            Add Question
+                          </Button>
+                        </Stack>
                       </Box>
                       <Table size="small">
                         <TableHead>
                           <TableRow>
-                            {["#","Subject","Round","Question","Difficulty","Status","Action"].map((h) => (
+                            {["","#","Subject","Round","Question","Difficulty","Status","Action"].map((h) => (
                               <TableCell key={h} sx={{ fontWeight: 700, color: MUTED, fontSize: 12 }}>{h}</TableCell>
                             ))}
                           </TableRow>
@@ -786,6 +829,14 @@ export default function AdminQuizManager() {
                         <TableBody>
                           {(eventDetail.questions || []).map((q, i) => (
                             <TableRow key={q.id}>
+                              <TableCell padding="checkbox">
+                                <input
+                                  type="checkbox"
+                                  checked={selectedQIds.includes(q.id)}
+                                  onChange={() => toggleSelect(q.id)}
+                                  disabled={q.status !== "approved"}
+                                />
+                              </TableCell>
                               <TableCell>{i + 1}</TableCell>
                               <TableCell><Chip label={q.subject} size="small" sx={{ fontSize: 10, fontWeight: 700 }} /></TableCell>
                               <TableCell sx={{ color: MUTED, fontSize: 12 }}>R{q.roundAssignment}</TableCell>
@@ -814,6 +865,13 @@ export default function AdminQuizManager() {
                               </TableCell>
                             </TableRow>
                           ))}
+                          {(!eventDetail.questions || eventDetail.questions.length === 0) && (
+                            <TableRow>
+                              <TableCell colSpan={8} sx={{ textAlign: "center", color: MUTED, py: 4 }}>
+                                No questions yet — click "Add Question" to create one.
+                              </TableCell>
+                            </TableRow>
+                          )}
                         </TableBody>
                       </Table>
                     </Box>
