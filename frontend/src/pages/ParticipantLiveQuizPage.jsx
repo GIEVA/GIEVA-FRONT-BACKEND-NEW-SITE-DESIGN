@@ -69,6 +69,19 @@ export default function ParticipantQuizPage() {
   const timerIntervalRef = useRef(null);
   const answeringSentRef = useRef(false); // avoid spamming quiz:answering on every keystroke-equivalent click
 
+  // inside ParticipantQuizPage
+const { code: urlCode } = useParams();
+
+useEffect(() => {
+  const savedCode = sessionStorage.getItem(STORAGE_KEY);
+  const codeToUse = urlCode?.trim().toUpperCase() || savedCode;
+  if (codeToUse) {
+    setCodeInput(codeToUse);
+    attemptJoin(codeToUse, true);
+  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [urlCode]);
+
   // ── Restore a session on reload (participantCode only — no PII kept) ──
   useEffect(() => {
     const savedCode = sessionStorage.getItem(STORAGE_KEY);

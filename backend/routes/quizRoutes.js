@@ -96,7 +96,7 @@ router.get("/events/by-code/:eventCode", authenticate, getEventByCode);
 // ══════════════════════════════════════════════════════════════
 // PARTICIPANT — No auth (join by code)
 // ══════════════════════════════════════════════════════════════
-router.post("/join",                                             joinEvent);
+router.post("/join/:code",                                             joinEvent);
 router.get( "/events/:eventId/state/:participantId",            getEventState);
 router.post("/events/:eventId/answer",                          submitAnswer);
 router.get( "/events/:eventId/my-results/:participantId",       getMyResults);
