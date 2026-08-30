@@ -146,6 +146,8 @@ import ExamPaymentInitiate from "./pages/exams/ExamPaymentInitiate";
 
 import AdminQuizManager from "./pages/AdminQuizManager";
 import ParticipantQuizPage from "./pages/ParticipantLiveQuizPage";
+import AudienceQuizPage from "./pages/AudienceQuizPage";
+import PanelistQuizPage from "./pages/PanelistQuizPage";
 
 
 
@@ -226,6 +228,7 @@ function App() {
           <Route path="/public-meet/:roomName" element={<PublicMeetingRedirect />} />
           <Route path="/quiz/join" element={<ParticipantQuizPage />} />
           <Route path="/quiz/join/:code" element={<ParticipantQuizPage />} />
+          <Route path="/quiz/audience/:code" element={<AudienceQuizPage />} />
 
 
          <Route
@@ -260,6 +263,15 @@ function App() {
               </ProtectedRoute>
             }
           />
+
+          <Route
+  path="/quiz/panel/:code"
+  element={
+    <ProtectedRoute>
+      <PanelistQuizPage />
+    </ProtectedRoute>
+  }
+/>
 
           <Route
             path="/tutor/profile"

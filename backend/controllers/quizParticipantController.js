@@ -12,7 +12,11 @@ const {
 } = models;
 
 const audit = async (eventId, userId, action, extras = {}) => {
-  await QuizAuditEvent.create({ eventId, userId, action, ...extras }).catch(console.error);
+  try {
+    await QuizAuditEvent.create({ eventId, userId, action, ...extras });
+  } catch (err) {
+    console.error("audit() failed:", err);
+  }
 };
 
 const broadcast = (req, eventId, type, payload) => {

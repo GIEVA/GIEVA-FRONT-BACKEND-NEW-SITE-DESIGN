@@ -19,7 +19,11 @@ const isAdmin = (u) => u && ADMIN_ROLES.includes(u.role);
 // ── Helpers ────────────────────────────────────────────────────
 
 const audit = async (eventId, userId, action, extras = {}) => {
-  await QuizAuditEvent.create({ eventId, userId, action, ...extras }).catch(console.error);
+  try {
+    await QuizAuditEvent.create({ eventId, userId, action, ...extras });
+  } catch (err) {
+    console.error("audit() failed:", err);
+  }
 };
 
 // Broadcast current event state to all connected sockets in the event room.
@@ -258,15 +262,24 @@ export const addParticipant = async (req, res) => {
     const count = await QuizParticipant.count({ where: { eventId: event.id } });
     const participantCode = `${event.eventCode}-P${String(count + 1).padStart(2,"0")}`;
 
-    const participant = await QuizParticipant.create({
-      eventId: event.id,
-      userId:  userId || null,
-      name:    name.trim(),
-      school, classLevel, photoUrl,
-      displayNumber:   count + 1,
-      participantCode,
-      status: "registered",
-    });
+    // controllers/quizEventController.js — addParticipant, replace the final response
+const participant = await QuizParticipant.create({
+  eventId: event.id,
+  userId:  userId || null,
+  name:    name.trim(),
+  school, classLevel, photoUrl,
+  displayNumber:   count + 1,
+  participantCode,
+  status: "registered",
+});
+
+res.status(201).json({
+  message: "Participant added",
+  participant: {
+    ...participant.toJSON(),
+    joinLink: `${process.env.FRONTEND_URL}/quiz/join/${participantCode}`,
+  },
+});
 
     res.status(201).json({ message: "Participant added", participant });
   } catch (err) { res.status(500).json({ message: "Failed to add participant" }); }
@@ -1237,4 +1250,19 @@ export const logIncident = async (req, res) => {
 
     res.status(201).json({ message: "Incident logged", incident });
   } catch (err) { res.status(500).json({ message: "Failed to log incident" }); }
+};
+
+
+// controllers/adminQuizEventController.js — add near getEvent
+export const getEventByCode = async (req, res) => {
+  try {
+    const event = await QuizEvent.findOne({
+      where: { eventCode: req.params.eventCode },
+      attributes: ["id", "name", "status", "eventCode"],
+    });
+    if (!event) return res.status(404).json({ message: "Event not found" });
+    res.json({ event });
+  } catch (err) {
+    res.status(500).json({ message: "Failed to fetch event" });
+  }
 };

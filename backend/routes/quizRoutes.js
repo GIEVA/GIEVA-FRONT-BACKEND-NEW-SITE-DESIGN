@@ -30,6 +30,7 @@ import {
   exportResults,
   addPanelist,
   logIncident,
+  getEventByCode,
 } from "../controllers/adminQuizEventController.js";
 
 import {
@@ -88,6 +89,9 @@ router.get(   "/events/:id/dashboard",             authenticate, getPanelistDash
 // Incidents & export
 router.post(  "/events/:id/incidents",             authenticate, logIncident);
 router.get(   "/events/:id/export",                authenticate, exportResults);
+
+// routes/quizRoutes.js — add alongside your other authenticated admin routes
+router.get("/events/by-code/:eventCode", authenticate, getEventByCode);
 
 // ══════════════════════════════════════════════════════════════
 // PARTICIPANT — No auth (join by code)

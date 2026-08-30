@@ -717,17 +717,26 @@ export default function AdminQuizManager() {
                       </Typography>
                       <Grid container spacing={1.5} mb={3}>
                         {(eventDetail.participants || []).map((p) => (
-                          <Grid item xs={12} sm={6} md={4} key={p.id}>
-                            <Paper elevation={0} sx={{ border: `1px solid ${BORDER}`, borderRadius: 2, p: 1.5 }}>
-                              <Typography sx={{ fontWeight: 700, fontSize: 13, color: TEXT }}>{p.displayNumber}. {p.name}</Typography>
-                              <Typography sx={{ fontSize: 11, color: MUTED }}>{p.school} · {p.participantCode}</Typography>
-                              <Chip label={p.connectionStatus} size="small"
-                                sx={{ mt: 0.5, height: 16, fontSize: 9,
-                                      bgcolor: p.connectionStatus === "ready" ? `${GREEN}15` : "#F1F5F9",
-                                      color:   p.connectionStatus === "ready" ? GREEN : MUTED }} />
-                            </Paper>
-                          </Grid>
-                        ))}
+  <Grid item xs={12} sm={6} md={4} key={p.id}>
+    <Paper elevation={0} sx={{ border: `1px solid ${BORDER}`, borderRadius: 2, p: 1.5 }}>
+      <Typography sx={{ fontWeight: 700, fontSize: 13, color: TEXT }}>{p.displayNumber}. {p.name}</Typography>
+      <Typography sx={{ fontSize: 11, color: MUTED }}>{p.school} · {p.participantCode}</Typography>
+      <Button
+        size="small"
+        onClick={() => {
+          navigator.clipboard.writeText(`${window.location.origin}/quiz/join/${p.participantCode}`);
+        }}
+        sx={{ mt: 0.5, textTransform: "none", fontSize: 10, p: 0, minWidth: 0, color: GREEN }}
+      >
+        Copy join link
+      </Button>
+      <Chip label={p.connectionStatus} size="small"
+        sx={{ mt: 0.5, height: 16, fontSize: 9, display: "block", width: "fit-content",
+              bgcolor: p.connectionStatus === "ready" ? `${GREEN}15` : "#F1F5F9",
+              color:   p.connectionStatus === "ready" ? GREEN : MUTED }} />
+    </Paper>
+  </Grid>
+))}
                       </Grid>
                       {["draft","published"].includes(eventDetail.status) && (
                         <AddParticipantInline eventId={eventDetail.id} onAdded={() => loadDetail(eventDetail.id)} />
