@@ -60,7 +60,7 @@ export const getEventByCode = (eventCode) =>
 
 // ── Participant — no auth ──────────────────────────────────────
 export const joinEvent             = (participantCode) =>
-  PUBLIC_API.post(`${BASE}/join/:code`, { participantCode }).then((r) => r.data);
+  PUBLIC_API.post(`${BASE}/join`, { participantCode }).then((r) => r.data);
 
 export const getEventState         = (eventId, participantId) =>
   PUBLIC_API.get(`${BASE}/events/${eventId}/state/${participantId}`).then((r) => r.data);
