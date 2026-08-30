@@ -269,7 +269,7 @@ app.use("/admin/get-payments",  adminPaymentROutes)
 
 
 app.use("/api/contact", contactRoutes);
-app.use("/api/admin/contacts", adminContactMessageRoutes);
+app.use("/api/message-contacts/admin", adminContactMessageRoutes);
 
 
 app.use("/api/admin/service", adminServiceRoutes);

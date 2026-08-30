@@ -5,7 +5,7 @@
 
 import API from "./api";
 
-const BASE = "/api/admin/contacts";
+const BASE = "/api/message-contacts/admin";
 
 export const getContactSummary     = ()              => API.get(`${BASE}/summary`).then((r) => r.data);
 export const listContactMessages   = (params = {})   => API.get(`${BASE}`, { params }).then((r) => r.data);
