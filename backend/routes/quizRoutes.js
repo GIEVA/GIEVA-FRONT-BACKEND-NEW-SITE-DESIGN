@@ -31,6 +31,7 @@ import {
   addPanelist,
   logIncident,
   getEventByCode,
+  getFinalRankingReview,
 } from "../controllers/adminQuizEventController.js";
 
 import {
