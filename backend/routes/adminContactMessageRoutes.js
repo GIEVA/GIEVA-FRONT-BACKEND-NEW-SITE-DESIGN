@@ -14,7 +14,7 @@ import {
   addInternalNote,
   deleteContactMessage,
   getContactSummary,
-} from "../controllers/contactController.js";
+} from "../controllers/adminContactController.js";
 import { authenticate } from "../middleware/auth.js";
 
 const router = express.Router();
