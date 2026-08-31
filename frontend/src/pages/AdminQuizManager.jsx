@@ -392,6 +392,13 @@ const loadFinalReview = async () => {
               Complete Round
             </Button>
           )}
+            {isR1Done && (
+            <Button variant="contained" startIcon={<Group />} disabled={elimLoading}
+              onClick={loadEliminationReview}
+              sx={{ textTransform: "none", bgcolor: RED, fontWeight: 700, borderRadius: 2 }}>
+              {elimLoading ? <CircularProgress size={18} color="inherit" /> : "Elimination Review"}
+            </Button>
+          )}
          {isR2Done && (
             <Button variant="contained" startIcon={<Group />} disabled={finalLoading}
               onClick={loadFinalReview}
