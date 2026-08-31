@@ -48,8 +48,6 @@ const STORAGE_KEY = "quiz_participant_code";
 const HEARTBEAT_MS = 15000;
 const POLL_FALLBACK_MS = 4000; // safety-net poll; socket is primary source of truth
 
-const OPEN_STATUSES = new Set(["open"]);
-
 export default function ParticipantQuizPage() {
   // ── Session ──────────────────────────────────────────────
   const [participant, setParticipant] = useState(null);
@@ -61,7 +59,7 @@ export default function ParticipantQuizPage() {
   // ── Live state ───────────────────────────────────────────
   const [eventStatus,       setEventStatus]       = useState(null);
   const [participantStatus, setParticipantStatus] = useState(null);
-  const [currentQuestion,   setCurrentQuestion]    = useState(null); // {roundQuestionId, status, question, openedAt, sequenceNumber}
+  const [currentQuestion,   setCurrentQuestion]    = useState(null); // {roundQuestionId, status, question, openedAt, sequenceNumber, totalSeconds}
   const [myAnswer,          setMyAnswer]           = useState(null);
   const [myScore,           setMyScore]            = useState(null);
   const [selected,           setSelected]          = useState(null); // locally selected option, pre-submit confirmation
@@ -72,29 +70,33 @@ export default function ParticipantQuizPage() {
   const [toast,              setToast]             = useState(null);
   const [finalResults,       setFinalResults]      = useState(null);
 
-  const socketRef       = useRef(null);
+  const socketRef        = useRef(null);
   const timerIntervalRef = useRef(null);
   const answeringSentRef = useRef(false); // avoid spamming quiz:answering on every keystroke-equivalent click
 
-  // inside ParticipantQuizPage
-const { code: urlCode } = useParams();
+  // Mutable "current values" refs — needed because startTimer's tick
+  // callback and the socket handlers are set up once (per participant/
+  // event) and would otherwise close over stale state from whichever
+  // render they were created in.
+  const selectedRef        = useRef(null);
+  const myAnswerRef        = useRef(null);
+  const currentQuestionRef = useRef(null);
 
-useEffect(() => {
-  const savedCode = sessionStorage.getItem(STORAGE_KEY);
-  const codeToUse = urlCode?.trim().toUpperCase() || savedCode;
-  if (codeToUse) {
-    setCodeInput(codeToUse);
-    attemptJoin(codeToUse, true);
-  }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [urlCode]);
+  useEffect(() => { selectedRef.current = selected; }, [selected]);
+  useEffect(() => { myAnswerRef.current = myAnswer; }, [myAnswer]);
+  useEffect(() => { currentQuestionRef.current = currentQuestion; }, [currentQuestion]);
 
-  // ── Restore a session on reload (participantCode only — no PII kept) ──
+  const { code: urlCode } = useParams();
+
   useEffect(() => {
     const savedCode = sessionStorage.getItem(STORAGE_KEY);
-    if (savedCode) attemptJoin(savedCode, true);
+    const codeToUse = urlCode?.trim().toUpperCase() || savedCode;
+    if (codeToUse) {
+      setCodeInput(codeToUse);
+      attemptJoin(codeToUse, true);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [urlCode]);
 
   // ── Join flow ────────────────────────────────────────────
   const attemptJoin = async (code, silent = false) => {
@@ -118,6 +120,51 @@ useEffect(() => {
     }
   };
 
+  // ── Auto-submit whatever's currently selected, if anything ──────
+  // Called either when the local countdown hits 0, or when the server
+  // locks the question early (everyone else finished first). Silently
+  // ignores failures — a 409 here just means the question was already
+  // locked by the time this fired, which is fine, nothing to do.
+  const attemptAutoSubmit = async () => {
+    const cq = currentQuestionRef.current;
+    const sel = selectedRef.current;
+    const alreadySubmitted = !!myAnswerRef.current?.selectedOption;
+    if (!cq || cq.status !== "open" || !sel || alreadySubmitted) return;
+
+    try {
+      await submitAnswer(event.id, {
+        participantId: participant.id,
+        roundQuestionId: cq.roundQuestionId,
+        selectedOption: sel,
+      });
+      setMyAnswer({ selectedOption: sel, submittedAt: new Date().toISOString() });
+    } catch {
+      /* question likely already locked server-side — nothing more to do */
+    }
+  };
+
+  // ── Timer ────────────────────────────────────────────────
+  const startTimer = (openedAt, timerSeconds) => {
+    stopTimer();
+    const openedMs = new Date(openedAt).getTime();
+    const tick = () => {
+      const elapsed = (Date.now() - openedMs) / 1000;
+      const remaining = Math.max(0, Math.floor(timerSeconds - elapsed));
+      setSecondsLeft(remaining);
+      if (remaining <= 0) {
+        stopTimer();
+        attemptAutoSubmit();
+      }
+    };
+    tick();
+    timerIntervalRef.current = setInterval(tick, 500);
+  };
+  const stopTimer = () => {
+    if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+    timerIntervalRef.current = null;
+  };
+  useEffect(() => () => stopTimer(), []);
+
   // ── Socket connection — established once we have a participant ──
   useEffect(() => {
     if (!participant || !event) return;
@@ -135,29 +182,30 @@ useEffect(() => {
     });
 
     socket.on("quiz:joined", () => {
-      // Tell the admin dashboard this participant's client is live
       socket.emit("quiz:participant_ready", { eventId: event.id, participantId: participant.id });
     });
 
     socket.on("disconnect", () => setConnected(false));
 
-    // ── Event lifecycle broadcasts ──
     socket.on("event:state_change", ({ status }) => {
       setEventStatus(status);
     });
 
     socket.on("quiz:question_open", ({ roundQuestionId, sequenceNumber, question, timerSeconds, openedAt }) => {
-      setCurrentQuestion({ roundQuestionId, sequenceNumber, status: "open", question, openedAt });
+      setCurrentQuestion({ roundQuestionId, sequenceNumber, status: "open", question, openedAt, totalSeconds: timerSeconds });
       setMyAnswer(null);
       setSelected(null);
       answeringSentRef.current = false;
       startTimer(openedAt, timerSeconds);
-      setEventStatus((s) => s); // status itself comes via event:state_change / poll
     });
 
     socket.on("quiz:question_locked", ({ roundQuestionId }) => {
       setCurrentQuestion((cq) => (cq?.roundQuestionId === roundQuestionId ? { ...cq, status: "locked" } : cq));
       stopTimer();
+      // The room may have finished early (everyone answered before the
+      // timer ran out). If this participant picked an option but never
+      // hit Submit, get it in before it's too late.
+      attemptAutoSubmit();
     });
 
     socket.on("quiz:result_revealed", ({ roundQuestionId, correctAnswer, explanation, scores }) => {
@@ -226,25 +274,6 @@ useEffect(() => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [participant?.id, event?.id]);
 
-  // ── Timer ────────────────────────────────────────────────
-  const startTimer = (openedAt, timerSeconds) => {
-    stopTimer();
-    const openedMs = new Date(openedAt).getTime();
-    const tick = () => {
-      const elapsed = (Date.now() - openedMs) / 1000;
-      const remaining = Math.max(0, Math.floor(timerSeconds - elapsed));
-      setSecondsLeft(remaining);
-      if (remaining <= 0) stopTimer();
-    };
-    tick();
-    timerIntervalRef.current = setInterval(tick, 500);
-  };
-  const stopTimer = () => {
-    if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-    timerIntervalRef.current = null;
-  };
-  useEffect(() => () => stopTimer(), []);
-
   // ── REST poll fallback — catches anything a dropped socket connection missed ──
   const pollState = useCallback(async () => {
     if (!participant || !event) return;
@@ -252,21 +281,44 @@ useEffect(() => {
       const res = await getEventState(event.id, participant.id);
       setEventStatus(res.eventStatus);
       setParticipantStatus(res.participantStatus);
+
       if (res.currentQuestion) {
-        setCurrentQuestion((cq) =>
-          cq?.roundQuestionId === res.currentQuestion.roundQuestionId
-            ? { ...cq, status: res.currentQuestion.status } // don't clobber question payload we already have
-            : res.currentQuestion
-        );
+        const isNewQuestion = currentQuestionRef.current?.roundQuestionId !== res.currentQuestion.roundQuestionId;
+
+        if (isNewQuestion) {
+          // A different question than what's locally shown — the poll
+          // caught a transition the socket missed. Reset local selection
+          // state so a stale pick from the previous question can't carry
+          // over visually or keep the Submit button hidden.
+          setCurrentQuestion(res.currentQuestion);
+          setSelected(null);
+          answeringSentRef.current = false;
+          if (res.currentQuestion.status === "open") {
+            startTimer(res.currentQuestion.openedAt, event.questionTimerSeconds);
+          } else {
+            stopTimer();
+          }
+        } else {
+          setCurrentQuestion((cq) => ({ ...cq, status: res.currentQuestion.status }));
+        }
+
         if (res.timerInfo && res.currentQuestion.status === "open") {
           setSecondsLeft(res.timerInfo.remaining);
         }
       }
-      if (res.myAnswer) setMyAnswer(res.myAnswer);
-      if (res.myScore)  setMyScore(res.myScore);
+
+      // Always sync to the server's answer for the current question —
+      // including clearing it to null when there isn't one yet. Only
+      // updating on a truthy value here was the bug: it let a stale
+      // answer object from the previous question stick around, which
+      // both showed the old option as still selected and hid the
+      // Submit button (since hasSubmitted stayed true).
+      setMyAnswer(res.myAnswer || null);
+      if (res.myScore) setMyScore(res.myScore);
     } catch {
       /* transient — next poll or a socket event will recover state */
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [participant, event]);
 
   useEffect(() => {
@@ -535,15 +587,37 @@ function QuestionCard({ currentQuestion, selected, myAnswer, secondsLeft, submit
   const hasSubmitted = !!myAnswer?.selectedOption;
   const urgentTimer = secondsLeft !== null && secondsLeft <= 10;
 
-  const optionColor = (opt) => {
+  const mySelection = myAnswer?.selectedOption ?? selected;
+  const isCorrectOption = (opt) => opt === q.correctAnswer;
+  const isMySelection   = (opt) => opt === mySelection;
+
+  // Border: green on the correct answer once revealed; red on my pick
+  // if it was wrong; navy while I'm still choosing (pre-reveal).
+  const optionBorder = (opt) => {
     if (isRevealed) {
-      if (opt === q.correctAnswer) return GREEN;
-      if (opt === (myAnswer?.selectedOption || selected) && opt !== q.correctAnswer) return RED;
+      if (isCorrectOption(opt)) return GREEN;
+      if (isMySelection(opt))   return RED;
       return BORDER;
     }
-    if ((myAnswer?.selectedOption || selected) === opt) return NAVY;
-    return BORDER;
+    return isMySelection(opt) ? NAVY : BORDER;
   };
+
+  // Fill: a light tint matching the border, so the correct/incorrect
+  // answer is unmistakable at a glance once revealed, not just the
+  // border color.
+  const optionBg = (opt) => {
+    if (isRevealed) {
+      if (isCorrectOption(opt)) return `${GREEN}15`;
+      if (isMySelection(opt))   return `${RED}10`;
+      return CARD;
+    }
+    return isMySelection(opt) ? `${NAVY}08` : CARD;
+  };
+
+  const totalSeconds = currentQuestion.totalSeconds || 60;
+  const progressPct = secondsLeft !== null
+    ? Math.max(0, Math.min(100, (secondsLeft / totalSeconds) * 100))
+    : 0;
 
   return (
     <Paper elevation={0} sx={{ maxWidth: 560, width: "100%", borderRadius: 4, p: 4, border: `1px solid ${BORDER}` }}>
@@ -568,7 +642,7 @@ function QuestionCard({ currentQuestion, selected, myAnswer, secondsLeft, submit
       {isOpen && secondsLeft !== null && (
         <LinearProgress
           variant="determinate"
-          value={Math.max(0, Math.min(100, (secondsLeft / (secondsLeft > 60 ? secondsLeft : 60)) * 100))}
+          value={progressPct}
           sx={{ mb: 2.5, height: 5, borderRadius: 5, bgcolor: `${BORDER}`,
                 "& .MuiLinearProgress-bar": { bgcolor: urgentTimer ? RED : GREEN } }}
         />
@@ -588,14 +662,14 @@ function QuestionCard({ currentQuestion, selected, myAnswer, secondsLeft, submit
             onClick={() => onPick(opt)}
             sx={{
               justifyContent: "flex-start", textTransform: "none", textAlign: "left",
-              border: `2px solid ${optionColor(opt)}`,
-              bgcolor: (myAnswer?.selectedOption || selected) === opt ? `${NAVY}08` : CARD,
+              border: `2px solid ${optionBorder(opt)}`,
+              bgcolor: optionBg(opt),
               borderRadius: 2.5, py: 1.5, px: 2, color: TEXT, fontWeight: 600,
               "&:hover": { bgcolor: isOpen ? `${NAVY}05` : undefined },
             }}
             startIcon={
-              isRevealed && opt === q.correctAnswer ? <CheckCircle sx={{ color: GREEN }} /> :
-              isRevealed && opt === myAnswer?.selectedOption && opt !== q.correctAnswer ? <Cancel sx={{ color: RED }} /> :
+              isRevealed && isCorrectOption(opt) ? <CheckCircle sx={{ color: GREEN }} /> :
+              isRevealed && isMySelection(opt) && !isCorrectOption(opt) ? <Cancel sx={{ color: RED }} /> :
               undefined
             }
           >
