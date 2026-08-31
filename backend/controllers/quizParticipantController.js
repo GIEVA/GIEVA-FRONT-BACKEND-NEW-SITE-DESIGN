@@ -2,7 +2,7 @@
 //
 // Participant-facing: join event, get live state, submit answer,
 // get own scores. Correct answers are NEVER returned to participants.
-
+import sequelize from "../config/db.js";
 import { Op }  from "sequelize";
 import models  from "../models/index.js";
 
@@ -252,21 +252,12 @@ export const submitAnswer = async (req, res) => {
     if (!["A","B","C","D"].includes(selectedOption))
       return res.status(400).json({ message: "selectedOption must be A, B, C, or D" });
 
-    // Verify participant belongs to this event and is active
     const participant = await QuizParticipant.findOne({
-      where: {
-        id:      participantId,
-        eventId,
-        status:  { [Op.in]: ["active","qualified_round2","tiebreak"] },
-      },
+      where: { id: participantId, eventId, status: { [Op.in]: ["active","qualified_round2","tiebreak"] } },
     });
     if (!participant)
       return res.status(403).json({ message: "Participant not found or not active in this event" });
 
-      // Verify the question exists AND belongs to this event's round — without
-    // this join, a valid roundQuestionId from a *different* event (or a
-    // stale round in this one) would be accepted as long as participantId
-    // checked out, since QuizRoundQuestion has no eventId of its own.
     const rq = await QuizRoundQuestion.findOne({
       where: { id: roundQuestionId },
       include: [
@@ -279,14 +270,10 @@ export const submitAnswer = async (req, res) => {
     if (rq.status !== "open")
       return res.status(409).json({ message: "This question is no longer accepting answers" });
 
+    const existing = await QuizEventAnswer.findOne({ where: { participantId, roundQuestionId } });
 
-    // Check if already answered (allow change while open)
-    const existing = await QuizEventAnswer.findOne({
-      where: { participantId, roundQuestionId },
-    });
-
+    let responsePayload;
     if (existing) {
-      // Record the change
       existing.previousOption = existing.selectedOption;
       existing.selectedOption = selectedOption;
       existing.changedAnswer  = existing.previousOption !== selectedOption;
@@ -294,40 +281,40 @@ export const submitAnswer = async (req, res) => {
       existing.connectionStatusAtSubmit = participant.connectionStatus;
       await existing.save();
 
-      // Broadcast to admin/panelist that participant answered (no option revealed)
       broadcast(req, eventId, "quiz:answer_received", {
-        participantId,
-        roundQuestionId,
+        participantId, roundQuestionId,
         displayNumber: participant.displayNumber,
         hasAnswered:   true,
         changedAnswer: existing.changedAnswer,
       });
 
+      responsePayload = { message: "Answer updated", answerId: existing.id };
+    } else {
+      const answer = await QuizEventAnswer.create({
+        participantId,
+        questionId:      rq.questionId,
+        roundQuestionId: rq.id,
+        eventId,
+        selectedOption,
+        submittedAt:     new Date(),
+        connectionStatusAtSubmit: participant.connectionStatus,
+      });
+
+      broadcast(req, eventId, "quiz:answer_received", {
+        participantId, roundQuestionId,
+        displayNumber: participant.displayNumber,
+        hasAnswered:   true,
+      });
+
+      responsePayload = { message: "Answer submitted", answerId: answer.id };
+    }
+
+    // Runs once, regardless of which branch handled the save — locks
+    // the question immediately if this was the last outstanding answer.
     const io = req.app.get("io");
     await checkEarlyLock(io, eventId, roundQuestionId);
 
-      return res.json({ message: "Answer updated", answerId: existing.id });
-    }
-
-    // First submission
-    const answer = await QuizEventAnswer.create({
-      participantId,
-      questionId:      rq.questionId,
-      roundQuestionId: rq.id,
-      eventId,
-      selectedOption,
-      submittedAt:     new Date(),
-      connectionStatusAtSubmit: participant.connectionStatus,
-    });
-
-    broadcast(req, eventId, "quiz:answer_received", {
-      participantId,
-      roundQuestionId,
-      displayNumber: participant.displayNumber,
-      hasAnswered:   true,
-    });
-
-    res.json({ message: "Answer submitted", answerId: answer.id });
+    res.json(responsePayload);
   } catch (err) {
     console.error("submitAnswer:", err);
     res.status(500).json({ message: "Failed to submit answer" });

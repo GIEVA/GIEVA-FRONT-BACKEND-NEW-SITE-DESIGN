@@ -58,6 +58,8 @@ export const exportResults         = (id)          => API.get(`${BASE}/events/${
 export const getEventByCode = (eventCode) =>
   API.get(`${BASE}/events/by-code/${eventCode}`).then((r) => r.data);
 
+export const getFinalRankingReview = (id) => API.get(`${BASE}/events/${id}/final-ranking-review`).then((r) => r.data);
+
 // ── Participant — no auth ──────────────────────────────────────
 export const joinEvent             = (participantCode) =>
   PUBLIC_API.post(`${BASE}/join`, { participantCode }).then((r) => r.data);

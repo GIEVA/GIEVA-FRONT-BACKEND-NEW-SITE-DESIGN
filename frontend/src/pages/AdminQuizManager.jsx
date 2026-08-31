@@ -25,7 +25,7 @@ import {
   startEvent, openNextQuestion, lockQuestion, revealResult,
   completeRound, pauseEvent, resumeEvent, completeEvent,
   getEliminationReview, confirmElimination, startTiebreak,
-  voidQuestion, adjustScore, getPanelistDashboard, exportResults,
+  voidQuestion, adjustScore, getPanelistDashboard, exportResults, getFinalRankingReview,
 } from "../services/liveQuizService";
 
 // ─── Design tokens ────────────────────────────────────────────
@@ -250,6 +250,21 @@ function LiveControlPanel({ event, onRefresh }) {
   const [voidReason, setVoidReason] = useState("");
   const [showVoid,   setShowVoid]   = useState(false);
 
+  const [finalData, setFinalData] = useState(null);
+const [finalLoading, setFinalLoading] = useState(false);
+
+const loadFinalReview = async () => {
+  try {
+    setFinalLoading(true);
+    const res = await getFinalRankingReview(event.id);
+    setFinalData(res);
+  } catch (err) {
+    setToast({ msg: err?.response?.data?.message || "Failed to load final ranking", severity: "error" });
+  } finally {
+    setFinalLoading(false);
+  }
+};
+
   const loadDashboard = useCallback(async () => {
     try {
       setLoading(true);
@@ -310,23 +325,7 @@ function LiveControlPanel({ event, onRefresh }) {
 
   const cfg = STATUS_CFG[s] || STATUS_CFG.draft;
 
-  // const s = event.status;
-  // const isR1Open    = s === "round1_question_open";
-  // const isR2Open    = s === "round2_question_open";
-  // const isOpen      = isR1Open || isR2Open || s === "tiebreak_active";
-  // const isLocked    = s === "round1_question_locked" || s === "round2_question_locked";
-  // const isRevealed  = s === "round1_result_revealed"  || s === "round2_result_revealed";
-  // const isIntro     = s === "round1_intro" || s === "round2_intro";
-  // const isR1Done    = s === "round1_completed";
-  // const isR2Done    = s === "round2_completed";
-  // const isPaused    = s === "paused";
-  // // The backend allows voiding a question in either "open" or "locked"
-  // // state — keep this button's visibility window matching that, so a
-  // // problem spotted during locked-answer review (before reveal) can
-  // // still be corrected.
-  // const canVoid     = isOpen || isLocked;
 
-  // const cfg = STATUS_CFG[s] || STATUS_CFG.draft;
 
 
 
@@ -393,11 +392,11 @@ function LiveControlPanel({ event, onRefresh }) {
               Complete Round
             </Button>
           )}
-          {isR1Done && (
-            <Button variant="contained" startIcon={<Group />} disabled={elimLoading}
-              onClick={loadEliminationReview}
+         {isR2Done && (
+            <Button variant="contained" startIcon={<Group />} disabled={finalLoading}
+              onClick={loadFinalReview}
               sx={{ textTransform: "none", bgcolor: RED, fontWeight: 700, borderRadius: 2 }}>
-              {elimLoading ? <CircularProgress size={18} color="inherit" /> : "Elimination Review"}
+              {finalLoading ? <CircularProgress size={18} color="inherit" /> : "Review Final Ranking"}
             </Button>
           )}
           {isR2Done && (
@@ -556,32 +555,54 @@ function LiveControlPanel({ event, onRefresh }) {
               </TableBody>
             </Table>
           </DialogContent>
-          <DialogActions sx={{ px: 3, pb: 2.5, gap: 1, flexWrap: "wrap" }}>
+            <DialogActions sx={{ px: 3, pb: 2.5, gap: 1, flexWrap: "wrap" }}>
             <Button onClick={() => setElimData(null)} sx={{ textTransform: "none", color: MUTED }}>Close</Button>
-            {elimData.hasTie && (
-              <Button variant="outlined" startIcon={<Warning />} disabled={submitting}
-                onClick={async () => {
-                  const tiedIds = elimData.tiedParticipants.map((s) => s.participantId);
-                  await action(() => startTiebreak(event.id, tiedIds), "Tiebreak started!");
-                  setElimData(null);
-                }}
-                sx={{ textTransform: "none", borderColor: GOLD, color: GOLD, fontWeight: 700, borderRadius: 2 }}>
-                Start Tiebreak
-              </Button>
-            )}
-            <Button variant="contained" disabled={submitting || elimData.hasTie}
+            <Button variant="contained" disabled={submitting}
               onClick={async () => {
                 const qualified  = elimData.scores.slice(0, elimData.qualifyCount).map((s) => s.participantId);
                 const eliminated = elimData.scores.slice(elimData.qualifyCount).map((s) => s.participantId);
                 await action(
                   () => confirmElimination(event.id, { qualifiedParticipantIds: qualified, eliminatedParticipantIds: eliminated }),
                   "Round 2 started!"
-                );
-                setElimData(null);
-              }}
-              sx={{ textTransform: "none", bgcolor: NAVY, fontWeight: 700, borderRadius: 2, "&:hover": { bgcolor: GREEN } }}>
-              Confirm & Start Round 2
-            </Button>
+                  );
+                  setElimData(null);
+                }}
+                sx={{ textTransform: "none", bgcolor: NAVY, fontWeight: 700, borderRadius: 2, "&:hover": { bgcolor: GREEN } }}>
+                Confirm & Start Round 2
+              </Button>
+            </DialogActions>
+          </Dialog>
+        )}
+
+
+      {/* ← ADD THE NEW FINAL RANKING DIALOG HERE */}
+      {finalData && (
+        <Dialog open={!!finalData} onClose={() => setFinalData(null)} maxWidth="md" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
+          <DialogTitle sx={{ fontWeight: 800 }}>Final Ranking Review</DialogTitle>
+          <DialogContent dividers>
+            {!finalData.hasTies && (
+              <Alert severity="success" sx={{ borderRadius: 2 }}>No ties — ranking is final.</Alert>
+            )}
+            {finalData.tiedGroups.map((g, idx) => (
+              <Box key={idx} sx={{ mb: 2 }}>
+                <Alert severity="warning" sx={{ mb: 1, borderRadius: 2 }}>
+                  Rank {g.rankStart}{g.rankStart !== g.rankEnd ? `–${g.rankEnd}` : ""} tied at score {g.score}:
+                  {" "}{g.participants.map((p) => p.QuizParticipant?.name).join(", ")}
+                </Alert>
+                <Button variant="outlined" size="small"
+                  onClick={async () => {
+                    const tiedIds = g.participants.map((p) => p.participantId);
+                    await action(() => startTiebreak(event.id, tiedIds), "Tiebreak started!");
+                    setFinalData(null);
+                  }}
+                  sx={{ textTransform: "none", borderColor: GOLD, color: GOLD, fontWeight: 700 }}>
+                  Start Tiebreak for this group
+                </Button>
+              </Box>
+            ))}
+          </DialogContent>
+          <DialogActions sx={{ px: 3, pb: 2.5 }}>
+            <Button onClick={() => setFinalData(null)} sx={{ textTransform: "none", color: MUTED }}>Close</Button>
           </DialogActions>
         </Dialog>
       )}

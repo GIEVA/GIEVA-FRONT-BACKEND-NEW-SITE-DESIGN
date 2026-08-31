@@ -93,6 +93,8 @@ router.get(   "/events/:id/export",                authenticate, exportResults);
 // routes/quizRoutes.js — add alongside your other authenticated admin routes
 router.get("/events/by-code/:eventCode", authenticate, getEventByCode);
 
+router.get("/events/:id/final-ranking-review", authenticate, getFinalRankingReview);
+
 // ══════════════════════════════════════════════════════════════
 // PARTICIPANT — No auth (join by code)
 // ══════════════════════════════════════════════════════════════
