@@ -46,6 +46,7 @@
 import BaseLayout from '@layouts/BaseLayout.astro';
 import SubPageHero from '@components/SubPageHero.astro';
 import NgoCtaSection from '@components/NgoCtaSection.astro';
+import StatCounter from '@components/StatCounter.astro';
 import { ngoHeroPhoto } from '@lib/ngo-hero-images';
 
 const stats = [
@@ -113,7 +114,9 @@ const coreValues = [
         {
           stats.map((stat) => (
             <li class="stats__item">
-              <p class="u-h2 stats__value">{stat.value}</p>
+              <p class="u-h2 stats__value">
+                <StatCounter value={stat.value} />
+              </p>
               <p class="stats__label">{stat.label}</p>
             </li>
           ))
@@ -173,7 +176,7 @@ const coreValues = [
      i.e. 120px top and bottom per section, which is what --space-6xl already gives. The hero
      needs no bottom padding of its own: the story block's own 120px top is the whole gap. */
   .section {
-    padding-block: var(--space-6xl);
+    padding-block: var(--section-padding-block);
   }
 
   /* ── Our Story ───────────────────────────────────────────────────────────────

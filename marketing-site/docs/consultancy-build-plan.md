@@ -297,6 +297,23 @@ area.
 - Sections: hero (photo + "Who We Are"), Our Story (heading + 2-col paragraphs + a 4-stat row),
   Vision/Mission (2-col), Core Values (5 items in a 2-col grid, last cell naturally empty), and
   the same CTA banner as Home/Services.
+- **Our Story is CMS-driven as of 2026-08-15** (`@lib/history` ← `GET
+/api/gieva/history/our-history`) — but only its heading and paragraphs. `HistoryPage` models a
+  standalone _Our History_ page (hero + breadcrumb, intro beside a sidebar card, then a
+  year-by-year timeline — which is how the backend repo's own React app renders it, at its own
+  `/history` route); About is a different page, and only the intro group overlaps. Consuming
+  just that overlap was the explicit call, over building the `/about/history` route the model is
+  shaped for; the accepted cost is that the timeline's six entries and the sidebar stay
+  unpublished. `heroTitle` is deliberately unbound — it defaults to "Our History", so wiring it
+  would retitle this page's h1 away from "Who We Are" on the first dashboard save. The stats,
+  Vision/Mision and Core Values have no source field anywhere and stay hard-coded. Two knock-ons:
+  the paragraph count is now editorial (the design draws two, the CMS's live copy has four — the
+  2-col grid absorbs an even count cleanly and leaves a ragged last cell on an odd one), and the
+  design's bold lead run can't round-trip through a plain-string JSON column, so it is re-applied
+  by prefix-match in `splitLeadBold` and degrades to plain text if an editor rewrites that
+  sentence. Both logged as asks #9/#10 in `docs/backend-api-requests.md`. Fixtures are the
+  design's own heading and two paragraphs, so a build with no `GIEVA_API_URL` renders `/about`
+  byte-identically to the pre-integration page — verified by diffing the built HTML.
 - **Two genuine token-usage findings, confirmed against About's own `node.json`, not assumed
   from Home/Services precedent:**
   - About's recurring section headings ("Our Story", "Vision", "Mision", "Core Values") and its
@@ -380,7 +397,27 @@ area.
 - **Content notes confirmed via node.json, not guessed:** all 10 member cards use the
   identical placeholder photo/name/role (`8108addc…`, "Julie Sande", "Director General") — the
   same not-yet-personalised pattern as Home's Core Team (4×), reproduced as-is per
-  exact-replica-first. The CTA banner's button labels ("Book Consultancy" / "View all
+  exact-replica-first. **Superseded 2026-08-14 — the roster is now CMS-driven** (`@lib/staff` →
+  `GET /api/staff/all`, authored via the dashboard's AdminStaff screen). The frame is unchanged:
+  the grid, both gaps and the responsive collapse are the design's, and the ten placeholders
+  survive verbatim as `@lib/staff`'s fixtures, so a build with no `GIEVA_API_URL` renders this
+  page byte-identically to the pre-integration version (verified by diffing the built HTML —
+  the only delta is an unused `.team-empty` rule). Two knock-ons: the 4 + 4 + 2 row split is now
+  whatever the real roster's count gives, and the page gained an empty state for a CMS with no
+  published members, matching `/ngo/resources`' precedent. **Home's Core Team row was moved to
+  the same source in the same session** — `getStaff().slice(0, 4)`, since the design's section is
+  a single row of four and `order` (the field the dashboard exposes) is what decides which four.
+  Home's section is rendered conditionally rather than given an empty state: a heading reading
+  "Core Team — Intelligent Minds Leading the Way" above an empty grid is worse than no section,
+  and Home has five others to carry it. **Home's FAQ accordion followed on 2026-08-15**
+  (`@lib/faqs` ← `GET /api/faqs/all`), with the design's four questions as that module's
+  fixtures. Unlike Core Team it is **not** sliced: the accordion is a vertical stack of collapsed
+  rows that grows without layout consequence, so how many questions Home answers stays an
+  editorial call — worth knowing it is unbounded, and a long list will outrun the intro column
+  beside it. The API's own `category ASC, order ASC` ordering is kept rather than re-sorted by
+  `order`, which would interleave categories in a flat list; `category` itself is unrendered
+  (node 5891:4663's block has no headings, chips or filter). Empty CMS → the whole section is
+  omitted, same call as Core Team. The CTA banner's button labels ("Book Consultancy" / "View all
   Services") were confirmed from the actual button-instance text nodes, not the paragraph's
   "Book Free ConsultationView All Services" copy/paste artifact trailing it (trimmed here the
   same way as Home/Services/About).

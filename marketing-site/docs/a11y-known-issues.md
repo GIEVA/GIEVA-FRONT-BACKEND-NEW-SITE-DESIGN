@@ -190,7 +190,11 @@ these need the strict 4.5:1 threshold, not the relaxed 3:1 large-text one.
 
   **Extended 2026-08-11, NGO Resources build** to `/ngo/resources` (the "NEWS & RESOURCES"
   kicker) and `/ngo/resources/[slug]` (the article's category kicker), plus the category pill on
-  every `ArticleCard` on both. No new colour decision: `ArticleCard`'s pill is Home's
+  every `ArticleCard` on both. **Narrowed 2026-08-14:** the `/ngo/resources` kicker itself is
+  gone — the client had the "NEWS & RESOURCES" label removed as redundant next to the hero's own
+  "Resources" title — so that node and its `['resources__eyebrow']` allowlist entry are both
+  retired. The route stays in scope only for the `ArticleCard` pills. No new colour decision:
+  `ArticleCard`'s pill is Home's
   `.news__tag` lifted into a component and consumes the same `--color-accent-warm`, and both
   kickers are the same `.u-eyebrow` on the same white section surface — identical pairing,
   identical measured ratio. Recorded here rather than opened as N21 because a separate entry
@@ -204,9 +208,10 @@ these need the strict 4.5:1 threshold, not the relaxed 3:1 large-text one.
 - **Allowlist:** `['who__intro','u-eyebrow']`, `['programs__intro','u-eyebrow']`,
   `['success__intro','u-eyebrow']`, `['news__intro','u-eyebrow']`, `['news__tag']` — each keyed
   on an NGO-Home-only parent class so no Consultancy node can match. For the Resources routes:
-  `['resources__eyebrow']`, `['article__eyebrow']` and `['article-card__tag']`.
-  `resources__eyebrow` / `article__eyebrow` are **style-free marker classes** added to those two
-  elements for exactly this purpose — those pages' kickers don't get a usable parent class into
+  `['article__eyebrow']` and `['article-card__tag']` (the `['resources__eyebrow']` entry was
+  removed 2026-08-14 with the label itself).
+  `article__eyebrow` is a **style-free marker class** added to that element
+  for exactly this purpose — that page's kicker doesn't get a usable parent class into
   axe's generated selector, and a bare `['u-eyebrow']` marker would silently allowlist every
   eyebrow on all 18 routes, which is the failure mode this whole mechanism exists to avoid.
   `['article-card__tag']` is intentionally NOT paired with a parent: `ArticleCard` is

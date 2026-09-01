@@ -22,8 +22,14 @@
  *      About use. The redesign gave Program the identical 1440×670 / 25%-scrim / bottom-120 /
  *      `u-page-title` treatment, and its photo is byte-identical to About's (RMSE 0), so it
  *      takes the shared `ngoHeroPhoto` rather than a second copy of anything.
- *   2. THREE program-detail sections (node 7447:6030 vertical stack, 120px itemSpacing) —
- *      alternating photo/copy: STEP (photo left), HEALS (photo right), GVP (photo left). Each is
+ *   2. The program-detail sections (node 7447:6030 vertical stack, 120px itemSpacing) —
+ *      alternating photo/copy: the design's THREE are STEP (photo left), HEALS (photo right),
+ *      GVP (photo left), and they are **CMS-driven as of 2026-08-15** (`@lib/programs`, the same
+ *      published list Home's card grid takes its first four from; the design's three are that
+ *      module's fixtures, so a fixture build renders this frame unchanged). A configured-but-
+ *      empty CMS renders none of them, leaving the hero above the contact panel — the same
+ *      "empty states are real" call the Resources listing makes, and not one the fixtures can
+ *      reach. Each is
  *      a 40px `u-h3` heading + the same placeholder GIEVA paragraph + a tinted green "Learn more
  *      about us" button (`Button variant="secondary"` — the design's `GIEVA Button` here is
  *      `bg rgba(0,127,14,.05)` / `border rgba(0,127,14,.1)` / 8px radius / 33×17 padding / 16px
@@ -61,45 +67,33 @@ import SubPageHero from '@components/SubPageHero.astro';
 import { Image } from 'astro:assets';
 import { ngoHeroPhoto } from '@lib/ngo-hero-images';
 import { programPhoto } from '@lib/ngo-program-images';
+import { getProgramDetails } from '@lib/programs';
 
-// The shared placeholder paragraph the three detail sections carry verbatim (node 7463:5846).
-const programBlurb =
-  'Global Integrated Education Volunteers Association (GIEVA) was registered in 2006 as a nonprofit organization to improve access to quality education and global learning opportunities among young Nigerians. Over the years, GIEVA has grown to serve over 1,000 young Nigerians annually, with a strong focus on inclusive education, digital empowerment, and youth development.';
+/**
+ * The program-detail sections — CMS-driven as of 2026-08-15 (`@lib/programs`), from the same
+ * published list Home's card grid takes its first four from. The design's own three live on as
+ * that module's detail fixtures, so a build with no `GIEVA_API_URL` renders this page exactly as
+ * the frame does. Rendered in the API's own order (`order ASC`), all of them: this is the page
+ * every programme is entitled to a section on, and it is where Home's `#slug` links land.
+ *
+ * Three things the CMS does NOT supply, and why they stay here:
+ *
+ * - **The photo/copy alternation.** The design runs photo-left, photo-right, photo-left
+ *   (node 7447:6415 is the mirrored one), which is a rhythm of the layout rather than a property
+ *   of a programme, so it is computed from the index. On the three fixtures that reproduces the
+ *   frame exactly, and it keeps alternating for however many the client publishes.
+ * - **The "Learn more about us" destination.** No model field could hold it. Every one of these
+ *   buttons used to point at `/ngo/program`, i.e. the page rendering them, so all three were
+ *   no-ops; the label the design sets is "Learn more about us" and `/ngo/about` is what that
+ *   sentence names. If the client ever wants per-programme pages, `GET /api/programs/all/:slug`
+ *   is already there to back a `/ngo/program/[slug]` route and this becomes that link instead.
+ * - **The section `id`.** It is the CMS `slug` now rather than a hand-written acronym — the same
+ *   value Home builds its anchors from, so the two can no longer drift apart.
+ */
+const details = await getProgramDetails();
 
-// Program-detail sections, in document order. `reversed` puts the photo on the right (HEALS).
-//
-// `id` is ours, not the design's: the frame draws no anchors, but Home's four program cards each
-// need a destination inside this page (they previously all landed on its top). Slugs are the
-// programme acronyms so the URLs stay legible — /ngo/program#step, #heals, #gvp.
-//
-// `href` likewise: every one of these three buttons used to point at '/ngo/program', i.e. the
-// page it renders on, so all three were no-ops. The label the design sets is "Learn more about
-// us", and /ngo/about is what that sentence names, so that is where they go. Nothing here
-// invents a destination — if the designer intends these to reach a per-programme page, that page
-// doesn't exist in the Figma file yet (only five NGO frames do) and this becomes a redirect.
-const details = [
-  {
-    id: 'step',
-    title: 'Strategic Transformative Education Program (STEP)',
-    body: programBlurb,
-    href: '/ngo/about',
-    reversed: false,
-  },
-  {
-    id: 'heals',
-    title: 'Holistic Education Advising and Learning Services (HEALS)',
-    body: programBlurb,
-    href: '/ngo/about',
-    reversed: true,
-  },
-  {
-    id: 'gvp',
-    title: 'The GIEVA Volunteer Project (GVP)',
-    body: programBlurb,
-    href: '/ngo/about',
-    reversed: false,
-  },
-];
+// The design's own label on all three buttons (node 7463:5844) — see above for why it is here.
+const detailHref = '/ngo/about';
 
 // Seven contact fields — all labelled "What is your name?" in the source (node 7447:6451),
 // reproduced verbatim; unique ids keep each label→input association valid.
@@ -120,24 +114,55 @@ const contactFields = Array.from({ length: 7 }, (_, i) => ({
   <div class="container program">
     <!-- ── Program detail sections (STEP / HEALS / GVP) ───────────────────────── -->
     {
-      details.map((detail) => (
+      details.map((detail, i) => (
         <section
           class="program__detail"
-          id={detail.id}
-          data-reversed={detail.reversed ? '' : undefined}
+          id={detail.slug || undefined}
+          data-reversed={i % 2 === 1 ? '' : undefined}
         >
-          <Image
-            src={programPhoto}
-            alt=""
-            width={636}
-            height={450}
-            class="program__detail-media"
-          />
+          {/* A programme's own hero photo when the CMS has one, else the design's placeholder.
+              `heroImageUrl` is a remote Cloudinary URL, which `astro:assets` cannot process
+              without `image.remotePatterns` in astro.config.mjs — and that host is not confirmed
+              yet — so it renders as a plain <img> with explicit dimensions and `loading="lazy"`:
+              correct and CLS-free, just unoptimised. Same call, and the same one-line reversal
+              once the CDN host is known, as `ArticleCard.astro` and `TeamCard.astro`.
+
+              `alt=""` either way. The design's placeholder is decorative, and a real photo has no
+              alt-text field in the model — the only candidates are the empty string or the
+              programme title, which the heading immediately beside it already states. Logged
+              with the other Program asks in docs/backend-api-requests.md.
+
+              `data-remote` marks the CMS branch, NOT the placeholder one, so the placeholder's
+              markup stays byte-identical to the pre-integration page. It turns off the two
+              treatments that belong to the design's own fill rather than to any photo — see the
+              CSS. */}
+          {detail.imageUrl ? (
+            <img
+              class="program__detail-media"
+              src={detail.imageUrl}
+              alt=""
+              width={636}
+              height={450}
+              loading="lazy"
+              decoding="async"
+              data-remote
+            />
+          ) : (
+            <Image
+              src={programPhoto}
+              alt=""
+              width={636}
+              height={450}
+              class="program__detail-media"
+            />
+          )}
           <div class="program__detail-body">
             <h2 class="u-h3 program__detail-title">{detail.title}</h2>
             <div class="program__detail-copy">
-              <p class="u-body-lg program__detail-desc">{detail.body}</p>
-              <Button variant="secondary" href={detail.href}>
+              {detail.description && (
+                <p class="u-body-lg program__detail-desc">{detail.description}</p>
+              )}
+              <Button variant="secondary" href={detailHref}>
                 Learn more about us
               </Button>
             </div>
@@ -227,6 +252,16 @@ const contactFields = Array.from({ length: 7 }, (_, i) => ({
     object-position: bottom;
     transform: scaleX(-1);
     display: block;
+  }
+  /* Both of those last two belong to the design's placeholder FILL, not to "a programme photo":
+     the mirror is that fill's `scaleX(-1)` and the bottom alignment is its own crop origin.
+     Applying either to a photo the client uploaded would flip their image left-for-right and
+     crop it from an origin nobody chose, so the CMS branch opts out. (Scoped this way round —
+     the override on the remote image rather than the rules on the placeholder — so the
+     placeholder's markup and CSS stay exactly what they were before the CMS integration.) */
+  .program__detail-media[data-remote] {
+    object-position: center;
+    transform: none;
   }
   /* Copy column (node 7463:5841): 40px block padding, then a 40px gap from the heading to the
      copy block — which itself puts 64px between the paragraph and the button (node 7463:5844

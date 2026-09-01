@@ -1,0 +1,73 @@
+---
+/**
+ * Newsletter — could not subscribe.
+ *
+ * Where `POST /api/newsletter/subscribe` sends the visitor when the submission was rejected
+ * (`303 See Other`). Per the contract in docs/backend-api-requests.md #13 the ONLY thing that
+ * lands here is a missing or malformed email address: a Brevo outage does not, because the
+ * endpoint stores the row before it syncs and reports success once the address is safely held.
+ * So the copy can be specific about the cause instead of hedging.
+ *
+ * That also means this page should be close to unreachable in practice — the field is
+ * `type="email" required`, so a browser blocks an invalid address before the post is made. It
+ * exists for the cases that skip that: an older browser, a submission with validation bypassed,
+ * or a genuinely malformed address the client-side check lets through.
+ *
+ * No Figma frame, brand resolution and pagefind handling are all as /newsletter/thanks/ —
+ * see that file's header for the reasoning; the two pages share a stylesheet shape deliberately.
+ */
+import BaseLayout from '@layouts/BaseLayout.astro';
+import Button from '@components/Button.astro';
+---
+
+<BaseLayout
+  title="We couldn't subscribe you — GIEVA"
+  description="That newsletter signup didn't go through. Check the email address and try again."
+>
+  <section class="newsletter-result" data-pagefind-ignore>
+    <div class="container newsletter-result__inner">
+      <p class="u-eyebrow">Newsletter</p>
+      <h1 class="u-hero newsletter-result__heading">
+        That didn't <em class="u-accent-em">go through.</em>
+      </h1>
+      <p class="u-body-lg newsletter-result__lead">
+        The email address didn't look right, so we haven't subscribed you. Nothing was saved —
+        try again with the form at the foot of this page and it should go straight through.
+      </p>
+
+      <div class="newsletter-result__actions">
+        <Button variant="primary" href="/">GIEVA Consultancy</Button>
+        <Button variant="secondary" href="/ngo">GIEVA NGO</Button>
+      </div>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  /* Deliberately identical to /newsletter/thanks/ — the two are one template in everything but
+     copy, and the rhythm is the sub-page family's (--section-padding-block), as on /404. */
+  .newsletter-result {
+    padding-block: var(--section-padding-block);
+    display: grid;
+    align-items: center;
+    min-height: 60vh;
+  }
+  .newsletter-result__inner {
+    display: grid;
+    justify-items: start;
+    gap: var(--space-lg);
+  }
+  .newsletter-result__heading {
+    max-width: 18ch;
+  }
+  .newsletter-result__lead {
+    max-width: 56ch;
+    color: var(--color-text-muted);
+  }
+  .newsletter-result__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-md);
+    margin-block-start: var(--space-md);
+  }
+</style>

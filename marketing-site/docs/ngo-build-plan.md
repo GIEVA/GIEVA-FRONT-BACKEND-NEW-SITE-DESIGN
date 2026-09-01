@@ -771,13 +771,31 @@ build and crawler; and the publish→rebuild webhook.
   footer — leaving `NgoCtaSection`'s "Other Partnership Opportunities" row, present on only 2 of
   6 NGO pages, as its single inbound link. **This changes the footer on all 18 routes, so every
   committed visual baseline needs regenerating in the pinned container.**
-- **Two of Home's four program cards still point at `/ngo/program` root**, not an anchor. The
+- ~~**Two of Home's four program cards still point at `/ngo/program` root**~~ — **settled by the
+  CMS integration 2026-08-15, on the live-content path only; see "NGO Programs" below.** The
   design's own two frames disagree about the programme set: Home names STEP · CHOICES · GVP ·
   PARTNERSHIP PROGRAMS (node 5990:3672), Programs details STEP · HEALS · GVP (node 7447:6027).
   CHOICES has no section anywhere; PARTNERSHIP PROGRAMS is titled for partnerships but carries
-  HEALS's description verbatim. Both readings are defensible, neither is confirmed, so no anchor
-  was guessed. **Client question: which is right — is CHOICES retired, or is HEALS missing from
-  Home, or are Home's four cards meant to be four separate programme pages?**
+  HEALS's description verbatim. Both readings were defensible, neither confirmed, so no anchor was
+  guessed. Both surfaces now read one published list, so the sets cannot diverge and every card's
+  `#slug` resolves. The fixtures still carry the design's four and three, root links and all, so
+  a fixture build is unchanged — and the **client question survives for the content itself: is
+  CHOICES retired, or is HEALS missing from Home?** It is now a question about what to publish
+  rather than about what to build.
+
+- **Home's hero mark is sized to match Consultancy's, not to bleed off the frame edge** (client
+  direction, 2026-08-25). Node 5990:3672 draws `logo image` (5990:3677) as an 818px square
+  clipped to 780 at the frame's right edge; `.hero__ring` reproduced that with `width: 115%` and
+  a negative gutter margin, which is what made the NGO mark paint ~30% larger than the
+  Consultancy one on `/`. It now carries the same rule Consultancy's `.hero__ring` does —
+  `width: 100%`, sized by the grid — and `.hero__grid` matches that hero's columns too
+  (656px + `--space-2xl`, i.e. 656 + 48 inside the 1312px container, which is what leaves the
+  mark its 608px). The stacked cap under 900px moves 26rem → 24rem for the same reason. The NGO
+  frame never specified a two-column hero at all — 5990:3698 is a full-width overlay stacked on
+  the image — so the previous 600/24 split was an approximation, not a measured value, and the
+  copy is unaffected either way (`.hero__heading`/`.hero__lead` are capped in `ch`, well inside
+  both column widths). **`/ngo`'s committed visual baseline needs regenerating in the pinned
+  container.**
 
 ### Known, out of scope for this pass
 
@@ -788,6 +806,55 @@ The **Consultancy** nav's seven anchor links are all dead: `/services#heals`,
 `src/pages/services/professional-development.astro` defines a single `id`, so every one of them
 lands at the top of the page. Same class of bug as the NGO anchors, fixed the same way — logged
 in `docs/consultancy-build-plan.md`, not fixed here.
+
+## NGO Programs — CMS-backed (2026-08-15)
+
+Home's 2×2 programme grid (node 5990:3672) and `/ngo/program`'s detail sections (node 7447:6027)
+both read `GET /api/programs/all` through `src/lib/programs.ts`, which owns the endpoint, the
+types, the normalisation and the fixtures — the pattern `@lib/staff`, `@lib/faqs` and
+`@lib/history` set, with `@lib/cms` still owning transport and failure policy. **No frame
+changed; this is a content-source change.** Read the module header before touching either page.
+
+**What maps where.** `title` → the card title and the section heading; `tagline` → the card's
+blurb; `description` → the detail paragraph; `slug` → the `#anchor` joining the two; `heroImageUrl`
+→ the detail photo. `order` and `status` are consumed server-side (the sort and the published
+filter), so the response order is the display order and this module does not re-sort. `sections`
+and `category` are deliberately unread — see asks #11/#12 in `docs/backend-api-requests.md`, which
+also carry the two consequences worth the client's attention: dashboard sub-sections surface
+nowhere, and one `title` column has to serve both the card's acronym and the heading's full name.
+
+**The four-versus-three mismatch is settled, for live content.** One published list feeds both
+surfaces: Home takes the first four (the grid is a fixed 2×2, the same slice-of-a-shared-list call
+Home's Core Team makes on `@lib/staff`), `/ngo/program` details all of them in the API's order,
+alternating photo left/right by index. So every Home card's `#slug` necessarily has a section to
+land on, and the two sets can no longer drift.
+
+**The fixtures are allowed to disagree with each other**, and do: four programmes for Home, three
+for the detail page, with STEP's name written short on one and long on the other. Their job is to
+render the pre-integration pages byte-identically, and the pre-integration pages carry the
+design's own inconsistency. Verified: a fixture build's HTML is identical on both routes; the only
+byte that changed anywhere in `dist/` is one extra CSS rule (below), so **the committed visual
+baselines stay valid** — no regeneration needed for this commit.
+
+**Programme photos.** `heroImageUrl` is a remote Cloudinary URL, so `astro:assets` can't process it
+without `image.remotePatterns` (host still unconfirmed) — it renders as a plain `<img>` with
+explicit dimensions and `loading="lazy"`, the same call `ArticleCard.astro` and `TeamCard.astro`
+already make. No image falls back to the design's placeholder, which still goes through the
+pipeline. The placeholder's `transform: scaleX(-1)` and `object-position: bottom` are properties
+of the design's _fill_, not of "a programme photo", so a `[data-remote]` rule turns both off for
+CMS images — mirroring a photo the client uploaded would flip it left-for-right. The marker sits
+on the remote branch precisely so the placeholder markup stays byte-identical.
+
+**Empty states.** A configured-but-empty CMS drops Home's whole Programs section (same call as its
+news row and Consultancy Home's Core Team/FAQ) and leaves `/ngo/program` as hero + contact panel.
+Unreachable or erroring backend still fails the build, per `@lib/cms`. Fixtures can't reach either
+state.
+
+**Verified:** `verify:local` green (91 passed); scoped axe on `/ngo` and `/ngo/program` clean; the
+real fetch path exercised against a throwaway mock backend — remote images, missing images, a
+blank-titled row dropped, a tagline-less card falling back to `description`, a description-less
+section rendering no paragraph, a fifth programme detailed but off Home's grid, empty CMS, and a
+500 on `/api/programs/all` failing the build.
 
 ## Verification checklist (run every phase — non-negotiable)
 

@@ -1,0 +1,11 @@
+# GIEVA — https://gieva.org
+#
+# The two styleguides are internal tooling and are excluded from production builds
+# entirely (see astro.config.mjs), so they should never be reachable to crawl. These
+# Disallow lines are belt-and-braces for any deploy built with INCLUDE_STYLEGUIDE=1,
+# and for anything already indexed from before that exclusion existed.
+
+User-agent: *
+Allow: /
+Disallow: /styleguide
+Disallow: /ngo/styleguide

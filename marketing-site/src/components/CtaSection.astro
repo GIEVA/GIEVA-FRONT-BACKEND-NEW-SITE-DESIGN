@@ -122,16 +122,26 @@ const titleLines = titleLead.split('\u2028');
     flex-wrap: wrap;
   }
 
+  /* ── Mobile (node 12490:11562) ────────────────────────────────────────────────
+     This block used to centre the card's copy and its buttons. That was ours, authored before
+     any mobile frame existed, and the frame contradicts it: the card is 350×468 with its
+     content LEFT-aligned in a 286px column, exactly as on desktop. Only the axis changes —
+     the two-column split becomes a stack, the buttons go full-width, and the text→buttons gap
+     opens from 48px to 80px (the actions frame sits at y=300 under a 220px text block).
+     Padding drops 64 → 32 with it. */
   @media (max-width: 640px) {
     .cta__card {
-      justify-content: center;
-      text-align: center;
+      flex-direction: column;
+      align-items: stretch;
+      gap: var(--space-4xl);
+      padding: var(--space-lg);
     }
     .cta__text {
       max-width: none;
     }
     .cta__actions {
-      justify-content: center;
+      flex-direction: column;
+      align-items: stretch;
     }
   }
 </style>

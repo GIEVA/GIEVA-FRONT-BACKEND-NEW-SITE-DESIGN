@@ -52,10 +52,34 @@ built page.
   sign-off (SAT's block spacing, the "Councellor" spelling fix, placeholder Prof. Dev. copy).
 - **NGO — 6 routes.** `/ngo`, `/ngo/styleguide`, `/ngo/partners`, `/ngo/about`, `/ngo/program`,
   `/ngo/contact` — all `verified`. See `docs/ngo-build-plan.md`.
+- **The stat count-up is live** on `/`, `/about`, `/ngo` and `/ngo/about` — `StatCounter.astro`,
+  driven by stock **Motion** (`animate` + `inView`, open-source core; it replaced `number-flow`
+  on 2026-08-27 because making that component actually _count_ needed a bespoke tuned driver).
+  It costs 21.9 kB gz, all of it `animate`. **Read `docs/enhancement-backlog.md` E-08 before
+  touching a stat rail** — the ease choice, the width ghost and the weight trade are recorded
+  there.
 - **Open deferrals.** Colour-contrast gaps in `docs/a11y-known-issues.md` (tracked, not fixed —
   non-negotiable #2); craft ideas in `docs/enhancement-backlog.md`; a shell-level parity gap
   affecting all 18 routes (the header sits above the hero rather than over it) recorded in
-  `docs/consultancy-build-plan.md` Phase 6.
+  `docs/consultancy-build-plan.md` Phase 6; and the footer newsletter, which is now fully wired on
+  our side but waits on `POST /api/newsletter/subscribe` being built in the backend repo — the
+  contract is `docs/backend-api-requests.md` #13, and until it exists the form renders with no
+  `action` and reloads the page, exactly as before.
+- **The logo mark was rebuilt in 3D as a prototype, and that prototype is NOT part of this
+  export.** Every mark the site paints is the drawn Figma artwork, on every route, so no page
+  here depends on it. The Blender generator and renders (`design/blender/`), the `MarkOrbit`
+  component, and the `/styleguide` section that previewed them live only in the upstream
+  marketing-site repo (`Akintayo74/gieva-website-fiat`), which stays the canonical home for
+  design prototypes. `docs/enhancement-backlog.md` E-02 still carries the decision record, the
+  measured motion-option matrix and the fidelity gaps, and it refers to files you will not find
+  in this directory — that is expected, not a missing-file bug. The same applies to the
+  `/styleguide` stat-count-up lab: the tuning harness stayed upstream, while the `StatCounter`
+  it tuned ships here and is live on four routes.
+  - **Where it stands (2026-08-25).** The resting frame was signed off for the Consultancy hero
+    that morning and shipped with the light orbiting above 900px; **later the same day the hero
+    was reverted to the drawn artwork on client direction**. So `heroRing` on `/`, `logoMark` (the
+    48px lockup on every route) and the NGO hero's ring are all the 2D artwork — the 3D mark was
+    never on the NGO site at all.
 
 > **▶ The build plans are the durable hand-off record.** Page index, Figma node IDs, per-phase
 > deliverables, the mandatory verification checklist, and every deviation logged against a frame
@@ -135,8 +159,37 @@ patching the palette. First used, and best studied, on the Consultancy Home buil
   work has been per-topic branches since.)
 - **Components consume semantic tokens, never primitives.** Brand differences live only in
   the theme value-sets.
+- **The design has TWO authored widths, and so does the token layer.** 1440px (every page's
+  build frames) and 390px (the Consultancy Home mobile frame, node 12490:10106). `tokens.css`
+  §4 holds the 390 values — a different type scale (48px hero vs 64, 32px section titles vs 48,
+  14px paragraphs vs 18), a 20px gutter and a 64px section rhythm — behind one `max-width: 640px`
+  query. **Author mobile differences there, or in a component's own `@media (max-width: 640px)`
+  block; never by restating a font size in a page.** A page-local override of a `--font-size-*`
+  PRIMITIVE silently opts that element out of the whole mobile tier (SubPageHero did exactly
+  this and rendered its titles at desktop size). Roles with no mobile frame yet are marked
+  `(derived)` in §4 — replace them when the remaining mobile frames land.
+- **The a11y gate runs at both widths.** `playwright.config.ts` has a `mobile-a11y` project that
+  re-runs `tests/a11y.spec.ts` alone at 390×844. Visual regression stays desktop-only on
+  purpose — a second baseline per route is a real cost and a separate decision.
 - **Every new route** goes into `tests/routes.ts` → automatically held to the a11y gate and
   given a visual baseline.
+- **Styleguides are internal-only and are NOT deployed.** `/styleguide` and `/ngo/styleguide`
+  live in **`src/internal/`**, outside `src/pages/`, so file-based routing cannot see them;
+  `astro.config.mjs`'s `gieva:internal-styleguide-routes` integration injects them back on
+  `astro dev` (always) or when **`INCLUDE_STYLEGUIDE=1`** is set. A plain `npm run build` — what
+  a deploy runs — omits the pages _and_ everything only they reference, which is how the 3D
+  mark's ~1 MB of sprite sheets stays out of production. Deleting the built page in
+  `astro:build:done` would not have achieved that: the bundler emits a page's assets before that
+  hook runs, so the bytes would ship orphaned.
+  - Both routes stay in `tests/routes.ts` and `lighthouserc.json` and stay gated:
+    `playwright.config.ts` sets the flag on its webServer build, and CI sets it on the Lighthouse
+    and snapshot-refresh builds. The `quality` job builds _without_ it, so the production build is
+    covered too. The accepted trade is that the gated build differs from the deployed one by
+    exactly these two pages.
+  - **If you build by hand and a styleguide 404s, that is the design, not a break** — use
+    `npm run dev`, or `INCLUDE_STYLEGUIDE=1 npm run build`.
+  - `public/robots.txt` disallows both paths as belt-and-braces, for anything already indexed
+    and for any deploy someone builds with the flag on.
 - **Visual baselines are Chromium-build-specific** — generate them in the canonical
   environment (see README "Visual regression"). CI uses the pinned Playwright container.
 - **Testing cadence (WORKFLOW.md §5a):** iterate with **`npm run verify:quick`** (check + lint,

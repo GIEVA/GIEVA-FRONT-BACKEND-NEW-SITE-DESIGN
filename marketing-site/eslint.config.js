@@ -42,6 +42,18 @@ export default tseslint.config(
     files: ['**/*.astro'],
     rules: {
       'astro/jsx-a11y/no-redundant-roles': ['error', { ul: ['list'], ol: ['list'] }],
+      // A `tabindex="0"` on a non-interactive element is normally a smell — but a horizontally
+      // scrollable container is the documented exception, and the two tools disagree about it:
+      // axe's `scrollable-region-focusable` (WCAG 2.1.1) FAILS a scroll container that no
+      // keyboard can reach, while this rule fails the `tabindex` that fixes it. The accepted
+      // resolution is `tabindex="0"` + a labelled `role="region"`, which is what the styleguide
+      // tables carry. `tabpanel` is the rule's own default for the same shape of exception;
+      // this adds `region` beside it and leaves the strict ruleset otherwise untouched, so a
+      // bare focusable <div> with no role is still an error.
+      'astro/jsx-a11y/no-noninteractive-tabindex': [
+        'error',
+        { tags: [], roles: ['tabpanel', 'region'] },
+      ],
     },
   },
 );

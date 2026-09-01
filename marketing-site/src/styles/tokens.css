@@ -168,6 +168,10 @@
      `.container` in base.css, which adds the gutter back on top of it. */
   --container-max: 1312px;
   --container-gutter: var(--space-3xl);
+  /* Vertical rhythm between full-width sections. Every page's `.section` rule consumes this
+     rather than `--space-6xl` directly, so §4's mobile tier can retune the whole site's section
+     rhythm from one place instead of each page repeating a media query. */
+  --section-padding-block: var(--space-6xl);
   /* The masthead pill is deliberately WIDER than the content column: both brands' header
      frames inset it 32px from the 1440 design frame (1376px — Consultancy 8159:7478, NGO
      7429:5891), not the 64px section gutter. Sections keep --container-max; the shell uses
@@ -183,6 +187,27 @@
   --motion-fast: 120ms;
   --motion-base: 200ms;
   --easing-standard: cubic-bezier(0.2, 0, 0, 1);
+  /* Marketing tier. The 300ms ceiling that governs UI motion is a responsiveness rule — it
+     exists so a control doesn't keep the user waiting after they act. A figure counting itself
+     up is not a response to an action; it is content explaining itself, and it needs long
+     enough to read as counting rather than as a glitch. Only reveal/count effects on marketing
+     surfaces may use this; nothing the user clicks may. */
+  --motion-narrative: 1500ms;
+  /* Stronger than the built-in keywords, which are too weak to read as deliberate. `--ease-out`
+     is the default for anything entering or arriving; `--ease-in-out` is for something moving
+     between two on-screen positions. There is deliberately no ease-IN token: starting slow
+     delays the exact moment the user is watching. */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  /* A count-up is the one place `--ease-out` is the WRONG ease-out, and the reason is duration,
+     not taste. That curve is calibrated for 150–300ms UI motion, where its very front-loaded
+     shape is what makes a control feel like it answered instantly; its long tail is ~100ms and
+     reads as a settle. Stretched over a 1500ms count the same shape puts the figure within 1%
+     of its target with 546ms still to run — measured, not estimated — so a third of the
+     animation is a number that has visibly stopped while the clock is still going. This curve
+     (easeOutQuad) reaches 75% at half-time and leaves 162ms of tail: still unmistakably a
+     deceleration, but the figure is moving for essentially the whole run. */
+  --ease-count: cubic-bezier(0.5, 1, 0.89, 1);
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
@@ -348,7 +373,15 @@
   --color-cta-soft: var(--color-orange-10); /* secondary-button tint fill */
   /* Consultancy draws the same 10% tint for fill and border; NGO splits them (see §3b). */
   --color-cta-soft-border: var(--color-cta-soft);
-  --color-cta-hover: var(--color-action-hover);
+  /* NOT `--color-action-hover`. That role is the darkened *electric violet* (#4614CC) and it is
+     correct for links, whose resting colour is the violet brand primary. The CTA role rests at
+     ORANGE #E65320, so aliasing the two hovered every button and every `link`-variant CTA from
+     orange straight to violet — a full hue jump that read as a bug the moment the hover stopped
+     being an instant whole-box swap (see docs/enhancement-backlog.md E-07, which surfaced it).
+     NGO keeps the alias because there both roles genuinely are green.
+     #BD441A is the resting orange at 82%: 5.24:1 against white, up from the resting colour's
+     3.73:1, so the hovered state is the more legible of the two rather than the less. */
+  --color-cta-hover: #bd441a;
   /* Search-panel washes (see §1). These values are unchanged from the hard-coded literals they
      replaced, so Consultancy renders exactly as before. */
   --color-cta-tint: var(--color-orange-08);
@@ -428,6 +461,8 @@
   --color-cta-contrast: var(--color-white);
   --color-cta-soft: var(--color-green-05); /* Donate et al: green fill at 5% … */
   --color-cta-soft-border: var(--color-green-10); /* … under a 10% border */
+  /* Kept as an alias here, unlike Consultancy: on NGO the CTA and the primary action are the
+     same green, so the darkened-green hover serves both. See the Consultancy note in §3. */
   --color-cta-hover: var(--color-action-hover);
   /* Search-panel washes (see §1) — green, matching the result row's own arrow affordance. */
   --color-cta-tint: var(--color-green-08);
@@ -477,4 +512,117 @@
   --color-link: var(--color-cta); /* green, per design (low-contrast, tracked) */
   --color-focus-ring: var(--color-white); /* light ring stays visible on the dark surface */
   --color-action-outline: var(--color-text-inverse);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   4. MOBILE TIER — the second design point. Sizes only; no colour changes.
+
+   The design has TWO authored widths, not a fluid range: the 1440px desktop frames every page
+   was built from, and a 390px mobile frame (Consultancy Home, node 12490:10106). §1/§2 above
+   hold the 1440 values; this block holds the 390 ones. Both are exact — nothing here is
+   interpolated between them, because the designer did not draw the in-between.
+
+   WHY THE TOKEN LAYER. Mobile is not "the desktop page, narrower": the type scale itself is
+   different (48px hero vs 64, 32px section titles vs 48, 14px paragraphs vs 18), and every page
+   in the site consumes these same roles. Authoring the drop per page would mean re-deriving the
+   same six numbers seventeen more times and letting them drift. Components keep consuming the
+   semantic role and get the right size for the viewport for free.
+
+   BREAKPOINT. 640px — the tier the pages already use for their single-column collapse, so the
+   type drop and the layout collapse happen together rather than leaving a band where 64px
+   headings sit in a one-column layout.
+
+   BELOW 390px. The mobile frame is the SMALLEST authored width, and 48px/"Your Gateway to"
+   only just fits its 350px content column. So the display roles are `min(<390px value>,
+   <same value as a vw fraction of 390>)`: exactly the design value from 390px up, and scaling
+   down in proportion below it, which keeps 320px phones (iPhone SE, Galaxy Fold cover) from
+   word-breaking mid-syllable via base.css's `overflow-wrap: anywhere` safety net. Their
+   tracking moves to `em` for the same reason — a fixed -3.3px is a different optical weight
+   at 42px than at 48px.
+
+   CONFIRMED vs DERIVED. Roles marked (confirmed) were read off the mobile frame's node data:
+   hero, section-title, h2, card-title, lead, body-lg, eyebrow, the 20px gutter, the 64px
+   section rhythm, and the 40px control height. Roles marked (derived) have no mobile frame yet
+   — page-title, display, h3, title — and take the same ratio as their nearest confirmed
+   neighbour so sub-page heroes and the styleguide specimens are not left at desktop size.
+   Replace them with real values when the remaining mobile frames land.
+   ───────────────────────────────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  :root {
+    /* Layout — the mobile frame pads every section 20px each side (node 12496:9736) and sets
+       64px between sections (each `Background` frame's content starts at y=64), against the
+       desktop 64px / 120px. 20px is not a step on the desktop-derived spacing scale, which is
+       why it is a literal here rather than a `--space-*` alias. */
+    --container-gutter: 20px;
+    --section-padding-block: var(--space-3xl);
+
+    /* Hero H1 — 48/1.2/−3.3px (confirmed, node 12496:9740). Desktop is 64/72. */
+    --type-hero-size: min(48px, 12.31vw);
+    --type-hero-line: 1.2;
+    --type-hero-tracking: -0.06875em; /* −3.3px at 48px */
+
+    /* Sub-page hero (derived) — desktop shares the hero's 64px at the h2's tighter tracking,
+       so mobile takes the same 48px drop and keeps that tracking. */
+    --type-page-title-size: min(48px, 12.31vw);
+    --type-page-title-line: 1.2;
+
+    /* Display (derived) — styleguide specimen only; 110px cannot stand on a 350px column. */
+    --type-display-size: min(56px, 14.36vw);
+    --type-display-line: 1.15;
+    --type-display-tracking: -0.03em;
+
+    /* Recurring section headline — 32/1.2/−1.65px (confirmed, node 12490:11379). */
+    --type-section-title-size: min(32px, 8.21vw);
+    --type-section-title-line: 1.2;
+    --type-section-title-tracking: -0.0515625em; /* −1.65px at 32px */
+
+    /* Stat-card numbers — 32px over a 40px line (confirmed, node 12490:11390). */
+    --type-h2-size: min(32px, 8.21vw);
+    --type-h2-line: 40px;
+
+    /* (derived) */
+    --type-h3-size: min(26px, 6.67vw);
+    --type-h3-line: 1.2;
+    --type-title-size: min(32px, 8.21vw);
+    --type-title-line: 1.2;
+    --type-title-tracking: -0.03em;
+
+    /* Dark-card titles — 26/32/−0.26 (confirmed, node I12490:11429;4571:24848). */
+    --type-card-title-size: min(26px, 6.67vw);
+    --type-card-title-line: 32px;
+    --type-card-title-tracking: -0.01em;
+
+    /* Names on the team/testimonial cards — 18/24/700 (confirmed, node I12490:11448;6021:4621).
+       Loses the desktop role's −1.2px tracking, which the mobile frame does not carry. */
+    --type-lead-size: 18px;
+    --type-lead-line: 24px;
+    --type-lead-tracking: var(--letter-spacing-none);
+
+    /* Running paragraphs and button labels — 14/20, tracking 0 (confirmed, nodes 12496:9741,
+       12490:11382 and every `GIEVA Button` label on the frame). Desktop is 18/24/−0.16. This
+       makes --type-body-lg equal --type-body on mobile; the two roles stay distinct because
+       they diverge again the moment the viewport passes 640px. */
+    --type-body-lg-size: var(--font-size-body);
+    --type-body-lg-line: var(--line-height-body);
+    --type-body-lg-tracking: var(--letter-spacing-none);
+
+    /* All-caps kicker — 12/20/700/−0.16 (confirmed, node 12490:11376). Desktop is 14/24. */
+    --type-eyebrow-size: var(--font-size-legal);
+    --type-eyebrow-line: var(--line-height-body);
+  }
+
+  /* Controls — every `GIEVA Button` on the mobile frame is 40px tall over a 14/20 label:
+     9 + 20 + 9 + 2 × 1px border = 40 (desktop is 50). Above the 24×24 WCAG 2.5.8 AA target
+     minimum; short of the 44×44 AAA enhancement, which is a design-value trade recorded in
+     docs/enhancement-backlog.md rather than silently overridden here.
+
+     Written against both brand selectors rather than bare `:root`: §3b gives NGO its own 14px
+     value at equal specificity, so a `:root` rule here would only win on source order. NGO has
+     no mobile frame yet — it inherits Consultancy's 40px control until one says otherwise, and
+     the 4px desktop delta between the brands is deliberately NOT carried down (at 40px it would
+     read as a bug, not a brand trait). */
+  [data-brand='consultancy'],
+  [data-brand='ngo'] {
+    --control-padding-block: 9px;
+  }
 }

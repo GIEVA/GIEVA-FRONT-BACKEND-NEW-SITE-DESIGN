@@ -10,14 +10,19 @@
  *   - The closing CTA band is the shared `CtaSection.astro` — one Figma component instantiated
  *     identically here and on /services, /about and /team. See that file for the confirmed
  *     text (including its forced line break) and the copy/paste artifact it trims.
- *   - Core Team repeats one placeholder photo/name/role 4×, and the testimonial quote/name
+ *   - Core Team repeated one placeholder photo/name/role 4×, and the testimonial quote/name
  *     repeats 3× — that's the design's real (not-yet-personalised) content, kept as-is.
+ *     **Core Team is CMS-driven as of 2026-08-14** (`@lib/staff`, the same source as /team,
+ *     sliced to the design's four); the four placeholders live on as that module's fixtures, so
+ *     a build with no `GIEVA_API_URL` still renders this section exactly as designed. The
+ *     testimonials are still hard-coded — no CMS type backs them.
  */
 import BaseLayout from '@layouts/BaseLayout.astro';
 import Button from '@components/Button.astro';
 import PartnersMarquee from '@components/PartnersMarquee.astro';
 import TeamCard from '@components/TeamCard.astro';
 import CtaSection from '@components/CtaSection.astro';
+import StatCounter from '@components/StatCounter.astro';
 import { Image } from 'astro:assets';
 import {
   heroRing,
@@ -28,6 +33,8 @@ import {
   testimonial3,
   partnerLogos,
 } from '@lib/home-images';
+import { getStaff } from '@lib/staff';
+import { getFaqs } from '@lib/faqs';
 
 const stats = [
   { value: '10,000+', label: 'Lives Changed' },
@@ -51,10 +58,11 @@ const services = [
   { number: '03', title: 'Professional Development', description: serviceDescription },
 ];
 
-const team = Array.from({ length: 4 }, () => ({
-  name: 'Julie Sande',
-  role: 'Director General',
-}));
+/* Core Team is a taster for /team, not a second roster: the design's section is a single row of
+   four, so it takes the first four of the same CMS list rather than fetching its own slice. The
+   backend already orders by `order ASC`, which is the field the dashboard exposes for exactly
+   this — so "which four" is an editorial decision made in the admin UI, not here. */
+const team = (await getStaff()).slice(0, 4);
 
 const testimonialQuote =
   "The GIEVA team walked me through every step of my TOEFL registration. They even helped me pick test centres I didn't know existed. I got my scores in record time and reported them to my target schools the same week.";
@@ -85,28 +93,11 @@ const testimonials = [
   },
 ];
 
-const faqs = [
-  {
-    question: 'How long does the registration process take?',
-    answer:
-      'Most registrations are completed within 24–48 hours of your initial consultation and payment. Urgent registrations can often be processed the same day if test slots are available.',
-  },
-  {
-    question: 'What documents do I need to bring?',
-    answer:
-      "You'll need a valid international passport (or national ID for some tests), your O-Level results, and proof of payment. Our counselors will confirm the exact requirements for your specific test.",
-  },
-  {
-    question: 'Do you offer test preparation alongside registration?',
-    answer:
-      'Yes! Our Premium and Elite packages include access to prep materials, mock tests, and one-on-one tutoring sessions. We also partner with certified tutors for more intensive preparation.',
-  },
-  {
-    question: 'Is my payment secure?',
-    answer:
-      "All payments are processed through Paystack, Nigeria's leading and most trusted payment gateway. Official receipts are issued for every transaction.",
-  },
-];
+// CMS-driven as of 2026-08-15. The four questions the design ships live on as `@lib/faqs`'
+// fixtures, so a build with no `GIEVA_API_URL` renders this section exactly as designed. Unlike
+// Core Team above, the list is NOT sliced — see that module for why the accordion is allowed to
+// grow and why the API's own ordering is kept.
+const faqs = await getFaqs();
 ---
 
 <BaseLayout
@@ -118,22 +109,32 @@ const faqs = [
   <section class="hero">
     <div class="container hero__grid">
       <div class="hero__content">
-        <span class="hero__badge">Educational Consultancy</span>
         {
-          /* Hard line breaks mirror the design's forced separators (node 5898:5918:
-            "Your Gateway to" / "Global Academic" / "Excellence."); the &nbsp; binds
-            "Global Academic" so line 2 never splits. Explicit breaks over width-based
-            wrapping keeps parity robust against font-metric drift. */
+          /* Badge + headline + lead are one group in the mobile frame (node 12496:9737): a
+            24px stack under a single 5px backdrop blur, which is what lets the violet copy sit
+            legibly over the ring bleeding behind it. Desktop has no such grouping — the three
+            are plain siblings of the 40px stack — so this wrapper is `display: contents` there
+            and only becomes a box at the mobile tier. */
         }
-        <h1 class="u-hero hero__heading">
-          Your Gateway to<br />
-          <em class="u-accent-em">Global</em>&nbsp;Academic<br />
-          <em class="u-accent-em">Excellence.</em>
-        </h1>
-        <p class="u-body-lg hero__lead">
-          From standardized test registration to university admissions — GIEVA's certified
-          counselors guide every step of your international education journey.
-        </p>
+        <div class="hero__copy">
+          <span class="hero__badge">Educational Consultancy</span>
+          {
+            /* Hard line breaks mirror the design's forced separators (node 5898:5918:
+              "Your Gateway to" / "Global Academic" / "Excellence."); the &nbsp; binds
+              "Global Academic" so line 2 never splits. Explicit breaks over width-based
+              wrapping keeps parity robust against font-metric drift. The mobile frame
+              (12496:9740) keeps the same three lines. */
+          }
+          <h1 class="u-hero hero__heading">
+            Your Gateway to<br />
+            <em class="u-accent-em">Global</em>&nbsp;Academic<br />
+            <em class="u-accent-em">Excellence.</em>
+          </h1>
+          <p class="u-body-lg hero__lead">
+            From standardized test registration to university admissions — GIEVA's certified
+            counselors guide every step of your international education journey.
+          </p>
+        </div>
         <div class="hero__actions">
           <Button variant="primary" href="/book-consultancy" arrow={false}
             >Book Consultancy</Button
@@ -184,7 +185,9 @@ const faqs = [
           {
             stats.map((stat, i) => (
               <li class="who__stat" data-divider={i > 0 ? '' : undefined}>
-                <p class="u-h2 who__stat-value">{stat.value}</p>
+                <p class="u-h2 who__stat-value">
+                  <StatCounter value={stat.value} />
+                </p>
                 <p class="who__stat-label">{stat.label}</p>
               </li>
             ))
@@ -235,30 +238,43 @@ const faqs = [
   </section>
 
   <!-- ── Core Team ────────────────────────────────────────────────────────────── -->
-  <section class="section team">
-    <div class="container">
-      <div class="team__intro">
-        <p class="u-eyebrow">Core Team</p>
-        <h2 class="u-section-title">
-          Intelligent Minds <em class="u-accent-em">Leading the Way.</em>
-        </h2>
-        <p class="u-body-lg">
-          GIEVA handles your entire registration process — from account setup to score
-          reporting — with certified guidance at every step.
-        </p>
-      </div>
+  {
+    /* The whole section is conditional, unlike /team's in-place empty state. A page headed
+       "Core Team — Intelligent Minds Leading the Way" above an empty grid is worse than no
+       section at all, and Home (unlike /team) has five other sections that carry it. Only
+       reachable with a configured-but-empty CMS, i.e. a transient state before the first member
+       is published. */
+    team.length > 0 && (
+      <section class="section team">
+        <div class="container">
+          <div class="team__intro">
+            <p class="u-eyebrow">Core Team</p>
+            <h2 class="u-section-title">
+              Intelligent Minds <em class="u-accent-em">Leading the Way.</em>
+            </h2>
+            <p class="u-body-lg">
+              GIEVA handles your entire registration process — from account setup to score
+              reporting — with certified guidance at every step.
+            </p>
+          </div>
 
-      <ul role="list" class="team__grid">
-        {
-          team.map((member) => (
-            <li>
-              <TeamCard src={teamPhoto} name={member.name} role={member.role} />
-            </li>
-          ))
-        }
-      </ul>
-    </div>
-  </section>
+          <ul role="list" class="team__grid">
+            {team.map((member) => (
+              <li>
+                {/* No photo uploaded → the design's own placeholder portrait, a local asset that
+                    goes through astro:assets. Same fallback as /team. */}
+                <TeamCard
+                  src={member.imageUrl ?? teamPhoto}
+                  name={member.name}
+                  role={member.role}
+                />
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+    )
+  }
 
   <!-- ── Testimonials ─────────────────────────────────────────────────────────── -->
   <section class="section testimonials">
@@ -313,40 +329,48 @@ const faqs = [
   </section>
 
   <!-- ── FAQ ──────────────────────────────────────────────────────────────────── -->
-  <section class="section faq">
-    <div class="container faq__grid">
-      <div class="faq__intro">
-        <p class="u-eyebrow">FAQ</p>
-        <h2 class="u-section-title">
-          Common Questions, <em class="u-accent-em">Clear Answers.</em>
-        </h2>
-        <p class="u-body-lg">
-          Still have questions? Our counselors are available Monday–Friday, 9am–5pm via
-          WhatsApp, email, and in-person at our Abuja, Lagos, and Jos offices.
-        </p>
-        <Button variant="secondary" href="/contact">Chat with us</Button>
-      </div>
+  {
+    /* Rendered only when the CMS has published questions — same call as Core Team above: the
+      intro column promising "Clear Answers." beside an empty accordion is worse than no section,
+      and the "Chat with us" CTA it carries is already reachable from the nav and the closing CTA
+      band. Only reachable with a configured-but-empty CMS; fixtures always have four. */
+  }
+  {
+    faqs.length > 0 && (
+      <section class="section faq">
+        <div class="container faq__grid">
+          <div class="faq__intro">
+            <p class="u-eyebrow">FAQ</p>
+            <h2 class="u-section-title">
+              Common Questions, <em class="u-accent-em">Clear Answers.</em>
+            </h2>
+            <p class="u-body-lg">
+              Still have questions? Our counselors are available Monday–Friday, 9am–5pm via
+              WhatsApp, email, and in-person at our Abuja, Lagos, and Jos offices.
+            </p>
+            <Button variant="secondary" href="/contact">
+              Chat with us
+            </Button>
+          </div>
 
-      <div class="faq__list">
-        {
-          /* `name` groups these into an exclusive accordion — the browser closes the
-            open sibling for us. Pre-2024 browsers ignore it and simply allow several
-            open at once, which is the behaviour we had before. */
-        }
-        {
-          faqs.map((faq) => (
-            <details class="faq__item" name="faq">
-              <summary class="faq__question">
-                {faq.question}
-                <span class="faq__toggle" aria-hidden="true" />
-              </summary>
-              <p class="u-body-lg faq__answer">{faq.answer}</p>
-            </details>
-          ))
-        }
-      </div>
-    </div>
-  </section>
+          <div class="faq__list">
+            {/* `name` groups these into an exclusive accordion — the browser closes the
+                open sibling for us. Pre-2024 browsers ignore it and simply allow several
+                open at once, which is the behaviour we had before. */}
+            {faqs.map((faq) => (
+              <details class="faq__item" name="faq">
+                <summary class="faq__question">
+                  {faq.question}
+                  <span class="faq__toggle" aria-hidden="true" />
+                </summary>
+                <p class="u-body-lg faq__answer">{faq.answer}</p>
+              </details>
+            ))}
+          </div>
+        </div>
+      </section>
+    )
+  }
 
   <!-- ── CTA ──────────────────────────────────────────────────────────────────── -->
   <section class="section cta">
@@ -359,7 +383,7 @@ const faqs = [
 <style>
   /* ── Shared section rhythm ──────────────────────────────────────────────── */
   .section {
-    padding-block: var(--space-6xl);
+    padding-block: var(--section-padding-block);
   }
 
   /* ── Hero ───────────────────────────────────────────────────────────────── */
@@ -383,6 +407,12 @@ const faqs = [
   .hero__content {
     display: grid;
     gap: var(--space-xl); /* 40px — design itemSpacing on the content stack (node 5891:4670) */
+  }
+  /* Transparent to layout on desktop: the badge, headline and lead stay direct children of the
+     40px stack, exactly as before this wrapper existed. It becomes a real box only at the
+     mobile tier (see the @media block). */
+  .hero__copy {
+    display: contents;
   }
   .hero__badge {
     display: inline-block;
@@ -419,6 +449,9 @@ const faqs = [
     width: 100%;
     height: auto;
   }
+  /* The 3D mark's light-orbit layer used to stack over .hero__ring here (2026-08-25). The
+     hero is back on the drawn artwork; the orbit now lives only on /styleguide, at the 608px
+     sheet and 16s duration it painted at here. See docs/enhancement-backlog.md E-02. */
   /* The cross-site "Explore NGO" pill's styles moved to BrandSwitchLink.astro. */
 
   /* ── Who We Are ─────────────────────────────────────────────────────────── */
@@ -902,20 +935,206 @@ const faqs = [
       margin-inline: auto;
     }
   }
+  /* ── Mobile (Figma node 12490:10106, 390px) ───────────────────────────────────
+     The type scale and gutters come from tokens.css §4 — nothing below restates a font size.
+     What is left is the geometry that genuinely differs between the two frames: the hero
+     becomes a stack over a full-bleed ring, the stat rail turns vertical, and the three fixed
+     card heights the desktop grid depends on all come off. */
   @media (max-width: 640px) {
-    .services__grid {
-      grid-template-columns: 1fr;
-    }
+    .services__grid,
     .team__grid,
     .testimonials__grid {
       grid-template-columns: 1fr;
     }
-    .who__stats {
-      flex-wrap: wrap;
+
+    /* ── Hero ──────────────────────────────────────────────────────────────────
+       The desktop hero is a two-column grid with the ring beside the copy. The mobile frame
+       is one column with the ring BEHIND it, bled off the right edge, under a 5px backdrop
+       blur on the text block — so the grid comes apart into a bottom-aligned stack and the
+       visual becomes positioned decoration rather than a column. */
+    .hero {
+      /* The GLASS overlay is 11 equal panes across the 390 frame (node 12496:9724), against
+         the desktop frame's 60px pitch — same stripe, re-divided for the narrower canvas. */
+      background-size: calc(100vw / 11) 100%;
+      /* The ring is 168% of the frame and bleeds off the right edge, so the hero has to clip
+         it or it becomes 334px of page-wide horizontal scroll (WCAG 2.2 §1.4.10 Reflow).
+         `clip`, not `hidden`: `hidden` would make this a scroll container, which silently
+         breaks `position: sticky` for anything inside it and is the usual cause of a masthead
+         that stops sticking on one page only. */
+      overflow-x: clip;
+    }
+    .hero__grid {
+      display: block;
+      position: relative;
+      /* The mobile frame's hero background is 798px tall and its partner strip 46px, summing to
+         844 — one iPhone viewport exactly, which is clearly the intent. We render the masthead
+         ABOVE the hero rather than over it (the shell-level parity gap logged in
+         docs/consultancy-build-plan.md Phase 6), so the hero's own box is that 798 less the
+         64px bar, keeping the pair on the design's total. */
+      min-height: calc(798px - 64px);
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      /* Top: the content frame starts at y=40 (node 12496:9736).
+         Bottom: 64px of frame padding, plus the 80px the design's own stack spends on a
+         trailing 40px button row and its 40px gap. That row holds the cross-site switcher
+         (node 12498:11006), which BrandSwitchLink renders as fixed chrome rather than in
+         flow — so the row is empty here, but the space it reserves is real geometry and
+         dropping it would lift every line of hero copy 80px off the frame. */
+      padding-block: var(--space-xl) calc(var(--space-3xl) + var(--space-4xl));
+      /* Sits above .hero__visual, which is painted into the same stacking context. */
+      position: relative;
+      z-index: 1;
+    }
+    /* Badge, headline and lead become one blurred group (node 12496:9737 — `backdrop-blur(5px)`
+       over a 24px stack), so the ring reads softly through the copy instead of competing with
+       it, and the 40px stack gap now separates that group from the buttons. */
+    .hero__copy {
+      display: grid;
+      justify-items: start;
+      gap: var(--space-md);
+      backdrop-filter: blur(5px);
+    }
+    /* Own block — Lightning CSS collapses a prefixed/standard pair written together, the same
+       trap documented on .who__frost and the header pill. */
+    @supports (-webkit-backdrop-filter: blur(1px)) {
+      .hero__copy {
+        -webkit-backdrop-filter: blur(5px);
+      }
+    }
+    .hero__badge {
+      /* node 12496:9738 — 3px/13px, against the desktop 4px/24px. */
+      padding: 3px 13px;
+      font-size: var(--font-size-legal);
+    }
+    .hero__actions {
+      flex-direction: column;
+      /* The design insets the button column 48px inside the 350px content column, giving the
+         254px buttons it draws (node 12496:9742). They stretch rather than sit at their label
+         width — `align-items: stretch` is the flex default, so only the inset is stated. */
+      padding-inline: var(--space-2xl);
+      gap: var(--space-sm);
+    }
+    /* The ring is TWO nested boxes in the design, not one, and the outer one crops the inner:
+       `logo image` (node 12496:9722) is a 476×903.18 frame at x=158, y=−80, and the ring itself
+       (12496:9723) is a 655.68px square sitting at −89.84, +123.75 INSIDE it. The frame clips,
+       which is what gives the ring its straight left edge at x=158 and stops it sliding under
+       the headline. Dropping the crop and positioning the ring alone puts a whole extra arc
+       across the copy — visibly not the design.
+
+       So `.hero__visual` becomes that clipping frame and `.hero__ring` the oversized child.
+       Horizontal values are percentages of the hero's padding box (a full 100vw here, since
+       the container's max-width is far above the viewport), so the crop tracks any width;
+       vertical values stay in px, which is how the frame authors them. `top` carries the same
+       −64px shift as the min-height above, for the same reason. */
+    .hero__visual {
+      position: absolute;
+      inset-block-start: calc(-80px - 64px);
+      inset-inline-start: 40.51%; /* 158 / 390 */
+      inline-size: 122.05%; /* 476 / 390 */
+      block-size: 903.18px;
+      overflow: clip;
+      /* Behind the copy — the design stacks the ring under the text and lets the 5px backdrop
+         blur on .hero__copy soften it, rather than painting it on top. Without this the
+         positioned visual would paint over its non-positioned sibling and bury the headline. */
+      z-index: 0;
+      pointer-events: none;
+    }
+    .hero__ring {
+      position: absolute;
+      inset-block-start: 123.75px;
+      inset-inline-start: -18.87%; /* −89.84 / 476 */
+      inline-size: 137.75%; /* 655.68 / 476 */
+      max-width: none;
+      block-size: auto;
+    }
+    .hero__content {
+      position: relative;
+      z-index: 1;
+    }
+
+    /* ── Who We Are ────────────────────────────────────────────────────────────
+       Paragraph → CTA closes from 64px to 24px (node 12490:11380). */
+    .who__body {
       gap: var(--space-md);
     }
+    /* The photo turns from a 1312×670 landscape band into a 350×947 portrait panel with the
+       four stats stacked down it (node 12490:11384). The desktop split — plain wash over the
+       top half, frosted scrim and a horizontal stat rail over the bottom — collapses: on
+       mobile every overlay runs the full height, because the stats do. */
+    .who__photo {
+      aspect-ratio: 350 / 947;
+      object-fit: cover;
+    }
+    .who__wash {
+      display: none;
+    }
+    .who__frost,
+    .who__stats {
+      inset: 0;
+      height: auto;
+    }
+    .who__stats {
+      flex-direction: column;
+      justify-content: center;
+      /* Both of these undo a desktop value that means something different once the axis turns.
+         `align-items: flex-end` bottom-aligned a horizontal rail; in a column it is the CROSS
+         axis, so it pushed all four stats against the right edge. `flex: 1` on the stat spread
+         them down the full 947px panel instead of stacking them at the design's fixed height. */
+      align-items: stretch;
+      /* 32px of scrim padding + 32px on the inner column = the design's 64px inset from the
+         photo edge to a 222px-wide stat card, same construction as desktop. */
+      padding: var(--space-3xl);
+      /* 4 × 168px cards + 3 × 48px gaps + 2 × 64px padding = the 944px the frame measures
+         (node 12490:11384), which is what `aspect-ratio: 350/947` on the photo behind them
+         leaves room for. The divider sits centred in each gap, 24px up. */
+      gap: var(--space-2xl);
+    }
     .who__stat {
-      flex: 1 1 40%;
+      flex: none;
+      min-block-size: 168px;
+    }
+    /* The divider rotates with the rail: a full-height hairline in the gutter becomes a
+       full-width one across it (nodes 12490:11393/11400/11407). */
+    .who__stat[data-divider]::before {
+      inset-block: auto;
+      inset-inline: 0;
+      inset-block-start: calc(-1 * var(--space-md));
+      width: auto;
+      height: 1px;
+    }
+
+    /* ── Consultancy Services ──────────────────────────────────────────────────
+       Intro → cards closes from 80px to 40px (node 12490:11427 at y=300 under a 260px intro). */
+    .services__intro {
+      margin-bottom: var(--space-xl);
+    }
+    .services__card {
+      /* Desktop pins 555px so three side-by-side cards share a row height. One card per row has
+         nothing to line up with, and the mobile frame's cards are 399/399/431 — i.e. sized by
+         their own content. Padding drops 32/32/64 → 32/32/40 (node 12490:11429). */
+      min-height: 0;
+      padding: var(--space-lg) var(--space-lg) var(--space-xl);
+      gap: var(--space-3xl);
+    }
+    .services__card-foot {
+      gap: var(--space-xl); /* 96 → 40 */
+    }
+
+    /* ── FAQ ───────────────────────────────────────────────────────────────────
+       Intro → accordion opens from 64px to 80px, and the "Chat with us" CTA drops 96px clear
+       of the copy above it rather than 32 (node 12490:11515 at y=296 under a 200px block). */
+    .faq__grid {
+      gap: var(--space-4xl);
+    }
+    .faq__intro :global(.btn) {
+      margin-top: var(--space-5xl);
+    }
+    /* The plus doubles, 20px → 40px (node 12490:11524), which also lifts the accordion's own
+       hit target well clear of the 24×24 AA minimum. */
+    .faq__toggle {
+      inline-size: 2.5rem;
+      block-size: 2.5rem;
     }
   }
 </style>

@@ -60,7 +60,7 @@ const brand =
       <slot />
     </main>
     <footer>
-      <SiteFooter homeHref={brand === 'ngo' ? '/ngo' : '/'} />
+      <SiteFooter homeHref={brand === 'ngo' ? '/ngo' : '/'} brand={brand} />
     </footer>
     {
       /* Cross-site switcher. Outside <main> deliberately: it is shell chrome, so it stays out

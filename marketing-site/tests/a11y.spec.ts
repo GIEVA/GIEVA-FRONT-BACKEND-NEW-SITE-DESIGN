@@ -65,11 +65,12 @@ const KNOWN_CONTRAST_ISSUES: { rule: string; markers: string[] }[] = [
   { rule: 'color-contrast', markers: ['success__intro', 'u-eyebrow'] },
   { rule: 'color-contrast', markers: ['news__intro', 'u-eyebrow'] },
   { rule: 'color-contrast', markers: ['news__tag'] },
-  // Same issue N3, on the two NGO Resources routes: the orange kicker on white and the category
-  // pill on the article cards. `resources__eyebrow` and `article__eyebrow` are style-free hooks
-  // added purely so these match without a bare `u-eyebrow` marker, which would allowlist every
-  // eyebrow on all 18 routes.
-  { rule: 'color-contrast', markers: ['resources__eyebrow'] },
+  // Same issue N3, on the NGO article route: the orange category kicker on white.
+  // `article__eyebrow` is a style-free hook added purely so it matches without a bare
+  // `u-eyebrow` marker, which would allowlist every eyebrow on all 18 routes.
+  // The listing page (/ngo/resources) had a matching `resources__eyebrow` entry until
+  // 2026-08-14, when the client had the "NEWS & RESOURCES" label removed; the node is gone, so
+  // `color-contrast` is fully enforced on that kicker's former position again.
   { rule: 'color-contrast', markers: ['article__eyebrow'] },
   // `article-card__tag` is deliberately unpaired, unlike the entries above. ArticleCard is
   // brand-neutral and its pill consumes `--color-accent-warm`, which resolves to the same

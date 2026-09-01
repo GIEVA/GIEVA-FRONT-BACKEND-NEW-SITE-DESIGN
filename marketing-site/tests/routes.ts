@@ -2,6 +2,13 @@
  * The set of routes exercised by the a11y and visual-regression gates.
  * Extend this as pages are built — every route added here is automatically held to the
  * WCAG gate and gets a committed visual baseline.
+ *
+ * `/styleguide` and `/ngo/styleguide` are the exception to "every route here is in the built
+ * site": they are internal-only and a plain `npm run build` deliberately omits them (see
+ * astro.config.mjs). They are still gated here, because untested pages are worse than a build
+ * that differs from production by two pages — playwright.config.ts sets `INCLUDE_STYLEGUIDE=1`
+ * on its webServer build so they exist for the run. If you build by hand and these 404,
+ * that is why: build with `INCLUDE_STYLEGUIDE=1 npm run build`, or use `npm run dev`.
  */
 export interface RouteUnderTest {
   path: string;
@@ -41,6 +48,12 @@ export const routes: RouteUnderTest[] = [
     path: '/ngo/resources/step-cohort-four-graduates',
     name: 'ngo-resources-article',
   },
+  // Newsletter result pages. Not linked from anywhere — they are the `303 See Other` targets of
+  // POST /api/newsletter/subscribe (docs/backend-api-requests.md #13), which is how the footer
+  // form works with JS off. Held to the gates like any other route: they render the full shell,
+  // so a regression on them is exactly as user-facing as one on Home.
+  { path: '/newsletter/thanks', name: 'newsletter-thanks' },
+  { path: '/newsletter/error', name: 'newsletter-error' },
   // Not-Found. A real route so the error page is held to the same a11y gate and visual baseline
   // as every other page — it renders the full shell (masthead, footer, brand switcher), so a
   // regression there is exactly as user-facing as one on Home.

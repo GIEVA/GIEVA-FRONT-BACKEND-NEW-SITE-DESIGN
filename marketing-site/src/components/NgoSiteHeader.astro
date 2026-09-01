@@ -76,15 +76,25 @@ const current = Astro.url.pathname;
     <details class="ngo-header__menu">
       <summary class="ngo-header__menu-toggle">
         <span class="visually-hidden">Open menu</span>
+        {
+          /* `menu-02` — the same glyph SiteHeader now carries. NGO has no mobile frame of its
+             own; the two mastheads have always drawn the identical toggle, so it takes the
+             Consultancy frame's confirmed icon rather than keeping the even 3-bar we drew. */
+        }
         <svg
-          width="20"
-          height="14"
-          viewBox="0 0 20 14"
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
           fill="none"
           aria-hidden="true"
           focusable="false"
         >
-          <path d="M0 1h20M0 7h20M0 13h20" stroke="currentColor" stroke-width="2"></path>
+          <path
+            d="M4 5H16M4 12H20M4 19H12"
+            stroke="currentColor"
+            stroke-width="1.25"
+            stroke-linecap="round"
+            stroke-linejoin="round"></path>
         </svg>
       </summary>
 
@@ -295,6 +305,24 @@ const current = Astro.url.pathname;
     }
     .ngo-header__menu {
       display: block;
+    }
+  }
+
+  /* ── Mobile bar ───────────────────────────────────────────────────────────────
+     Mirrors SiteHeader's — see the note there. The flat, full-bleed 64px treatment is read off
+     the CONSULTANCY mobile frame (12490:11659); NGO has no mobile frame yet. Applied here on
+     the same grounds as the toggle glyph above: the two mastheads are the same object in the
+     design at every ingested width, so they should not diverge at the one width only one of
+     them has been drawn at. */
+  @media (max-width: 640px) {
+    .ngo-header {
+      padding: 0;
+    }
+    .ngo-header__bar {
+      max-width: none;
+      border-radius: 0;
+      padding: var(--container-gutter);
+      gap: var(--space-sm);
     }
   }
 </style>

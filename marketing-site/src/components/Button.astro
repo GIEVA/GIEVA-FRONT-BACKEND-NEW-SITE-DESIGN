@@ -39,15 +39,30 @@
  * — exactly the 15.00 × 12.50 the node data reports, so the glyph now fills its box as designed.
  * Verified unchanged in the 2026-07-28 ingests, the newest design data we hold.
  *
+ * HOVER. `primary` and `secondary` reveal their hover colour from the pointer's point of contact
+ * via `HoverRipple` — read that component for the mechanism and docs/enhancement-backlog.md E-07
+ * for the decision record. It is strictly an enhancement: with no JS the attribute stays inert
+ * and the plain background swap below still runs. Default-on for those two variants rather than
+ * opt-in per call site, because a page where some filled buttons sweep and their identical
+ * neighbours snap reads as a bug, not as restraint — and per-call-site opt-in is exactly how
+ * that drift happens. `ripple={false}` is the escape hatch if a placement ever needs it.
+ * `secondary` also passes `ink`: its LABEL colour changes on hover, and a background circle
+ * can't repaint text. `link` has no fill to grow, and `on-inverse`'s hover is a 10% white wash
+ * that is too faint for the sweep to read, so neither takes it.
+ *
  * One hand-drawn copy of this same glyph still lives outside this component (SiteFooter.astro).
  * The other two — ngo/about.astro and ngo/index.astro — were both the NGO CTA's row links, and
  * both went when that CTA became NgoCtaSection.astro and its rows became `on-inverse` Buttons.
  */
+import HoverRipple from '@components/HoverRipple.astro';
+
 interface Props {
   href?: string;
   variant?: 'primary' | 'secondary' | 'link' | 'on-inverse';
   type?: 'button' | 'submit' | 'reset';
   arrow?: boolean;
+  /** Escape hatch. The fill-bearing variants opt in automatically; see the note above. */
+  ripple?: boolean;
   class?: string;
 }
 
@@ -56,13 +71,50 @@ const {
   variant = 'primary',
   type = 'button',
   arrow = true,
+  ripple = variant === 'primary' || variant === 'secondary',
   class: className,
 } = Astro.props;
 const cls = ['btn', `btn--${variant}`, className].filter(Boolean).join(' ');
 const Tag = href ? 'a' : 'button';
+/* `secondary` flips its label colour on hover as well as its fill, so it needs the ink layer;
+   `primary` keeps a white label at both ends and only needs the fill. */
+const ink = ripple && variant === 'secondary';
+
+/* The glyph's provenance is in the doc comment above. It lives in a constant because the ink
+   layer renders a second copy of the label row — the `<svg>` element itself is written out
+   twice so Astro's scoped styles still reach it, but the 500-character path is not. */
+const ARROW_PATH =
+  'M17.3172 10.4425L11.6922 16.0675C11.5749 16.1848 11.4159 16.2507 11.25 16.2507C11.0841 16.2507 10.9251 16.1848 10.8078 16.0675C10.6905 15.9503 10.6247 15.7912 10.6247 15.6253C10.6247 15.4595 10.6905 15.3004 10.8078 15.1832L15.3664 10.6253H3.125C2.95924 10.6253 2.80027 10.5595 2.68306 10.4423C2.56585 10.3251 2.5 10.1661 2.5 10.0003C2.5 9.83459 2.56585 9.67562 2.68306 9.55841C2.80027 9.4412 2.95924 9.37535 3.125 9.37535H15.3664L10.8078 4.81754C10.6905 4.70026 10.6247 4.5412 10.6247 4.37535C10.6247 4.2095 10.6905 4.05044 10.8078 3.93316C10.9251 3.81588 11.0841 3.75 11.25 3.75C11.4159 3.75 11.5749 3.81588 11.6922 3.93316L17.3172 9.55816C17.3753 9.61621 17.4214 9.68514 17.4529 9.76101C17.4843 9.83688 17.5005 9.91821 17.5005 10.0003C17.5005 10.0825 17.4843 10.1638 17.4529 10.2397C17.4214 10.3156 17.3753 10.3845 17.3172 10.4425Z';
 ---
 
-<Tag class={cls} href={href} type={href ? undefined : type}>
+<Tag
+  class={cls}
+  href={href}
+  type={href ? undefined : type}
+  data-ripple={ripple ? '' : undefined}
+>
+  {
+    ripple && (
+      <HoverRipple ink={ink}>
+        <span class="btn__label">
+          <slot />
+        </span>
+        {arrow && (
+          <svg
+            class="btn__arrow"
+            width="20"
+            height="20"
+            viewBox="0 0 20 20"
+            fill="none"
+            aria-hidden="true"
+            focusable="false"
+          >
+            <path d={ARROW_PATH} fill="currentColor" />
+          </svg>
+        )}
+      </HoverRipple>
+    )
+  }
   <span class="btn__label"><slot /></span>
   {
     arrow && (
@@ -75,10 +127,7 @@ const Tag = href ? 'a' : 'button';
         aria-hidden="true"
         focusable="false"
       >
-        <path
-          d="M17.3172 10.4425L11.6922 16.0675C11.5749 16.1848 11.4159 16.2507 11.25 16.2507C11.0841 16.2507 10.9251 16.1848 10.8078 16.0675C10.6905 15.9503 10.6247 15.7912 10.6247 15.6253C10.6247 15.4595 10.6905 15.3004 10.8078 15.1832L15.3664 10.6253H3.125C2.95924 10.6253 2.80027 10.5595 2.68306 10.4423C2.56585 10.3251 2.5 10.1661 2.5 10.0003C2.5 9.83459 2.56585 9.67562 2.68306 9.55841C2.80027 9.4412 2.95924 9.37535 3.125 9.37535H15.3664L10.8078 4.81754C10.6905 4.70026 10.6247 4.5412 10.6247 4.37535C10.6247 4.2095 10.6905 4.05044 10.8078 3.93316C10.9251 3.81588 11.0841 3.75 11.25 3.75C11.4159 3.75 11.5749 3.81588 11.6922 3.93316L17.3172 9.55816C17.3753 9.61621 17.4214 9.68514 17.4529 9.76101C17.4843 9.83688 17.5005 9.91821 17.5005 10.0003C17.5005 10.0825 17.4843 10.1638 17.4529 10.2397C17.4214 10.3156 17.3753 10.3845 17.3172 10.4425Z"
-          fill="currentColor"
-        />
+        <path d={ARROW_PATH} fill="currentColor" />
       </svg>
     )
   }
@@ -119,7 +168,10 @@ const Tag = href ? 'a' : 'button';
     border-color: var(--color-cta);
     color: var(--color-cta-contrast);
   }
-  .btn--primary:hover {
+  /* Guarded on `:not([data-ripple='on'])`: this whole-box swap is the baseline and stays the
+     hover state until the script claims the button, at which point the circle takes over the
+     fill and only the ring is left to handle (see "Hover reveal" below). */
+  .btn--primary:not([data-ripple='on']):hover {
     background: var(--color-cta-hover);
     border-color: var(--color-cta-hover);
   }
@@ -128,7 +180,7 @@ const Tag = href ? 'a' : 'button';
     border-color: var(--color-cta-soft-border);
     color: var(--color-cta);
   }
-  .btn--secondary:hover {
+  .btn--secondary:not([data-ripple='on']):hover {
     background: var(--color-cta);
     border-color: var(--color-cta);
     color: var(--color-cta-contrast);
@@ -154,6 +206,18 @@ const Tag = href ? 'a' : 'button';
   .btn--link:hover {
     color: var(--color-cta-hover);
   }
+  /* The link variant does NOT take the mobile tier's 18→14px drop. Every other button label
+     shrinks with `--type-body-lg` (tokens.css §4), but the mobile frame keeps "Learn more" at
+     18/24 — confirmed on the service card (node I12490:11429;5966:3579;5963:3494), where it sits
+     beside 14px body copy in the same card, so the difference is deliberate rather than an
+     un-updated instance. Restated here rather than excluded from the token, because at desktop
+     the two roles genuinely do share a size. */
+  @media (max-width: 640px) {
+    .btn--link {
+      font-size: var(--font-size-underline);
+      line-height: var(--line-height-underline);
+    }
+  }
   /* `on-inverse` — the CTA panel's row links (NGO About node 12327:12146/12149/12152). A real
      `GIEVA Button` instance, so it keeps the base box verbatim (32px inline padding, 8px radius,
      16px label→arrow gap, the 20×20 arrow) and only drops the fill: the design gives these no
@@ -168,5 +232,40 @@ const Tag = href ? 'a' : 'button';
   }
   .btn--on-inverse:hover {
     background: rgb(255 255 255 / 0.1);
+  }
+
+  /* ── Hover reveal ────────────────────────────────────────────────────────────────────────
+     The mechanism lives in HoverRipple; this is only the colour wiring. Each variant names the
+     colour that grows, and — where the label changes too — the colour it grows underneath.
+
+     Once the script has claimed the button (`data-ripple="on"`) the box keeps its RESTING fill
+     and the circle carries the change; until then the plain `:hover` swaps above are still the
+     hover state, so the no-JS baseline is the behaviour this replaced.
+
+     The 1px border is the one thing the circle cannot reveal — `overflow` clips at the padding
+     box, so the ring is always outside it. Leaving it at the resting colour drew a hard ring in
+     the old colour around an already-swept button, so it cross-fades on the reveal's own
+     duration and curve; at 1px that reads as part of the sweep rather than as a competing
+     animation. */
+  .btn--primary[data-ripple] {
+    --ripple-fill: var(--color-cta-hover);
+  }
+  .btn--secondary[data-ripple] {
+    --ripple-fill: var(--color-cta);
+    --ripple-ink: var(--color-cta-contrast);
+  }
+  .btn[data-ripple='on'] {
+    transition: border-color var(--ripple-out) var(--ripple-easing);
+  }
+  .btn[data-ripple='on']:hover {
+    transition-duration: var(--ripple-in);
+  }
+  /* All that is left for the claimed state: the ring. The fill is the circle's job, and on
+     `secondary` the label's job belongs to the ink copy, which flips on the same edge. */
+  .btn--primary[data-ripple='on']:hover {
+    border-color: var(--color-cta-hover);
+  }
+  .btn--secondary[data-ripple='on']:hover {
+    border-color: var(--color-cta);
   }
 </style>

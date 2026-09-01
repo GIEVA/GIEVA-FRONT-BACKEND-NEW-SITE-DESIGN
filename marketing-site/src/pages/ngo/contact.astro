@@ -390,6 +390,18 @@ const contactFields: ContactField[] = [
     outline: 3px solid var(--color-focus-ring);
     outline-offset: 2px;
   }
+  /* The phone and website rows were 24px tall only because `--type-body-lg` carries a 24px
+     line-height; the mobile tier drops that role to 14/20 (tokens.css §4), which would leave
+     these under the 24×24 WCAG 2.5.8 AA floor. Padding restores the target, the equal negative
+     margin hands the space back so the row's 4px `row-gap` rhythm is unchanged. Same fix, same
+     reason, as the footer's contact links. */
+  @media (max-width: 640px) {
+    .contact-info__link {
+      display: block;
+      padding-block: 2px;
+      margin-block: -2px;
+    }
+  }
 
   /* ── Send us a Message ────────────────────────────────────────────────────────
      Deep-teal inverse panel (#0E3E40), 12px radius, 64px padding + 64px gap between header /
