@@ -189,7 +189,12 @@ const spacing = ['3xs', '2xs', 'xs', 'sm', 'md', 'lg', 'xl', '2xl', '3xl', '4xl'
     <section class="sg__section" aria-labelledby="sg-semantic">
       <h2 id="sg-semantic" class="u-h3">Semantic colour roles</h2>
       <p class="u-body sg__note">Components consume these, never primitives directly.</p>
-      <div class="sg__tablewrap">
+      <div
+        class="sg__tablewrap"
+        tabindex="0"
+        role="region"
+        aria-label="Semantic colour roles table, scrollable"
+      >
         <table class="sg__table">
           <thead>
             <tr>
@@ -218,7 +223,12 @@ const spacing = ['3xs', '2xs', 'xs', 'sm', 'md', 'lg', 'xl', '2xl', '3xl', '4xl'
     <!-- Contrast -->
     <section class="sg__section" aria-labelledby="sg-contrast">
       <h2 id="sg-contrast" class="u-h3">Colour contrast (WCAG 2.2)</h2>
-      <div class="sg__tablewrap">
+      <div
+        class="sg__tablewrap"
+        tabindex="0"
+        role="region"
+        aria-label="Colour contrast table, scrollable"
+      >
         <table class="sg__table">
           <thead>
             <tr>
@@ -387,6 +397,10 @@ const spacing = ['3xs', '2xs', 'xs', 'sm', 'md', 'lg', 'xl', '2xl', '3xl', '4xl'
   }
 
   /* Tables */
+  /* Horizontally scrollable, so the wrapper carries `tabindex="0"` + a labelled `role="region"`
+     in the markup: a scroll container that only a mouse or a finger can reach fails WCAG 2.1.1,
+     and at the mobile tier these tables genuinely do overflow. Caught by the mobile a11y project
+     added to playwright.config.ts — the desktop-only run never made the wrapper scroll. */
   .sg__tablewrap {
     overflow-x: auto;
   }

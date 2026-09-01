@@ -51,11 +51,13 @@ const articles = await getArticles('ngo');
       <div class="resources__panel">
         <div class="resources__intro">
           {
-            /* `resources__eyebrow` carries no style — it exists so tests/a11y.spec.ts can match
-              this one orange-on-white kicker (tracked issue N3) without a bare `u-eyebrow`
-              marker that would allowlist every eyebrow on the site. */
+            /* No eyebrow here. Home's news panel opens with an orange "NEWS & RESOURCES" kicker,
+               and this page borrowed it — but on Home that kicker is what tells you which of six
+               stacked sections you are looking at. Here the hero already says "Resources" 120px
+               above it, so it was labelling the page twice. Removed on client direction
+               2026-08-14. That also retires the page's only tracked-N3 kicker; see
+               docs/a11y-known-issues.md. */
           }
-          <p class="u-eyebrow resources__eyebrow">News &amp; Resources</p>
           <h2 class="u-section-title">
             Keep Up <em class="u-accent-em">With Us</em>
           </h2>
@@ -102,6 +104,17 @@ const articles = await getArticles('ngo');
 </BaseLayout>
 
 <style>
+  /* ── Shared section rhythm ───────────────────────────────────────────────────
+     `.section` is NOT a global utility — every page that uses the class defines it in its own
+     scoped block (see /ngo, /ngo/about, /, /about, /team, /partners). This page carried the
+     class without the rule, so both its sections rendered with zero padding: the hero ran
+     straight into the intro, the card grid straight into the CTA, and the CTA straight into the
+     footer. 120px top and bottom is the site-wide value — it puts 240px between sections and
+     120px before the footer, matching /ngo/about's measured frame rhythm. */
+  .section {
+    padding-block: var(--section-padding-block);
+  }
+
   /* Intro-to-grid spacing matches Home's news panel (--space-4xl), so the two readings of the
      same section feel like one system. */
   .resources__panel {

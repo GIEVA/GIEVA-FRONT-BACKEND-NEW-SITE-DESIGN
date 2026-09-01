@@ -3,6 +3,14 @@
  * (design/figma/fTqnnV20l9htP7vFJrOsvn/5891-4663/assets/), not duplicated into src/assets.
  * Importing them here lets Astro's built-in image pipeline (astro:assets) optimise/resize
  * every raster fill the design uses, while keeping design/ as the single source of truth.
+ *
+ * `heroRing` was briefly the 3D rebuild's resting frame (design/blender/web/mark-static-818.png,
+ * shipped 2026-08-25) and is back on the Figma artwork as of 2026-08-25 — client direction, so
+ * nothing under design/blender/ ships on a route any more. The 3D model is still canonical as a
+ * model and is kept renderable and visible on /styleguide, at the exact sheet, size and duration
+ * the hero painted it at; see docs/enhancement-backlog.md E-02. Every ring on the site is now the
+ * drawn artwork again: this one, `logoMark` (the 48px header lockup) and the NGO hero's own ring
+ * in ngo-home-images.ts.
  */
 import heroRing from '../../design/figma/fTqnnV20l9htP7vFJrOsvn/5891-4663/assets/fill-d07bdd3d45347cdc0acfc2853309656f48f2a808.png';
 import logoMark from '../../design/figma/fTqnnV20l9htP7vFJrOsvn/5891-4663/assets/fill-3172f31ce44b7c8cfb0a897f5d748407dc9e6cbc.png';

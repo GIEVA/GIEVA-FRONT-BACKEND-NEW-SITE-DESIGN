@@ -10,6 +10,12 @@
  * bold-italic accent phrases live in characterStyleOverrides and render GREEN on NGO (the
  * inverse of Consultancy's orange — see tokens.css --color-heading-accent).
  *
+ * Two of its blocks are CMS-driven: the Recent News row (`@lib/articles`, 2026-08-11) and the
+ * 2×2 **programs grid as of 2026-08-15** (`@lib/programs`, the same list `/ngo/program` details
+ * — see the `programs` const and that module for the four-versus-three mismatch it settles).
+ * Both ship the design's own content as fixtures, so a build with no `GIEVA_API_URL` renders
+ * this page exactly as the frame does.
+ *
  * The shell (NgoSiteHeader + SiteFooter) is finalized against this frame here; the only shell
  * token correction Home surfaced was the eyebrow↔accent colour inversion (tokens.css/base.css).
  *
@@ -23,8 +29,10 @@ import BaseLayout from '@layouts/BaseLayout.astro';
 import Button from '@components/Button.astro';
 import PartnersMarquee from '@components/PartnersMarquee.astro';
 import NgoCtaSection from '@components/NgoCtaSection.astro';
+import StatCounter from '@components/StatCounter.astro';
 import ArticleCard from '@components/ArticleCard.astro';
 import { getArticles } from '@lib/articles';
+import { getHomePrograms } from '@lib/programs';
 import { Image } from 'astro:assets';
 // Both homes share the same real partner set (node 12023:32440); the NGO-specific glob was
 // removed as its per-logo identities were unverified placeholders.
@@ -39,47 +47,21 @@ const stats = [
 ];
 
 /**
- * The four program cards (node 5990:3672). Titles and descriptions are the design's, verbatim.
+ * The program cards (node 5990:3672) — CMS-driven as of 2026-08-15, from the same list
+ * `/ngo/program` details. The design's own four live on as `@lib/programs`' Home fixtures, so a
+ * build with no `GIEVA_API_URL` renders this grid exactly as designed.
  *
- * The hrefs are ours, and only two of the four can be deep-linked honestly. `/ngo/program`
- * details THREE programmes — STEP, HEALS, GVP (node 7447:6027) — so STEP and GVP get the
- * matching `#step` / `#gvp` anchors added to that page. The other two do not resolve:
- *   - CHOICES has no section on the Programs page at all.
- *   - PARTNERSHIP PROGRAMS is titled for partnerships but its *description* is HEALS's
- *     expansion ("Holistic Education Advising and Learning Services"), so #heals and
- *     /ngo/partners are both defensible and neither is confirmed.
- * Both are the design's own inconsistency, not a translation slip — the Home node contains
- * "CHOICES" and "PARTNERSHIP PROGRAMS" and no "HEALS", the Program node the reverse. Guessing an
- * anchor would silently pick a reading for the client, so those two keep pointing at the
- * Programs page root: a real destination, just not a precise one. Awaiting client confirmation
- * (docs/ngo-build-plan.md, "Cross-page link map").
+ * The hrefs come from the CMS `slug` now, which is what makes them honest. They used to be
+ * guesses, and only two of four could be deep-linked: `/ngo/program` details THREE programmes
+ * (STEP, HEALS, GVP — node 7447:6027) against Home's four, CHOICES has no section there at all,
+ * and PARTNERSHIP PROGRAMS is titled for partnerships while carrying HEALS's expansion as its
+ * blurb. That is the design's own inconsistency, so those two kept pointing at the Programs page
+ * root rather than at an invented anchor. With one published list behind both surfaces the
+ * mismatch cannot recur — Home shows the first four of exactly what that page details, so every
+ * `#slug` has a section to land on. The fixtures still carry the design's four, root links and
+ * all; see `@lib/programs` for why the two fixture sets are allowed to disagree.
  */
-const programs = [
-  {
-    title: 'STEP',
-    description:
-      "Strategic Transformative Education Program — leadership pathways for tomorrow's changemakers.",
-    href: '/ngo/program#step',
-  },
-  {
-    title: 'CHOICES',
-    description:
-      'STEM innovation club challenging young minds to create solutions for real-world problems.',
-    href: '/ngo/program',
-  },
-  {
-    title: 'GVP',
-    description:
-      'GIEVA Volunteer Project — connecting young Nigerians with meaningful community service.',
-    href: '/ngo/program#gvp',
-  },
-  {
-    title: 'PARTNERSHIP PROGRAMS',
-    description:
-      'Holistic Education Advising and Learning Services — personalized coaching and global opportunities.',
-    href: '/ngo/program',
-  },
-];
+const programs = await getHomePrograms();
 
 const testimonial = {
   quote:
@@ -166,7 +148,9 @@ const news = (await getArticles('ngo')).slice(0, 3);
           {
             stats.map((stat, i) => (
               <li class="who__stat" data-divider={i > 0 ? '' : undefined}>
-                <p class="u-h2 who__stat-value">{stat.value}</p>
+                <p class="u-h2 who__stat-value">
+                  <StatCounter value={stat.value} />
+                </p>
                 <p class="who__stat-label">{stat.label}</p>
               </li>
             ))
@@ -176,37 +160,43 @@ const news = (await getArticles('ngo')).slice(0, 3);
     </div>
   </section>
 
-  <!-- ── Our Programs ─────────────────────────────────────────────────────────── -->
-  <section class="section programs">
-    <div class="container">
-      <div class="programs__intro">
-        <p class="u-eyebrow">Our Programs</p>
-        <h2 class="u-section-title">
-          Initiatives Built for <em class="u-accent-em">Real Impact</em>
-        </h2>
-        <p class="u-body-lg">
-          Community-centered, measurable, and designed for long-term change across Nigeria.
-        </p>
-      </div>
+  <!-- ── Our Programs ──────────────────────────────────────────────────────────────
+       Rendered only when the CMS has published programmes — same call as the news row below and
+       as Consultancy Home's Core Team and FAQ: "Initiatives Built for Real Impact" above an
+       empty grid is worse than no section at all. Only reachable with a configured-but-empty
+       CMS; fixtures always have four. -->
+  {
+    programs.length > 0 && (
+      <section class="section programs">
+        <div class="container">
+          <div class="programs__intro">
+            <p class="u-eyebrow">Our Programs</p>
+            <h2 class="u-section-title">
+              Initiatives Built for <em class="u-accent-em">Real Impact</em>
+            </h2>
+            <p class="u-body-lg">
+              Community-centered, measurable, and designed for long-term change across Nigeria.
+            </p>
+          </div>
 
-      <ul role="list" class="programs__grid">
-        {
-          programs.map((program) => (
-            <li class="programs__card surface-inverse" data-surface="inverse">
-              <div class="programs__card-head">
-                <h3 class="programs__card-title">{program.title}</h3>
-                <span class="programs__divider" aria-hidden="true" />
-                <p class="u-body-lg programs__card-desc">{program.description}</p>
-              </div>
-              <Button variant="link" href={program.href}>
-                Learn more
-              </Button>
-            </li>
-          ))
-        }
-      </ul>
-    </div>
-  </section>
+          <ul role="list" class="programs__grid">
+            {programs.map((program) => (
+              <li class="programs__card surface-inverse" data-surface="inverse">
+                <div class="programs__card-head">
+                  <h3 class="programs__card-title">{program.title}</h3>
+                  <span class="programs__divider" aria-hidden="true" />
+                  <p class="u-body-lg programs__card-desc">{program.tagline}</p>
+                </div>
+                <Button variant="link" href={program.href}>
+                  Learn more
+                </Button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+    )
+  }
 
   <!-- ── Success Stories ──────────────────────────────────────────────────────── -->
   <section class="section success">
@@ -311,7 +301,7 @@ const news = (await getArticles('ngo')).slice(0, 3);
 <style>
   /* ── Shared section rhythm ──────────────────────────────────────────────── */
   .section {
-    padding-block: var(--space-6xl);
+    padding-block: var(--section-padding-block);
   }
 
   /* ── Hero ───────────────────────────────────────────────────────────────── */
@@ -328,11 +318,19 @@ const news = (await getArticles('ngo')).slice(0, 3);
   .hero {
     overflow: hidden;
   }
+  /*
+   * Columns/gap match the Consultancy hero (656 + 48 inside the 1312px container),
+   * which is what leaves the mark its 608px. The NGO frame does not specify a
+   * two-column hero at all — node 5990:3698 is a full-width overlay stacked on the
+   * `logo image` — so the previous 600/24 split was an approximation, not a measured
+   * value. The copy is unaffected: .hero__heading and .hero__lead are capped in `ch`,
+   * well inside either column width.
+   */
   .hero__grid {
     display: grid;
-    grid-template-columns: minmax(0, 600px) 1fr;
+    grid-template-columns: minmax(0, 656px) 1fr;
     align-items: center;
-    gap: var(--space-md);
+    gap: var(--space-2xl);
     padding-block: var(--space-5xl) var(--space-2xl);
   }
   .hero__content {
@@ -367,11 +365,20 @@ const news = (await getArticles('ngo')).slice(0, 3);
   .hero__visual {
     position: relative;
   }
+  /*
+   * Sized to match the Consultancy hero's mark rather than bleeding off the viewport
+   * (client direction, 2026-08-25). The grid above supplies the width — this is the
+   * same rule Consultancy's .hero__ring carries — so the two marks paint identically
+   * at every viewport, not just at the container's max.
+   *
+   * Deliberate deviation from node 5990:3672, where `logo image` (5990:3677) is the
+   * 818px rectangle clipped to 780 at the frame's right edge. The previous
+   * `width: 115%` + negative gutter margin reproduced that bleed and is what made
+   * this mark render ~30% larger than Consultancy's. Logged in docs/ngo-build-plan.md.
+   */
   .hero__ring {
-    width: 115%;
-    max-width: none;
+    width: 100%;
     height: auto;
-    margin-inline-end: calc(-1 * var(--container-gutter));
   }
   /* The cross-site "Explore Consultancy" pill's styles moved to BrandSwitchLink.astro. */
 
@@ -695,7 +702,7 @@ const news = (await getArticles('ngo')).slice(0, 3);
       max-width: none;
     }
     .hero__visual {
-      max-width: 26rem;
+      max-width: 24rem; /* Consultancy's stacked-hero cap — same reason as above. */
       margin-inline: auto;
     }
     .testimonial {

@@ -107,15 +107,26 @@ const current = Astro.url.pathname;
     <details class="site-header__menu">
       <summary class="site-header__menu-toggle">
         <span class="visually-hidden">Open menu</span>
+        {
+          /* `menu-02` — the mobile frame's own glyph (node 12490:11668), three ragged rules
+             (12/16/8 units long) rather than the even 3-bar we drew before it was ingested.
+             Inlined rather than exported as a file: it is four attributes of geometry, and
+             inline is the only form that can take `currentColor` from the toggle's own ink. */
+        }
         <svg
-          width="20"
-          height="14"
-          viewBox="0 0 20 14"
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
           fill="none"
           aria-hidden="true"
           focusable="false"
         >
-          <path d="M0 1h20M0 7h20M0 13h20" stroke="currentColor" stroke-width="2"></path>
+          <path
+            d="M4 5H16M4 12H20M4 19H12"
+            stroke="currentColor"
+            stroke-width="1.25"
+            stroke-linecap="round"
+            stroke-linejoin="round"></path>
         </svg>
       </summary>
 
@@ -410,8 +421,16 @@ const current = Astro.url.pathname;
     margin: var(--space-2xs) 0 0;
     padding-inline-start: var(--space-sm);
   }
+  /* Sized as a touch target, not as a line of text. These used to be 24px tall only because
+     `--type-body-lg` happened to carry a 24px line-height; at the mobile tier that role drops to
+     14/20 (tokens.css §4) and the target would have gone with it, under the 24×24 WCAG 2.5.8 AA
+     floor. `min-block-size` decouples the two: the drawer is the primary navigation on a phone
+     and it is entirely ours — the design has no mobile nav panel — so it takes the 44×44 AAA
+     enhancement rather than the AA floor. The parent <li> gap already separates them. */
   .site-nav__submenu-link {
-    display: block;
+    display: flex;
+    align-items: center;
+    min-block-size: 44px;
     color: var(--color-mine-shaft);
     text-decoration: none;
     font-size: var(--type-body-lg-size);
@@ -450,6 +469,25 @@ const current = Astro.url.pathname;
     }
     .site-header__menu {
       display: block;
+    }
+  }
+
+  /* ── Mobile bar (tokens.css §4's tier) ────────────────────────────────────────
+     The last rung of the ladder above is still the desktop object made small: a rounded pill
+     floating inside a gutter. The mobile frame draws something else — node 12490:11659 is a
+     FLAT, full-bleed 64px bar: no wrapper padding, no inset, no corner radius, 20px of its own
+     padding, and the same translucent white + 3px blur the pill carries. 20 + 24 (lockup) + 20
+     = the frame's 64px exactly, so the height is a consequence of the padding and is not
+     asserted here. */
+  @media (max-width: 640px) {
+    .site-header {
+      padding: 0;
+    }
+    .site-header__pill {
+      max-width: none;
+      border-radius: 0;
+      padding: var(--container-gutter);
+      gap: var(--space-sm);
     }
   }
 </style>

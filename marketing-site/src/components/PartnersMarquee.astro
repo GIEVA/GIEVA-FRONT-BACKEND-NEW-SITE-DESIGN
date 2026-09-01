@@ -99,6 +99,9 @@ const { logos, label = 'Trusted Partners' } = Astro.props;
 <style>
   .partners {
     padding-block: var(--space-lg) var(--space-2xl);
+    /* Every logo's per-item height (set inline from @lib/home-images) is multiplied by this, so
+       the whole strip resizes from one number instead of a second set of per-logo values. */
+    --partner-logo-scale: 1;
   }
   .partners__row {
     display: flex;
@@ -154,7 +157,7 @@ const { logos, label = 'Trusted Partners' } = Astro.props;
     display: flex;
     align-items: center;
     flex: none;
-    block-size: var(--logo-h);
+    block-size: calc(var(--logo-h) * var(--partner-logo-scale));
   }
   .partners__item :global(img) {
     height: 100%;
@@ -169,7 +172,7 @@ const { logos, label = 'Trusted Partners' } = Astro.props;
      size, which is what makes the two cancel out to the right offset. */
   .partners__item--crop {
     position: relative;
-    inline-size: var(--logo-w);
+    inline-size: calc(var(--logo-w) * var(--partner-logo-scale));
     overflow: hidden;
   }
   .partners__item--crop :global(img) {
@@ -193,6 +196,37 @@ const { logos, label = 'Trusted Partners' } = Astro.props;
   @media (prefers-reduced-motion: reduce) {
     .partners__track {
       animation: none;
+    }
+  }
+
+  /* ── Mobile (node 12496:9745) ─────────────────────────────────────────────────
+     On desktop the strip is a band of its own under the hero. On mobile it is the last 46px of
+     the hero frame itself — flush, no padding of its own — and every logo drops to exactly 2/3
+     of its desktop height (the design's 60px band becomes 40px, and each individual mark
+     divides through: Microsoft 40→26.67, WAEC 60→40, and so on for all thirteen). One scale
+     factor reproduces the whole set, which is why the per-logo heights in @lib/home-images stay
+     untouched. */
+  @media (max-width: 640px) {
+    .partners {
+      padding-block: 0;
+      --partner-logo-scale: calc(2 / 3);
+    }
+    .partners__row {
+      gap: var(--space-sm);
+    }
+    .partners__label {
+      /* 176×46 box around a 123×14 label — i.e. 16px block padding and the 26.5px each side
+         that centres it (node 12496:9746). */
+      padding: var(--space-sm) 26.5px;
+    }
+    .partners__viewport {
+      /* The desktop mask fades 32px in from the left, which on a 350px row eats a tenth of the
+         strip. The design fades only at the trailing edge here. */
+      mask-image: linear-gradient(to right, black 90%, transparent);
+    }
+    .partners__track {
+      gap: var(--space-lg);
+      padding-inline-end: var(--space-lg);
     }
   }
 </style>

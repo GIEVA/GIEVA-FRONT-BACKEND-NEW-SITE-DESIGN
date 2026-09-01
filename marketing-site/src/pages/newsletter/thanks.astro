@@ -1,0 +1,76 @@
+---
+/**
+ * Newsletter — subscribed.
+ *
+ * Where `POST /api/newsletter/subscribe` sends the visitor on success (`303 See Other`, so a
+ * refresh can't resubmit). This page is what makes the footer form work with JS off: the browser
+ * does a native form post, the API redirects here, and a real page loads. No island, no fetch.
+ *
+ * NO FIGMA FRAME EXISTS FOR THIS PAGE — same situation as /404, and handled the same way: built
+ * entirely from already-confirmed primitives (`.container`, the `u-hero`/`u-body-lg`/`u-eyebrow`
+ * utilities, `--space-*` rhythm, `Button`), adding no new visual vocabulary. If a frame is ever
+ * drawn, replace this rather than reconciling with it.
+ *
+ * BRAND: the endpoint has one redirect target for both sites, and `data-brand` is path-derived,
+ * so this resolves to `consultancy` — an NGO visitor gets the Consultancy shell. Same unavoidable
+ * limitation /404 documents (no server-side routing, zero-JS baseline), and handled the same way:
+ * the return links name both sites explicitly instead of assuming which one they came from.
+ *
+ * `data-pagefind-ignore` keeps this out of site search — a confirmation page is not a result.
+ */
+import BaseLayout from '@layouts/BaseLayout.astro';
+import Button from '@components/Button.astro';
+---
+
+<BaseLayout
+  title="You're subscribed — GIEVA"
+  description="Thanks for subscribing to the GIEVA newsletter."
+>
+  <section class="newsletter-result" data-pagefind-ignore>
+    <div class="container newsletter-result__inner">
+      <p class="u-eyebrow">Newsletter</p>
+      <h1 class="u-hero newsletter-result__heading">
+        You're on <em class="u-accent-em">the list.</em>
+      </h1>
+      <p class="u-body-lg newsletter-result__lead">
+        Thanks for signing up. You'll hear from us when there's news worth sending — new
+        programmes, registration windows and opportunities. Every email we send has an
+        unsubscribe link, and you can use it any time.
+      </p>
+
+      <div class="newsletter-result__actions">
+        <Button variant="primary" href="/">GIEVA Consultancy</Button>
+        <Button variant="secondary" href="/ngo">GIEVA NGO</Button>
+      </div>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  /* Section rhythm matches the sub-page family and /404: --section-padding-block, vertically
+     centred so a short page doesn't leave the footer riding high. */
+  .newsletter-result {
+    padding-block: var(--section-padding-block);
+    display: grid;
+    align-items: center;
+    min-height: 60vh;
+  }
+  .newsletter-result__inner {
+    display: grid;
+    justify-items: start;
+    gap: var(--space-lg);
+  }
+  .newsletter-result__heading {
+    max-width: 18ch;
+  }
+  .newsletter-result__lead {
+    max-width: 56ch;
+    color: var(--color-text-muted);
+  }
+  .newsletter-result__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-md);
+    margin-block-start: var(--space-md);
+  }
+</style>

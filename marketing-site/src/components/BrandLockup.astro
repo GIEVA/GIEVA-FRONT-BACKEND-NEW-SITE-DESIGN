@@ -87,18 +87,22 @@ const { href, ink = 'brand', destination = 'home page', class: className } = Ast
     font-weight: var(--font-weight-regular);
   }
 
-  /* Mobile step — ours, not the design's: neither brand has a mobile frame. At full size the
-     lockup (247px) plus the header's gap and menu toggle needs a 383px row, which overflows a
-     320px viewport and fails WCAG 2.2 §1.4.10 (Reflow). Below 560px it steps down to a 40px
-     mark / 28px wordmark — which is exactly the treatment the NGO header used to apply at every
-     width as `size="sm"`. That was never a desktop value, but it is a sound mobile one. */
-  @media (max-width: 560px) {
+  /* Mobile step — now CONFIRMED. This used to be ours (40px mark / 28px wordmark below 560px),
+     authored only to keep the 247px lockup from overflowing a 320px viewport. The Consultancy
+     mobile frame (node I12490:11661;5857:4414 et al) settles it: 24px mark, 24px "GIEVA",
+     16px ".org", in a 124×24 lockup.
+
+     Only the wordmark size moves, because the design's mobile ratios are the desktop ones
+     exactly — 20/24 leading is the same 0.8333 as 40/48, and 16/24 is the same 0.6667 the
+     `.org` already derives — so the whole lockup scales as one object off this single number.
+     Breakpoint moved 560 → 640 to land on the site-wide mobile tier (tokens.css §4). */
+  @media (max-width: 640px) {
     .brand-lockup__mark {
-      inline-size: 2.5rem;
-      block-size: 2.5rem;
+      inline-size: 1.5rem;
+      block-size: 1.5rem;
     }
     .brand-lockup__wordmark {
-      font-size: 1.75rem; /* 28px */
+      font-size: 1.5rem; /* 24px */
     }
   }
 

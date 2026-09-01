@@ -82,10 +82,20 @@ const { title, photo = servicesHeroPhoto } = Astro.props;
     text-align: center;
   }
 
-  /* ── Responsive (authored by us — no mobile frames exist; flagged for sign-off) ──── */
+  /* ── Responsive (authored by us — no mobile frames exist; flagged for sign-off) ────
+     The 120px bottom padding above is straight off the desktop frame, where it sits under a
+     670px band. The band is `height: auto`, so at 390px it scales to ~181px — and 120px of
+     bottom padding then pushes a bottom-anchored title clear out of the top of its own photo,
+     leaving it stranded against the masthead. Scaling the inset with the band keeps the title
+     where the design puts it: 120/670 is 17.9% of the band, which is 32px here.
+
+     The title itself no longer restates a size. This block used to pin it to the 40px
+     `--font-size-h3` PRIMITIVE, which meant it ignored the mobile type tier entirely
+     (tokens.css §4) and rendered larger than Home's own 48px hero does at this width relative
+     to its surroundings. It now takes `--type-page-title-size` like every other page title. */
   @media (max-width: 640px) {
-    .subpage-hero__heading {
-      font-size: var(--font-size-h3);
+    .subpage-hero__content {
+      padding-bottom: var(--space-lg);
     }
   }
 </style>

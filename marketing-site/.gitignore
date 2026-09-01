@@ -31,3 +31,6 @@ raw-tokens/
 
 # Local bun lockfile — CI uses npm/package-lock.json (see WORKFLOW.md §5a)
 bun.lock
+
+# Python bytecode from the Blender-side mark scripts
+__pycache__/

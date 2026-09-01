@@ -28,13 +28,29 @@
  *     re-authored; see that file for the confirmed content and geometry.
  *
  * Content notes confirmed via node.json (not guessed):
- *   - All 10 member cards (4 + 4 + 2, matching the source's exact row split) carry the
- *     identical placeholder name/role/photo — same not-yet-personalised pattern as Home's Core
- *     Team (4×) and Services'/Home's other repeated content, reproduced as-is per
- *     exact-replica-first.
+ *   - The design's 10 member cards (4 + 4 + 2, matching the source's exact row split) all carry
+ *     the identical placeholder name/role/photo — the same not-yet-personalised pattern as
+ *     Home's Core Team (4×) and Services'/Home's other repeated content. Those ten were
+ *     hard-coded here until 2026-08-14; the roster now comes from the CMS (see below) and the
+ *     placeholders survive only as `@lib/staff`'s fixtures, so a build with no API still renders
+ *     this frame exactly as designed.
  *   - Grid gaps confirmed from node.json's auto-layout: 24px between cards in a row
  *     (`--space-md`), 80px between rows (`--space-4xl`) — a genuine distinction from Home's
  *     single-row Core Team section, which only ever needed one gap value.
+ *
+ * ## The roster is CMS-driven
+ *
+ * Members come from `@lib/staff` at build time (`GET /api/staff/all`, admin-authored via the
+ * dashboard's AdminStaff screen). The grid is the design's, unchanged — only its contents moved.
+ * Two consequences worth knowing:
+ *
+ *   - **The row split is no longer 4+4+2.** It's whatever `ceil(n / 4)` gives, because the real
+ *     roster decides `n`. The 4-column grid, both gaps and the responsive collapse are untouched,
+ *     so any count lands on the design's own geometry.
+ *   - **Publishing a member needs a rebuild.** Static output; see `@lib/cms`.
+ *
+ * Home's Core Team section draws from the same module, sliced to the design's first four. This
+ * page is the full roster; Home's is the taster.
  *
  * Component reuse considered: `ServiceDetailSection` (the ★ template) shapes a
  * title+subtitle/about-covers-cost block — Team's content (a photo grid + the shared CTA) isn't
@@ -45,11 +61,9 @@ import TeamCard from '@components/TeamCard.astro';
 import CtaSection from '@components/CtaSection.astro';
 import { Image } from 'astro:assets';
 import { teamHeroPhoto, teamMemberPhoto } from '@lib/team-images';
+import { getStaff } from '@lib/staff';
 
-const team = Array.from({ length: 10 }, () => ({
-  name: 'Julie Sande',
-  role: 'Director General',
-}));
+const team = await getStaff();
 ---
 
 <BaseLayout
@@ -71,15 +85,39 @@ const team = Array.from({ length: 10 }, () => ({
   <!-- ── Team grid ────────────────────────────────────────────────────────────── -->
   <section class="section team-grid-section">
     <div class="container">
-      <ul role="list" class="team-grid">
-        {
-          team.map((member) => (
-            <li>
-              <TeamCard src={teamMemberPhoto} name={member.name} role={member.role} />
-            </li>
-          ))
-        }
-      </ul>
+      {
+        team.length > 0 ? (
+          <ul role="list" class="team-grid">
+            {team.map((member) => (
+              <li>
+                {/* No photo uploaded → the design's own placeholder portrait, which is a local
+                    asset and so goes through astro:assets. A card with an empty frame would read
+                    as a broken image; the placeholder reads as "photo pending". */}
+                <TeamCard
+                  src={member.imageUrl ?? teamMemberPhoto}
+                  name={member.name}
+                  role={member.role}
+                />
+              </li>
+            ))}
+          </ul>
+        ) : (
+          /* A real state, not a placeholder — same call as /ngo/resources. The CMS starts empty,
+             and this page is reachable by URL before the first member is published. Says so
+             plainly instead of rendering an empty grid under a lone "Our Team" hero. */
+          <p class="u-body-lg team-empty">
+            Team profiles are on their way. In the meantime,{' '}
+            <a class="u-underline" href="/about">
+              read about GIEVA
+            </a>{' '}
+            or{' '}
+            <a class="u-underline" href="/services">
+              see what we do
+            </a>
+            .
+          </p>
+        )
+      }
     </div>
   </section>
 
@@ -94,7 +132,7 @@ const team = Array.from({ length: 10 }, () => ({
 <style>
   /* ── Shared section rhythm (matches Home/Services/About) ─────────────────── */
   .section {
-    padding-block: var(--space-6xl);
+    padding-block: var(--section-padding-block);
   }
 
   /* ── Hero ───────────────────────────────────────────────────────────────── */
@@ -142,6 +180,12 @@ const team = Array.from({ length: 10 }, () => ({
     row-gap: var(--space-4xl);
   }
   /* Card itself lives in `TeamCard.astro` — the canonical implementation shared with Home. */
+
+  /* Empty roster. Same measure as /ngo/resources' empty state so the two read as one system. */
+  .team-empty {
+    max-width: 60ch;
+    color: var(--color-text-default);
+  }
 
   /* ── CTA (same content/shape as Home's/Services'/About's) ──────────────── */
   /* The CTA band's styles live in src/components/CtaSection.astro, which owns the

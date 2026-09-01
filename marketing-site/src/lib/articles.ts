@@ -3,18 +3,9 @@
  *
  * The article store lives in the handoff repo's Express/Sequelize backend
  * (`GIEVA/gieva-front-backend-new-site-design`, `backend/`), authored through its React admin
- * dashboard (`AdminArticles` / `CreateArticle` / `EditArticle`). This module is the only place
- * that knows the API exists; pages consume the exported types and functions.
- *
- * ## Why this runs at build time, not in the browser
- *
- * The site is `output: 'static'` with a zero-JS baseline (CLAUDE.md #3). Fetching here means
- * every article ships as real HTML: indexed by Pagefind for free (so site search covers post
- * bodies), fully server-rendered for SEO — which matters more for blog content than for any
- * other page — and readable with JS off. The cost is that publishing needs a rebuild, so the
- * admin dashboard has to fire a deploy webhook on publish. That is a deliberate trade, made
- * with the client 2026-08-11; the alternative (SSR) would have required a Node host, dropped
- * the blog out of Pagefind, and made the a11y/visual CI gates depend on live database content.
+ * dashboard (`AdminArticles` / `CreateArticle` / `EditArticle`). This module owns the article
+ * endpoints and types; the base URL and the build-time failure policy live in `@lib/cms`, which
+ * also explains why every CMS consumer fetches at build time rather than in the browser.
  *
  * ## The public endpoints this consumes
  *
@@ -47,6 +38,8 @@
  * in `CreateArticle.jsx`; it was requested, and if it lands, `BRAND_QUERY` below is the single
  * place that changes.
  */
+
+import { fetchJson } from '@lib/cms';
 
 /** Which site an article belongs to. Mirrors `data-brand`. */
 export type Brand = 'consultancy' | 'ngo';
@@ -92,15 +85,6 @@ interface ListResponse {
   totalPages: number;
   articles: ArticleSummary[];
 }
-
-/**
- * Base URL of the API, e.g. `https://api.gieva.org`. Unset means "no backend reachable from
- * this build" — see `fetchJson`.
- */
-const API_URL = import.meta.env.GIEVA_API_URL as string | undefined;
-
-/** True when the build has no API to talk to and is running on fixtures. */
-export const usingFixtures = !API_URL;
 
 /**
  * `tags` and `seoKeywords` are JSON columns. Sequelize hands back a parsed array on MySQL/
@@ -155,36 +139,8 @@ function normaliseArticle(raw: Record<string, unknown>): Article {
   };
 }
 
-/**
- * GET a JSON path under `/api/public`.
- *
- * Failure policy is deliberately split:
- *
- *   - **No `GIEVA_API_URL` at all** → return null and let the caller fall back to fixtures.
- *     A dev machine, and this repo's CI, have no backend; the site still has to build so the
- *     design can be reviewed and the a11y/visual gates can run against stable content.
- *   - **URL set but the request fails** → throw, failing the build. A configured build that
- *     silently shipped an empty Resources index would be far worse than a red build: the
- *     pages would 200 with nothing on them and nobody would notice.
- */
-async function fetchJson<T>(
-  path: string,
-  params: Record<string, string> = {},
-): Promise<T | null> {
-  if (!API_URL) return null;
-
-  const url = new URL(`${API_URL.replace(/\/$/, '')}/api/public${path}`);
-  for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
-
-  const res = await fetch(url, { headers: { accept: 'application/json' } });
-  if (!res.ok) {
-    throw new Error(
-      `Articles API ${res.status} ${res.statusText} for ${url.pathname}${url.search}. ` +
-        `Set GIEVA_API_URL to a reachable backend, or unset it to build against fixtures.`,
-    );
-  }
-  return (await res.json()) as T;
-}
+/** All article endpoints hang off this mount point (`index.js`: `app.use("/api/public", …)`). */
+const BASE = '/api/public';
 
 /**
  * Every published article for a brand, newest first (the API's own ordering: pinned, then
@@ -195,7 +151,7 @@ async function fetchJson<T>(
  * outgrows it. Capped at 50 pages purely so a misbehaving API can't loop forever.
  */
 export async function getArticles(brand: Brand): Promise<ArticleSummary[]> {
-  const first = await fetchJson<ListResponse>('/articles', {
+  const first = await fetchJson<ListResponse>(`${BASE}/articles`, {
     ...BRAND_QUERY[brand],
     page: '1',
     limit: '50',
@@ -207,7 +163,7 @@ export async function getArticles(brand: Brand): Promise<ArticleSummary[]> {
   );
   const pages = Math.min(first.totalPages ?? 1, 50);
   for (let page = 2; page <= pages; page++) {
-    const next = await fetchJson<ListResponse>('/articles', {
+    const next = await fetchJson<ListResponse>(`${BASE}/articles`, {
       ...BRAND_QUERY[brand],
       page: String(page),
       limit: '50',
@@ -223,7 +179,7 @@ export async function getArticles(brand: Brand): Promise<ArticleSummary[]> {
 /** One article by slug, with its body. Null when the slug isn't a published article. */
 export async function getArticleBySlug(slug: string): Promise<Article | null> {
   const res = await fetchJson<{ article: Record<string, unknown> }>(
-    `/articles/slug/${encodeURIComponent(slug)}`,
+    `${BASE}/articles/slug/${encodeURIComponent(slug)}`,
   );
   if (!res) return fixtureArticle(slug);
   return res.article ? normaliseArticle(res.article) : null;

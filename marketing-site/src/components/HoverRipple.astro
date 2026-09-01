@@ -1,0 +1,225 @@
+---
+/**
+ * HoverRipple — the hover fill grows out of the pointer's point of contact and sweeps across the
+ * control, instead of the whole box flipping colour at once. Shared by `Button.astro` (primary
+ * and secondary) and `BrandSwitchLink.astro`; see docs/enhancement-backlog.md E-07 for the
+ * decision record, the curve measurements, and the gates.
+ *
+ * ── Contract ──────────────────────────────────────────────────────────────────
+ * The host element carries `data-ripple` (empty) and renders `<HoverRipple />` as its FIRST
+ * child. The host owns its own resting/hover colours; this component owns only the reveal.
+ *   - `--ripple-fill` (required, set by the host) — the colour that grows.
+ *   - `<HoverRipple ink>` adds a second layer for hosts whose LABEL colour also changes on
+ *     hover. The host passes the duplicated label through the slot and sets `--ripple-ink`.
+ *
+ * ── Why two layers ────────────────────────────────────────────────────────────
+ * The fill is a scaled circle, which cannot repaint the text it passes under. Cross-fading the
+ * label colour over the same window was tried and rejected: mid-sweep the label sits half-way
+ * between its two colours while half the box is still the resting fill, and on `secondary` —
+ * orange label, 10% orange tint — that half-way colour is nearly invisible against the unswept
+ * background. The `ink` layer is instead an exact copy of the label in the hovered colour,
+ * clipped by a circle with the same centre and the same radius over the same duration and
+ * curve, so the text flips on the identical hard edge as the fill. Both layers are driven by
+ * one attribute flip in the same frame, so they cannot drift apart.
+ *
+ * ── Why the fill is sized rather than scaled from a dot ───────────────────────
+ * The script sizes the circle to the exact diameter that reaches the host's farthest corner,
+ * then animates `scale(0 → 1)`. Scaling a small dot up ~150× instead would rasterise the layer
+ * at its small size and stretch it, fraying the edge; sized this way the layer rasterises at
+ * final size and is only ever transformed downward. `transform` is the only property animated
+ * on the fill, and a registered `<length>` driving `clip-path` — the sanctioned fourth
+ * animatable property — on the ink.
+ */
+interface Props {
+  /** Render the label-reveal layer. Only for hosts whose label colour changes on hover. */
+  ink?: boolean;
+}
+const { ink = false } = Astro.props;
+---
+
+<span class="ripple" aria-hidden="true"></span>
+{
+  ink && (
+    <span class="ripple-ink" aria-hidden="true" data-pagefind-ignore>
+      <slot />
+    </span>
+  )
+}
+
+<style is:global>
+  /* Global rather than scoped: these rules key off `[data-ripple]` on the HOST element, which is
+     a different component every time, so Astro's scoping hash would never match. Emitted once
+     however many controls render. */
+  [data-ripple] {
+    /* Both durations are derived per control by the script, from a constant sweep SPEED — see
+       it for why. These are the values a ~215px-wide control resolves to, and the fallback if
+       the script never runs. Exposed as custom properties so they can be dialled in DevTools. */
+    --ripple-in: 280ms;
+    --ripple-out: 200ms;
+    /* A deliberate exception to "built-in easings are too weak, use a strong cubic-bezier".
+       Covered AREA grows as the square of the radius, so the reveal already reads as
+       decelerating before any easing is applied; layering a strong ease-out on top of that put
+       the leading edge ~45% across the control within the first 15% of the duration and left the
+       rest a crawl. Measured by scrubbing the paused transition frame by frame across five
+       candidates — plain `ease-out` was the only one legible the whole way across. */
+    --ripple-easing: ease-out;
+    position: relative;
+    /* Makes the host its own stacking context, so the fill's `z-index: -1` lands ABOVE the
+       host's own background (painted by the stacking context itself) and BELOW the real label,
+       which therefore needs no z-index of its own. */
+    isolation: isolate;
+    overflow: hidden;
+  }
+  [data-ripple] .ripple {
+    position: absolute;
+    z-index: -1;
+    /* Placed by the script; the fallbacks keep it harmless before the first pointer event and
+       if the script never runs at all. */
+    inset-block-start: var(--ripple-y, 50%);
+    inset-inline-start: var(--ripple-x, 50%);
+    inline-size: var(--ripple-d, 0px);
+    block-size: var(--ripple-d, 0px);
+    margin-block-start: calc(var(--ripple-d, 0px) / -2);
+    margin-inline-start: calc(var(--ripple-d, 0px) / -2);
+    border-radius: 50%;
+    /* Only ever painted once the script has claimed the host — until then the plain CSS hover
+       swap is still the hover state, and a visible circle would double it up. */
+    background: transparent;
+    transform: scale(0);
+    /* No transform-origin games: the circle is already centred on the contact point, so scaling
+       about its own centre IS symmetric growth from that point. */
+    transition: transform var(--ripple-out) var(--ripple-easing);
+  }
+  /* The ink's radius is animated as a REGISTERED custom property rather than by transitioning
+     `clip-path` itself. Transitioning the shorthand meant the circle's CENTRE interpolated too:
+     the centre lives inside the very property being animated, so on the first frame of a hover
+     it was still the previous contact point, and the clip drifted toward the pointer while it
+     grew — measured mid-sweep as `circle(58px at calc(24.5% + 2px) …)`, which flipped the text
+     on a different edge than the fill. Registering the radius makes the centre a plain `var()`
+     substitution that applies instantly, exactly like the fill's `inset-*`, leaving the radius
+     as the only thing with anywhere to travel. (A forced style flush between setting the centre
+     and flipping the state was tried first and does NOT work — reading a layout property does
+     not recompute a non-layout one like `clip-path`.) */
+  @property --ripple-clip {
+    syntax: '<length>';
+    inherits: false;
+    initial-value: 0px;
+  }
+  [data-ripple] .ripple-ink {
+    position: absolute;
+    /* The padding box. The host centres its real label in the content box, and symmetric padding
+       makes those two centres the same point, so the copy lands exactly on the original. */
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: inherit;
+    color: var(--ripple-ink);
+    /* A visual duplicate of text that already exists once in the page. It is hidden from
+       assistive tech by `aria-hidden`, kept out of the Pagefind index by `data-pagefind-ignore`
+       (without which every rippling control's label was indexed twice — the site's word count
+       moved the moment this layer shipped), and excluded from selection so dragging across a
+       button doesn't copy its label twice. */
+    pointer-events: none;
+    user-select: none;
+    --ripple-clip: 0px;
+    clip-path: circle(var(--ripple-clip) at var(--ripple-x, 50%) var(--ripple-y, 50%));
+    transition: --ripple-clip var(--ripple-out) var(--ripple-easing);
+  }
+  [data-ripple='on'] .ripple {
+    background: var(--ripple-fill);
+  }
+  [data-ripple='on'][data-ripple-state='in'] .ripple {
+    transform: scale(1);
+    transition-duration: var(--ripple-in);
+  }
+  [data-ripple='on'][data-ripple-state='in'] .ripple-ink {
+    /* Same centre, same radius, same duration, same curve as the fill above — so the text flips
+       on the identical edge rather than on a second, competing timeline. */
+    --ripple-clip: calc(var(--ripple-d, 0px) / 2);
+    transition-duration: var(--ripple-in);
+  }
+</style>
+
+<script>
+  /**
+   * Claims every `[data-ripple]` host on the page and drives the reveal. See the component
+   * doc-comment for the layer model.
+   *
+   * Pointer-only by design, gated on the media query AND on `pointerType`: on touch a tap fires
+   * a false `pointerenter` and the reveal would read as a stuck state, so there the host's plain
+   * CSS hover swap stays in charge. Reduced motion needs no branch — base.css collapses every
+   * transition globally, so the circle snaps to full coverage and the result is exactly the
+   * instant colour change this replaced.
+   */
+
+  /* Sweep speed, px of radius per ms. Calibrated so the ~215px control this was designed
+     against keeps the 280ms that was signed off, and every other control inherits its FEEL
+     rather than its number: a fixed duration would make the header's small buttons crawl and
+     a wide CTA look hurried, which is exactly how a good effect starts to feel cheap. */
+  const SPEED = 0.75;
+  /* Floor keeps the shortest sweep from reading as a flicker; ceiling is the 300ms limit for UI
+     motion, which the widest control on the site would otherwise cross. */
+  const MIN_MS = 150;
+  const MAX_MS = 300;
+  /* The retreat is quicker than the sweep in the same proportion the prototype was tuned to:
+     by then the user has left and is already looking somewhere else. */
+  const EXIT_RATIO = 0.71;
+
+  if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+    for (const host of document.querySelectorAll<HTMLElement>('[data-ripple]')) {
+      /* True once the circle demonstrably covers the host. Gates the re-anchor on exit. */
+      let covered = false;
+
+      /** Centres the reveal on a pointer position and sizes it to reach the farthest corner. */
+      const anchor = (event: PointerEvent) => {
+        const box = host.getBoundingClientRect();
+        const x = event.clientX - box.left;
+        const y = event.clientY - box.top;
+        const reach = Math.hypot(Math.max(x, box.width - x), Math.max(y, box.height - y));
+        const ms = Math.round(Math.min(MAX_MS, Math.max(MIN_MS, reach / SPEED)));
+        host.style.setProperty('--ripple-x', `${x}px`);
+        host.style.setProperty('--ripple-y', `${y}px`);
+        host.style.setProperty('--ripple-d', `${reach * 2}px`);
+        host.style.setProperty('--ripple-in', `${ms}ms`);
+        host.style.setProperty('--ripple-out', `${Math.round(ms * EXIT_RATIO)}ms`);
+        /* Flush the new centre into computed style BEFORE the caller flips the state attribute.
+           The fill takes its centre from `inset-*`, which is not in its transition list and so
+           applies instantly — but the ink's centre lives INSIDE `clip-path`, the very property
+           being transitioned. Without this flush both changes land in one style recalc, the
+           transition's start value is the OLD centre, and the clip circle interpolates its
+           position as well as its radius: measured mid-sweep as
+           `circle(55px at calc(25.8% + 1.9px) …)`, i.e. drifting toward the pointer while it
+           grew, so the text flipped on a different edge than the fill. Reading a layout property
+           forces the recalc, after which only the radius has anywhere left to travel. */
+        void host.offsetWidth;
+      };
+
+      host.addEventListener('pointerenter', (event) => {
+        if (event.pointerType !== 'mouse') return;
+        covered = false;
+        anchor(event);
+        host.dataset.rippleState = 'in';
+      });
+
+      host.addEventListener('pointerleave', (event) => {
+        /* Retreat towards where the pointer actually left, so the exit mirrors the entrance
+           instead of collapsing back to a corner the user has no relationship with. Safe to
+           re-centre only once the circle already covers the host: at full coverage the swap is
+           invisible because both circles paint the same pixels, whereas mid-sweep it would
+           teleport. A pointer that leaves before the sweep finishes simply reverses. */
+        if (covered && event.pointerType === 'mouse') anchor(event);
+        delete host.dataset.rippleState;
+      });
+
+      host.querySelector('.ripple')?.addEventListener('transitionend', (event) => {
+        if ((event as TransitionEvent).propertyName === 'transform') {
+          covered = host.dataset.rippleState === 'in';
+        }
+      });
+
+      // Claim it last: until this line the host's plain CSS hover swap is still the hover state.
+      host.dataset.ripple = 'on';
+    }
+  }
+</script>

@@ -26,19 +26,32 @@
  * are composed from the confirmed px values as one-off primitives, and the family stays
  * inherited. Introducing a second family for one repeating card isn't worth the load cost.
  *
- * A11y: `alt` is caller-supplied and defaults to "" because the shipped design uses one
- * placeholder portrait for every member — an identical photo repeated 14x across two pages
- * carries no information, so it is decorative until real headshots land. Name and role are
- * real text, so the card is fully readable either way. The caption's contrast is not gate-checked
- * — axe cannot measure text over a raster image behind a backdrop-filter, so it reports
- * `incomplete`, not a violation — and is tracked under "Checked and passing" in
+ * A11y: `alt` is caller-supplied and defaults to "", and that default now survives real
+ * headshots rather than expiring with them. Two reasons stack. The original one: the shipped
+ * design uses one placeholder portrait for every member, so an identical photo repeated 14x
+ * across two pages carries no information. The durable one: the card's own caption states the
+ * member's name and role as real text immediately below the photo, so a filled-in `alt` would
+ * make a screen reader announce the same person twice — the W3C's own "image with adjacent text
+ * alternative" case, where the empty string is the correct markup, not a placeholder for it.
+ * Name and role are real text, so the card is fully readable either way. The caption's contrast
+ * is not gate-checked — axe cannot measure text over a raster image behind a backdrop-filter, so
+ * it reports `incomplete`, not a violation — and is tracked under "Checked and passing" in
  * docs/a11y-known-issues.md for re-inspection when real headshots replace the placeholder.
+ *
+ * Photos are local OR remote. A member's photo arrives from the CMS as a Cloudinary URL
+ * (`StaffMember.imageUrl`), which `astro:assets` cannot process without `image.remotePatterns`
+ * in astro.config.mjs — and that host is not confirmed yet. So a string `src` renders as a plain
+ * `<img>` with explicit dimensions and `loading="lazy"`: correct and CLS-free, just unoptimised.
+ * An `ImageMetadata` `src` (the design's placeholder portrait, and any caller with a local
+ * asset) still goes through the pipeline. Same call, and the same one-line reversal once the CDN
+ * host is known, as `ArticleCard.astro`'s cover images.
  */
 import { Image } from 'astro:assets';
 import type { ImageMetadata } from 'astro';
 
 interface Props {
-  src: ImageMetadata;
+  /** A local asset (optimised) or a remote URL from the CMS (rendered as-is) — see above. */
+  src: ImageMetadata | string;
   name: string;
   role: string;
   /** Defaults to "" (decorative) — see the a11y note above. */
@@ -49,7 +62,21 @@ const { src, name, role, alt = '' } = Astro.props;
 ---
 
 <div class="team-card">
-  <Image src={src} alt={alt} width={310} height={380} class="team-card__photo" />
+  {
+    typeof src === 'string' ? (
+      <img
+        src={src}
+        alt={alt}
+        width={310}
+        height={380}
+        loading="lazy"
+        decoding="async"
+        class="team-card__photo"
+      />
+    ) : (
+      <Image src={src} alt={alt} width={310} height={380} class="team-card__photo" />
+    )
+  }
   <div class="team-card__info">
     <div class="team-card__frost" aria-hidden="true"></div>
     <div class="team-card__scrim" aria-hidden="true"></div>
@@ -165,5 +192,28 @@ const { src, name, role, alt = '' } = Astro.props;
     font-size: 16px;
     line-height: 22.4px;
     letter-spacing: 0;
+  }
+
+  /* ── Mobile (node 12490:11448) ────────────────────────────────────────────────
+     The card stops being 310 wide and fills the 350px column, but stays 380 tall — so the
+     portrait crops wider rather than growing taller with the width, and four cards down a phone
+     screen stay the length the design draws them. The caption keeps its 24px padding and 8px
+     stack; only the two type sizes move, and both land on sizes the mobile frame states
+     outright (18/24 bold name, 14/20 role) rather than on a ratio of the desktop values.
+     Tracking goes to 0 with them — the desktop name's −0.48px is an Inter value the mobile
+     frame does not carry. */
+  @media (max-width: 640px) {
+    .team-card__photo {
+      aspect-ratio: 350 / 380;
+    }
+    .team-card__name {
+      font-size: 18px;
+      line-height: 24px;
+      letter-spacing: 0;
+    }
+    .team-card__role {
+      font-size: 14px;
+      line-height: 20px;
+    }
   }
 </style>

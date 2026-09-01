@@ -1,0 +1,219 @@
+---
+/**
+ * StatCounter — the figure in a stat rail ("10,000+", "98%"), counted up once when it first
+ * scrolls into view.
+ *
+ * The animation is **stock Motion** (`motion`, the vanilla successor to Framer Motion):
+ * `animate(0, target, { onUpdate })` tweens the value and `inView` triggers it. Both are in
+ * Motion's open-source core — nothing here needs Motion+. See docs/enhancement-backlog.md E-08
+ * for the library decision and what it replaced.
+ *
+ * ── Contract ──────────────────────────────────────────────────────────────────
+ * The PAGE keeps its own element and its own class:
+ *
+ *   <p class="u-h2 who__stat-value"><StatCounter value={stat.value} /></p>
+ *
+ * so no page's stat CSS moves. `value` is the design's display string, verbatim — this
+ * component parses it rather than asking pages to restate the figure as a number, so the copy
+ * stays in one place and a value this can't parse ("Various", "N/A") renders as plain text
+ * instead of breaking.
+ *
+ * ── Why the ghost ─────────────────────────────────────────────────────────────
+ * Counting 0 → 10,000 grows the figure from one digit to five, so its box would widen while it
+ * runs and shove the neighbouring stats and their dividers sideways. The ghost is the final
+ * string, `visibility: hidden`, sharing one grid cell with the live figure: it reserves the
+ * exact final width in the real typeface, so the rail is geometrically identical to the static
+ * page at every frame. It is also why the committed visual baselines don't move.
+ *
+ * ── No-JS, and no flash ───────────────────────────────────────────────────────
+ * The finished figure is the element's static text content. With JS off it is simply what the
+ * reader sees — the count is the enhancement, the number is the baseline (non-negotiable #3).
+ * The script only ever rewinds a counter to zero if it is still off-screen when the script runs;
+ * a reader who lands already looking at the rail gets the figure, not a performance that starts
+ * by erasing it.
+ *
+ * ── A11y ──────────────────────────────────────────────────────────────────────
+ * When (and only when) the script takes a figure over, it stamps `role="img"` with the final
+ * string as the accessible name, so assistive tech reads "10,000+" once and never hears the
+ * digits churn. With no JS there is no role and no label — just text. `prefers-reduced-motion:
+ * reduce` skips the whole thing: the figure the build rendered is the figure that stays.
+ */
+interface Props {
+  /** The design's display string, verbatim — "10,000+", "98%", "12+". */
+  value: string;
+  /** Milliseconds the count runs for. */
+  duration?: number;
+}
+
+const { value, duration = 1600 } = Astro.props;
+
+/* Prefix / figure / suffix, split at build time. The middle group is lazy so the trailing `\D*`
+   claims "+" and "%" rather than the figure claiming them; `\D` can't match a digit, so the
+   engine is forced to grow the middle until the tail is genuinely non-numeric. */
+const parts = value.match(/^(\D*)(\d[\d,.\u00a0 ]*?)(\D*)$/);
+const digits = parts?.[2].replace(/[,\u00a0\s]/g, '') ?? '';
+const target = Number(digits);
+/* Anything we can't read as a figure is rendered verbatim and never animated. A stat rail is
+   content, not a widget: an unparseable value must still say what the design says. */
+const countable = parts !== null && digits !== '' && Number.isFinite(target);
+const fraction = digits.includes('.') ? digits.split('.')[1].length : 0;
+---
+
+{
+  countable ? (
+    <span class="stat">
+      <span class="stat__ghost" aria-hidden="true" data-pagefind-ignore>
+        {value}
+      </span>
+      <span
+        class="stat__value"
+        data-stat-counter
+        data-value={value}
+        data-target={target}
+        data-fraction={fraction}
+        data-prefix={parts[1]}
+        data-suffix={parts[3]}
+        data-duration={duration}
+      >
+        {value}
+      </span>
+    </span>
+  ) : (
+    value
+  )
+}
+
+<style>
+  .stat {
+    display: inline-grid;
+    justify-items: center;
+    /* Uniform digit advances, so the figure never wobbles horizontally inside its reserved box
+       as it climbs — 1 being narrower than 8 is enough to make a count look unsteady. Open Sans
+       is already tabular by default; this is here so a fallback face can't reintroduce the
+       wobble. */
+    font-variant-numeric: tabular-nums;
+  }
+  /* Ghost and figure share one cell — see the header comment. */
+  .stat > * {
+    grid-area: 1 / 1;
+  }
+  .stat__ghost {
+    visibility: hidden;
+  }
+</style>
+
+<script>
+  /**
+   * Claims every `[data-stat-counter]` on the page: rewinds it to zero, then runs it up to its
+   * figure the first time it scrolls into view. Never re-runs — a figure that re-counts every
+   * time it passes the fold is an interface fighting its reader.
+   */
+  import { animate, inView } from 'motion';
+
+  /* `--ease-count` from tokens.css, as Motion's bezier tuple. The UI `--ease-out` finishes the
+     figure with a third of the clock still to run — measured 546ms of dead tail at 1500ms — so
+     the count appears to stall. This one leaves 162ms. The token comment carries the table. */
+  const EASE_COUNT = [0.5, 1, 0.89, 1] as const;
+
+  /* Gap between the figures of one rail. Four counting together read as one flat event;
+     staggered, the rail assembles left to right and the eye is led across it. Kept inside the
+     30–80ms band that reads as one cascade — past that the rail stops feeling like a single
+     event and starts feeling like four animations queued up. */
+  const STAGGER_MS = 60;
+
+  /** True while any part of `el` is inside the viewport. */
+  const onScreen = (el: HTMLElement) => {
+    const box = el.getBoundingClientRect();
+    return box.bottom > 0 && box.top < window.innerHeight;
+  };
+
+  /**
+   * Runs one figure from 0 to its target. Exported onto the element so the styleguide lab can
+   * replay it with different settings without duplicating the logic — what the lab plays is
+   * therefore exactly what ships.
+   */
+  const run = (el: HTMLElement, opts: { duration: number; delay: number }) => {
+    const target = Number(el.dataset.target);
+    const fraction = Number(el.dataset.fraction) || 0;
+    /* `en-US` explicitly, not the browser's locale — grouping is part of the design ("10,000",
+       not "10 000") and must not depend on who is reading. */
+    const format = new Intl.NumberFormat('en-US', {
+      minimumFractionDigits: fraction,
+      maximumFractionDigits: fraction,
+    });
+    const prefix = el.dataset.prefix ?? '';
+    const suffix = el.dataset.suffix ?? '';
+
+    return animate(0, target, {
+      /* Motion counts in seconds. */
+      duration: opts.duration / 1000,
+      delay: opts.delay / 1000,
+      ease: EASE_COUNT,
+      onUpdate: (n) => {
+        el.textContent = `${prefix}${format.format(n)}${suffix}`;
+      },
+      /* The figure is written as the exact display string at the end rather than left on
+         eased(1) — floating point has no business deciding whether the headline reads 10,000
+         or 9,999. */
+      onComplete: () => {
+        el.textContent = el.dataset.value ?? el.textContent;
+      },
+    });
+  };
+
+  const counters = document.querySelectorAll<HTMLElement>('[data-stat-counter]');
+  /* Read once, not per element. Someone who turns the preference on mid-session gets it honoured
+     on their next navigation, which for a once-per-page effect is the right granularity. */
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* Figures still off-screen get rewound to zero, so the rewind itself is never seen. Figures
+     already on screen keep their built-in value and are never observed: they have already been
+     read, and erasing a figure the reader is looking at to re-count it is worse than no
+     animation at all. */
+  const armed: HTMLElement[] = [];
+  for (const el of counters) {
+    (el as HTMLElement & { statRun?: typeof run }).statRun = run;
+    if (reduced || onScreen(el)) continue;
+
+    /* Only now that the script is definitely driving this figure does it become an image with a
+       fixed name — so AT reads "10,000+" rather than whatever digit it caught mid-flight. */
+    el.setAttribute('role', 'img');
+    el.setAttribute('aria-label', el.dataset.value ?? '');
+    el.textContent = '0';
+    armed.push(el);
+  }
+
+  if (armed.length > 0) {
+    /* Figures crossing the threshold in the same frame stagger against each other; one arriving
+       alone starts immediately. This is what makes the same code read correctly at both widths —
+       a desktop rail enters as a row of four and staggers, while the mobile stack enters one
+       figure at a time and would look broken with a fixed per-index delay. */
+    let pending: HTMLElement[] = [];
+
+    const flush = () => {
+      pending.sort((a, b) =>
+        a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1,
+      );
+      pending.forEach((el, i) =>
+        run(el, { duration: Number(el.dataset.duration) || 1600, delay: i * STAGGER_MS }),
+      );
+      pending = [];
+    };
+
+    for (const el of armed) {
+      let done = false;
+      inView(
+        el,
+        () => {
+          if (done) return;
+          done = true;
+          if (pending.length === 0) requestAnimationFrame(flush);
+          pending.push(el);
+        },
+        /* A little inside the viewport rather than on its edge: a figure that starts counting
+           the instant its first pixel appears has already spent half its run off-screen. */
+        { margin: '0px 0px -12% 0px' },
+      );
+    }
+  }
+</script>

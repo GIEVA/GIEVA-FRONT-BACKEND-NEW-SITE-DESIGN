@@ -64,7 +64,12 @@ jobs:
       - uses: actions/checkout@v4
       - run: npm ci
       - name: Build
+        # lighthouserc.json asserts budgets on both styleguide routes, which a plain build
+        # omits by design (astro.config.mjs). The `quality` job above builds without the
+        # flag, so the production build stays covered too.
         run: npm run build
+        env:
+          INCLUDE_STYLEGUIDE: '1'
       - name: Run Lighthouse CI
         env:
           # Point LHCI at the container's bundled Chromium.

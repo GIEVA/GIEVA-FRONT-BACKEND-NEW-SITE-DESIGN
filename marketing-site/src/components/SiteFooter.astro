@@ -20,11 +20,23 @@
  *      from a typed value, so the field reads as already filled. See `::placeholder`.
  *   3. No copyright line. The frame has none, and the previous build had invented one.
  *
- * The newsletter is a real <form> (progressively enhanceable later) rather than a JS-only
- * widget — it degrades honestly instead of pretending to work; there's no subscription
- * endpoint yet (Phase 1 scope), so the form has no `action` and won't be wired until one
- * exists.
+ * The newsletter is a real <form> rather than a JS-only widget, and it stays that way now that
+ * it is wired: it posts natively to `POST /api/newsletter/subscribe`, which replies
+ * `303 See Other` to /newsletter/thanks/ (or /newsletter/error/). No script is involved on the
+ * baseline path — no island, no fetch, and no CORS, since a form post is a top-level navigation
+ * rather than an XHR. The endpoint puts the address in a Brevo list, which is also where admins
+ * compose and send from; the full contract is docs/backend-api-requests.md #13.
+ *
+ * `action` is rendered ONLY when GIEVA_API_URL is set (see @lib/cms `formAction`). With no
+ * backend configured — dev machines, this repo's CI — the form has no action and reloads the
+ * page, exactly as it did before it was wired. That is deliberate: a form pointed at a host that
+ * isn't there fails in the visitor's face, whereas this degrades the way it always has.
+ *
+ * The `brand` hidden input is not decoration. This footer is shared by both path-prefixed sites,
+ * so without it every subscriber lands in the list looking like a Consultancy subscriber and the
+ * list cannot be segmented.
  */
+import { formAction } from '@lib/cms';
 import { footerColumns } from '@lib/nav';
 import BrandLockup from '@components/BrandLockup.astro';
 import SocialIcon from '@components/SocialIcon.astro';
@@ -32,8 +44,14 @@ import SocialIcon from '@components/SocialIcon.astro';
 interface Props {
   /** Where the footer brand/logo links. Consultancy → "/", NGO → "/ngo". */
   homeHref?: string;
+  /** Which site this render belongs to — tags the newsletter signup. Passed down rather than
+   *  re-derived from the path so a page overriding BaseLayout's `brand` prop stays correct. */
+  brand?: 'consultancy' | 'ngo';
 }
-const { homeHref = '/' } = Astro.props;
+const { homeHref = '/', brand = 'consultancy' } = Astro.props;
+
+/* undefined when no backend is configured — the form then renders without an action. */
+const newsletterAction = formAction('/api/newsletter/subscribe');
 
 const contact = {
   /* Unpunctuated exactly as the design sets it (I8210:7883;8210:7804;4547:22458) — the commas
@@ -66,8 +84,18 @@ const social: {
         <p class="u-body-lg site-footer__newsletter-copy">
           Sign Up to our Newsletter to get the latest news and offers.
         </p>
-        <form class="site-footer__newsletter">
+        <form class="site-footer__newsletter" action={newsletterAction} method="post">
           <label class="visually-hidden" for="newsletter-email">Email address</label>
+          <input type="hidden" name="brand" value={brand} />
+          {
+            /* Honeypot. A field no human sees and a naive bot fills in; the endpoint discards
+              any submission that arrives with it set. Spam protection that costs no JS. Kept out
+              of the accessibility tree AND out of the tab order, so it is invisible to
+              screen-reader and keyboard users alike rather than merely off-screen. */
+          }
+          <div class="site-footer__honeypot" aria-hidden="true">
+            <input type="text" name="company" tabindex="-1" autocomplete="off" value="" />
+          </div>
           <input
             id="newsletter-email"
             class="site-footer__newsletter-input"
@@ -260,6 +288,7 @@ const social: {
     max-width: 280px;
   }
   .site-footer__newsletter {
+    position: relative;
     display: flex;
     align-items: center;
     gap: var(--space-lg); /* 32px */
@@ -286,6 +315,17 @@ const social: {
     .site-footer__newsletter {
       transition: none;
     }
+  }
+  /* Honeypot wrapper. Absolutely positioned rather than `display: none` for two reasons: a bot
+     that skips undisplayed fields would sail past the trap, and — since the form is a flex row
+     with a 32px gap — an in-flow wrapper would add a phantom gap and shift the field. Out-of-flow
+     children take part in neither. */
+  .site-footer__honeypot {
+    position: absolute;
+    left: -9999px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
   }
   .site-footer__newsletter-input {
     flex: 1;
@@ -415,13 +455,69 @@ const social: {
       --newsletter-grow: 0px;
     }
   }
-  @media (max-width: 620px) {
+  /* ── Mobile (node 12490:11577) ────────────────────────────────────────────────
+     Single column, which this footer already did below 620px. What the mobile frame changes is
+     the rhythm around it — and one thing it flatly contradicts.
+
+     The contradiction: the 620px tier used to CENTRE the bottom bar's social row and legal
+     links. That was ours, written before a mobile frame existed. Node 12490:11637 left-aligns
+     both, stacked (social at y=0, legal at y=34), so the centring is gone.
+
+     The rhythm: 80px of head room rather than 120 (the lockup sits at y=80); 40px between the
+     four stacked column blocks, each of which carries its own 40px tail in the frame; and 80px
+     from the last column to the bottom bar, which the 40px `row-gap` already supplies half of.
+     The 68px foot — a 44px spacer plus 24px of frame padding — is unchanged from desktop, which
+     is why only the top value moves.
+
+     Breakpoint moved 620 → 640 to land on the site-wide mobile tier (tokens.css §4); nothing
+     sits between the two widths. */
+  @media (max-width: 640px) {
+    .site-footer {
+      padding-block: var(--space-4xl) 68px;
+    }
     .site-footer__columns {
       grid-template-columns: 1fr;
+      gap: var(--space-xl) 0;
+      margin-bottom: var(--space-xl);
+    }
+    /* Target size. The link rows in these columns were 24px tall only as a side effect of
+       `--type-body-lg`'s 24px line-height; the mobile tier drops that role to 14/20 (tokens.css
+       §4) and the hit areas would have gone to 20px with it, under the 24×24 WCAG 2.5.8 AA
+       floor. The padding restores the target and the equal negative margin gives the space back
+       to the layout, so the frame's 19px column rhythm is untouched — the links get bigger to
+       the finger and stay put to the eye. `display: block` is what lets the block padding
+       apply at all; an inline <a> would ignore it for layout purposes. */
+    .site-footer__link,
+    .site-footer__contact-link {
+      display: block;
+      padding-block: 2px;
+      margin-block: -2px;
+    }
+    /* The email field's own box was 22px inside a 52px shell, so most of what looks like the
+       input was not the target. Stretching it makes the whole field height clickable, which is
+       both the fix and the obvious behaviour. The submit button opts out — it carries an
+       explicit 42px height from the design. */
+    .site-footer__newsletter {
+      align-items: stretch;
+    }
+    .site-footer__newsletter-input {
+      align-self: stretch;
     }
     .site-footer__bottom {
-      justify-content: center;
-      text-align: center;
+      /* Two flush-left rows rather than the space-between line the desktop bar draws, and not
+         the centred stack this tier used to produce.
+
+         DELIBERATE DEVIATION, logged for sign-off: the frame puts the SOCIAL row first
+         (12490:11638 at y=0) and the legal links under it (12490:11650 at y=34). The DOM has
+         them the other way round, because on desktop the legal list is the left-hand end of the
+         row. Reproducing the frame's order would mean either reversing the flex direction or
+         `order`-swapping on desktop, and both put a keyboard user's focus order at odds with
+         what they see (WCAG 2.2 §2.4.3) — on a vertical stack, visibly so. Two adjacent link
+         lists in a footer are not worth that, so the source order stands and the rows read
+         legal-then-social here. */
+      flex-direction: column;
+      align-items: flex-start;
+      gap: var(--space-2xs);
     }
   }
 </style>

@@ -30,6 +30,8 @@
  * value-set contains them — so they stay literal here rather than inventing token roles that
  * exactly one element would ever consume.
  */
+import HoverRipple from '@components/HoverRipple.astro';
+
 export interface Props {
   /** Which site the current page belongs to; the pill points at the *other* one. */
   brand: 'consultancy' | 'ngo';
@@ -43,7 +45,46 @@ const target =
     : { href: '/ngo', label: 'Explore NGO' };
 ---
 
-<a class="brand-switch" href={target.href}>{target.label}</a>
+<a class="brand-switch" href={target.href} data-ripple>
+  {
+    /* Hover reveal — shared with Button, see HoverRipple. `ink` because this pill flips its
+       label colour as well as its fill, and a background circle can't repaint text. */
+  }
+  <HoverRipple ink>
+    <span class="brand-switch__label">{target.label}</span>
+  </HoverRipple>
+  <span class="brand-switch__label">{target.label}</span>
+  {
+    /* `arrow-left-right` (node 12498:11011) — visible only in the mobile form below, where it
+       is the entire button. Inline for `currentColor`; the source SVG hard-codes white, which
+       is what `currentColor` resolves to there anyway. */
+  }
+  <svg
+    class="brand-switch__icon"
+    width="20"
+    height="20"
+    viewBox="0 0 20 20"
+    fill="none"
+    aria-hidden="true"
+    focusable="false"
+  >
+    <g
+      stroke="currentColor"
+      stroke-width="1.25"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <path d="M16.6666 14.1667H3.33333"></path>
+      <path
+        d="M14.1667 11.6667C14.1667 11.6667 16.6667 13.5079 16.6667 14.1667C16.6667 14.8255 14.1667 16.6667 14.1667 16.6667"
+      ></path>
+      <path d="M4.16667 5.83333H16.6666"></path>
+      <path
+        d="M5.83332 3.33333C5.83332 3.33333 3.33334 5.17456 3.33333 5.83335C3.33332 6.49215 5.83333 8.33333 5.83333 8.33333"
+      ></path>
+    </g>
+  </svg>
+</a>
 
 <style>
   .brand-switch {
@@ -74,8 +115,10 @@ const target =
     background: rgb(153 204 159 / 0.75);
     border-color: var(--color-green);
     color: var(--color-green);
+    --ripple-fill: var(--color-green);
+    --ripple-ink: var(--color-white);
   }
-  :global([data-brand='consultancy']) .brand-switch:hover {
+  :global([data-brand='consultancy']) .brand-switch:not([data-ripple='on']):hover {
     background: var(--color-green);
     color: var(--color-white);
   }
@@ -85,10 +128,81 @@ const target =
     background: rgb(245 186 166 / 0.75);
     border-color: var(--color-accent-warm);
     color: var(--color-accent-warm);
+    --ripple-fill: var(--color-accent-warm);
+    --ripple-ink: var(--color-white);
   }
-  :global([data-brand='ngo']) .brand-switch:hover {
+  :global([data-brand='ngo']) .brand-switch:not([data-ripple='on']):hover {
     background: var(--color-accent-warm);
     color: var(--color-white);
+  }
+
+  /* The two `:hover` rules above are guarded on `:not([data-ripple='on'])` rather than being
+     overridden once the script claims the pill — an override would have to restate the resting
+     colours, and those are per-brand, so it would duplicate the value-sets and drift from them.
+     Guarding means the plain swap simply stops applying and the resting rules keep painting the
+     box while the circle carries the change. With no JS the guard never fires and the swap is
+     the hover state, exactly as before. The pill's border already rests at the hovered colour,
+     so unlike Button there is no ring left behind to cross-fade.
+
+     The mobile form below needs no exclusion either: there the resting fill IS the hovered
+     colour, so the reveal resolves to a no-op rather than to something to switch off. */
+
+  .brand-switch__icon {
+    display: none;
+  }
+
+  /* ── Mobile form (node 12498:11006) ───────────────────────────────────────────
+     The mobile frame does NOT shrink the pill — it replaces it with a 54×40 icon-only button
+     carrying the `arrow-left-right` glyph, solid-filled in the TARGET site's colour with a
+     white arrow, under a 0 4px 2px black-25% drop shadow.
+
+     Two things follow from that. First, the solid fill is the colour the desktop pill already
+     resolves on hover, so the mobile resting state is literally the desktop hover state and
+     both brands get it from the rules above rather than from new literals here. Second — a
+     welcome side effect — the 75%-translucent mint and peach fills are the pair tracked as
+     contrast gaps in docs/a11y-known-issues.md; at this width the design itself has already
+     stopped using them, so the mobile form clears the gap rather than inheriting it.
+
+     The label stays in the DOM, visually hidden, so the link keeps reading "Explore NGO"
+     to assistive tech and in the accessibility tree. An `aria-label` would have done the same
+     job while throwing the real text away, and this way one string serves both forms.
+
+     54 × 40 is under the 44×44 AAA target-size enhancement on one axis. It clears the 24×24
+     WCAG 2.5.8 AA minimum with room to spare, and it is the confirmed design value — logged
+     with the 40px buttons in docs/enhancement-backlog.md rather than quietly grown to 44. */
+  @media (max-width: 640px) {
+    .brand-switch {
+      right: var(--container-gutter);
+      bottom: var(--container-gutter);
+      justify-content: center;
+      inline-size: 54px;
+      block-size: 40px;
+      padding: 0;
+      box-shadow: 0 4px 2px rgb(0 0 0 / 0.25);
+    }
+    .brand-switch__label {
+      /* Same treatment as base.css's `.visually-hidden`; inlined because that class is a global
+         utility and this element needs it only at this one breakpoint. */
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+    }
+    .brand-switch__icon {
+      display: block;
+    }
+    :global([data-brand='consultancy']) .brand-switch {
+      background: var(--color-green);
+      color: var(--color-white);
+    }
+    :global([data-brand='ngo']) .brand-switch {
+      background: var(--color-accent-warm);
+      color: var(--color-white);
+    }
   }
 
   @media (prefers-reduced-motion: reduce) {
