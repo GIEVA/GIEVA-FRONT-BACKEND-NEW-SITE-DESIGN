@@ -334,6 +334,7 @@ const ExamFormDialog = ({ open, exam, onClose, onSave, saving }) => {
     priceVariants: [],
     fieldSchema:   [],
     sortOrder:     0,
+    usdToNgnRate:  1600,
   });
 
   const [localError, setLocalError] = useState("");
@@ -354,7 +355,7 @@ const ExamFormDialog = ({ open, exam, onClose, onSave, saving }) => {
       setForm({
         examType: "", title: "", description: "", imageUrl: "",
         pricingType: "flat", flatPrice: 0,
-        priceVariants: [], fieldSchema: [], sortOrder: 0,
+        priceVariants: [], fieldSchema: [], sortOrder: 0, usdToNgnRate: 1600,
       });
     }
     setLocalError("");
@@ -372,6 +373,10 @@ const ExamFormDialog = ({ open, exam, onClose, onSave, saving }) => {
       setLocalError("Exam type identifier is required.");
       return;
     }
+    if (!form.usdToNgnRate || form.usdToNgnRate <= 0) {           // ← new
+    setLocalError("Naira to Dollar rate must be greater than 0.");
+    return;
+  }
     for (const f of form.fieldSchema) {
       if (!f.key || !f.label || !f.type) {
         setLocalError(`Field is incomplete: every field needs a key, label, and type.`);
