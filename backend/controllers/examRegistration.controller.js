@@ -40,9 +40,9 @@ const safePaymentInclude = {
 const safeExamTypeInclude = ExamType
   ? {
       model:      ExamType,
-      as:         "examTypeDetails",  // match your model association alias
+      as:         "examTypeDetails",
       required:   false,
-      attributes: ["id", "name", "code", "fee", "description"],
+      attributes: ["id", "examType", "title", "description", "flatPrice", "priceVariants", "usdToNgnRate"],
     }
   : null;
 
@@ -79,7 +79,7 @@ export const createRegistration = async (req, res) => {
     const registration = await ExamRegistration.create({
       userId,
       examType,
-      formData: data || {},
+      data: data || {},
       status:   "draft",
     });
 

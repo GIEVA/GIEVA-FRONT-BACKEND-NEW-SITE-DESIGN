@@ -386,6 +386,13 @@ export default (sequelize) => {
       foreignKey: "registrationId",
       as: "payments",
     });
+
+     ExamRegistration.belongsTo(models.ExamType, {
+    foreignKey: "examType",
+    targetKey:  "examType",
+    as:         "examTypeDetails",
+  });
+  
   };
 
   return ExamRegistration;

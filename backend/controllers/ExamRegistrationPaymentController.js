@@ -14,6 +14,16 @@ const {
 
 const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET_KEY;
 
+const safePaymentInclude = {
+  model:      ExamPayment,
+  as:         "payments",
+  required:   false,
+  attributes: [
+    "id", "status", "amount",
+    "transactionRef", "paidAt", "authorizationUrl", "channel",
+  ],
+};
+
 // ─────────────────────────────────────────────────────────────
 // INITIALIZE PAYMENT
 // ─────────────────────────────────────────────────────────────
