@@ -224,30 +224,17 @@ export default function RegistrationDetailsPage() {
 
 
 
-  const fetchRegistration =
-    async () => {
-      try {
-        const data =
-          await getRegistrationById(
-            id
-          );
-
-        setRegistration(
-          data
-        );
-
-      } catch (err) {
-        console.error(err);
-
-        setError(
-          err?.response?.data
-            ?.message ||
-            "Failed to load registration"
-        );
-      } finally {
-        setLoading(false);
-      }
-    };
+const fetchRegistration = async () => {
+  try {
+    const data = await getRegistrationById(id);
+    setRegistration(data.registration);
+  } catch (err) {
+    console.error(err);
+    setError(err?.response?.data?.message || "Failed to load registration");
+  } finally {
+    setLoading(false);
+  }
+};
 
 
 

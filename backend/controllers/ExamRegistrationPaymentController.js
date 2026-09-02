@@ -175,8 +175,9 @@ export const verifyExamPayment = async (req, res) => {
 
     if (isSuccess && payment.registration) {
       await payment.registration.update({
-        status: "submitted",       // workflow moves forward now that payment cleared
-        paymentStatus: "success",  // the field that actually tracks payment state
+        status: "submitted",
+        paymentStatus: "success",
+        submittedAt: new Date(),
       });
     } else if (payment.registration) {
       await payment.registration.update({ paymentStatus: "failed" });
