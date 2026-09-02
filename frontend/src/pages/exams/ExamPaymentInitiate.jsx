@@ -9,8 +9,12 @@ import { initializeExamPayment } from "../../services/examRegistrationService";
 const GREEN = "#1E7F4F";
 const NAVY  = "#0B1F3A";
 
-const formatPrice = (amount) =>
+const formatUsd = (amount) =>
   new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2 })
+    .format(amount);
+
+const formatNgn = (amount) =>
+  new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN", minimumFractionDigits: 2 })
     .format(amount);
 
 export default function ExamPaymentInitiate() {
@@ -18,8 +22,9 @@ export default function ExamPaymentInitiate() {
   const { state } = useLocation(); // { registration, amount } passed via navigate()
   const navigate = useNavigate();
 
-  const [status, setStatus] = useState("loading"); // loading | error
-  const [error, setError]   = useState("");
+  const [status, setStatus]       = useState("loading"); // loading | error
+  const [error, setError]         = useState("");
+  const [ngnAmount, setNgnAmount] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -27,8 +32,9 @@ export default function ExamPaymentInitiate() {
     initializeExamPayment(id)
       .then((res) => {
         if (cancelled) return;
-        if (res?.authorization_url) {
-          window.location.href = res.authorization_url; // hand off to Paystack
+        if (res?.paymentUrl) {
+          setNgnAmount(res.amount);
+          window.location.href = res.paymentUrl; // hand off to Paystack
         } else {
           setStatus("error");
           setError("Payment session could not be created. Please try again.");
@@ -55,8 +61,12 @@ export default function ExamPaymentInitiate() {
               Ref: {state.registration.registrationCode}
             </Typography>
             <Divider sx={{ mb: 2 }} />
-            <Typography sx={{ fontWeight: 800, fontSize: 24, color: GREEN, mb: 3 }}>
-              {formatPrice(state.amount ?? state.registration.amount)}
+
+            <Typography sx={{ fontWeight: 800, fontSize: 24, color: GREEN, mb: 0.25 }}>
+              {formatNgn(ngnAmount ?? 0)}
+            </Typography>
+            <Typography sx={{ color: "#64748B", fontSize: 12, mb: 3 }}>
+              ({formatUsd(state.amount ?? state.registration.amount)} at today's rate)
             </Typography>
           </>
         )}

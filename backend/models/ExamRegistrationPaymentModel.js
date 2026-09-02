@@ -50,6 +50,15 @@ export default (sequelize) => {
         defaultValue: "pending",
       },
 
+      authorizationUrl: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      channel: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+
       paidAt: DataTypes.DATE,
 
       gatewayResponse: DataTypes.JSON,
@@ -67,6 +76,7 @@ export default (sequelize) => {
 
     ExamPayment.belongsTo(models.ExamRegistration, {
       foreignKey: "registrationId",
+      as: "registration",
     });
   };
 

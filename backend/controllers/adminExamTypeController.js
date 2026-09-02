@@ -88,7 +88,7 @@ export const adminCreateExam = async (req, res) => {
     const {
       examType, title, description, imageUrl,
       pricingType, flatPrice, priceVariants,
-      fieldSchema, sortOrder,
+      fieldSchema, sortOrder, usdToNgnRate,
     } = req.body;
 
     if (!examType || !title || !description)
@@ -116,6 +116,7 @@ export const adminCreateExam = async (req, res) => {
       pricingType:   pricingType || "flat",
       flatPrice:     flatPrice   || 0,
       priceVariants: priceVariants || [],
+      usdToNgnRate:  usdToNgnRate || 1600,
       fieldSchema:   schema,
       sortOrder:     sortOrder || 0,
       status:        "draft",

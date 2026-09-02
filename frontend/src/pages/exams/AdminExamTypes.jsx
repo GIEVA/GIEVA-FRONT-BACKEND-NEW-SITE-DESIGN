@@ -222,7 +222,7 @@ const FieldSchemaBuilder = ({ fields, onChange }) => {
 };
 
 // ─── Pricing Config ───────────────────────────────────────────
-const PricingConfig = ({ pricingType, flatPrice, priceVariants, onChange }) => {
+const PricingConfig = ({ pricingType, flatPrice, priceVariants, usdToNgnRate, onChange }) => {
   const addVariant = () =>
     onChange("priceVariants", [...priceVariants, { key: "", label: "", price: 0, _id: Math.random().toString(36).slice(2) }]);
 
@@ -240,6 +240,21 @@ const PricingConfig = ({ pricingType, flatPrice, priceVariants, onChange }) => {
         <MenuItem value="flat">Flat price (single amount)</MenuItem>
         <MenuItem value="variants">Variants (different options, different prices)</MenuItem>
       </TextField>
+
+        <TextField
+        fullWidth
+        size="small"
+        type="number"
+        label="Naira to Dollar (Black Market) Rate *"
+        value={usdToNgnRate}
+        onChange={(e) => onChange("usdToNgnRate", Number(e.target.value))}
+        InputProps={{
+          inputProps: { min: 0, step: 1 },
+          startAdornment: <InputAdornment position="start">₦</InputAdornment>,
+        }}
+        helperText="Used to convert the USD price above into Naira at payment time. Update as the black market rate moves."
+        sx={{ mb: 2, "& fieldset": { borderColor: BORDER } }}
+      />
 
       {pricingType === "flat" && (
         <TextField fullWidth size="small" type="number" label="Price (USD) *"
@@ -435,6 +450,7 @@ const ExamFormDialog = ({ open, exam, onClose, onSave, saving }) => {
               pricingType={form.pricingType}
               flatPrice={form.flatPrice}
               priceVariants={form.priceVariants}
+              usdToNgnRate={form.usdToNgnRate}
               onChange={setPricing}
             />
           </Grid>

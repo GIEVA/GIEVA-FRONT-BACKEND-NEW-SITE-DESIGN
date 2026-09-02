@@ -1,13 +1,4 @@
-
 // controllers/ExamRegistrationPaymentController.js
-// FIXES:
-//   1. downloadReceipt — route uses `:id` but old controller read
-//      `req.params.paymentId` → always undefined → 500.
-//      Fixed to read `req.params.id` (matching the route definition).
-//   2. verifyExamPayment — made idempotent; doesn't crash if already verified
-//   3. initializeExamPayment — validates registrationId before Paystack call
-//   4. ActivityLog preserved
-
 import axios from "axios";
 import { Op } from "sequelize";
 import models from "../models/index.js";
@@ -18,6 +9,7 @@ const {
   ActivityLog,
   User,
   StudentProfile,
+  ExamType, // ← new
 } = models;
 
 const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET_KEY;
@@ -49,24 +41,40 @@ export const initializeExamPayment = async (req, res) => {
       attributes: ["email", "fullName"],
     });
 
-    // Fee table — amounts in kobo (× 100)
-    const EXAM_FEES = {
-      ielts:    50000,
-      toefl:    45000,
-      sat:      55000,
-      gre:      60000,
-      gmat:     65000,
-      duolingo: 25000,
-      default:  50000,
-    };
-    const amountKobo =
-      EXAM_FEES[(registration.examType || "").toLowerCase()] ||
-      EXAM_FEES.default;
+    const examTypeRecord = await ExamType.findOne({
+      where: { examType: registration.examType },
+      attributes: ["id", "usdToNgnRate"],
+    });
 
-    // Reuse a pending payment if one exists (idempotent)
+    if (!examTypeRecord || !examTypeRecord.usdToNgnRate) {
+      return res.status(400).json({
+        message: `No exchange rate configured for ${registration.examType}. Contact an admin.`,
+      });
+    }
+
+    const usdAmount = Number(registration.amount);
+    if (!usdAmount || usdAmount <= 0) {
+      return res.status(400).json({ message: "Registration has no valid amount" });
+    }
+
+    // Always the current admin-set rate — no snapshotting until payment succeeds.
+    const rate       = Number(examTypeRecord.usdToNgnRate);
+    const amountNgn  = usdAmount * rate;
+    const amountKobo = Math.round(amountNgn * 100);
+
+    await registration.update({ usdToNgnRateUsed: rate, amountNgn });
+
+    // Reuse a pending payment only if it was created at the SAME rate.
+    // If the admin moved the rate since, the old pending Paystack
+    // transaction is stale (wrong amount) — supersede it.
     let payment = await ExamPayment.findOne({
       where: { registrationId: regId, status: "pending" },
     });
+
+    if (payment && Number(payment.amount) !== amountNgn) {
+      await payment.update({ status: "failed" }); // stale, rate moved
+      payment = null;
+    }
 
     if (!payment) {
       const paystackRes = await axios.post(
@@ -79,6 +87,8 @@ export const initializeExamPayment = async (req, res) => {
             userId,
             examType: registration.examType,
             fullName: user.fullName,
+            usdAmount,
+            usdToNgnRate: rate,
           },
           callback_url: `${process.env.FRONTEND_URL}/exam-payments/verify`,
         },
@@ -88,10 +98,11 @@ export const initializeExamPayment = async (req, res) => {
       const { reference, authorization_url } = paystackRes.data.data;
 
       payment = await ExamPayment.create({
-        registrationId: regId,
+        registrationId:   regId,
         userId,
         amount:           amountKobo / 100,
-        reference,
+        currency:         "NGN",
+        transactionRef:   reference,
         authorizationUrl: authorization_url,
         status:           "pending",
       });
@@ -102,12 +113,12 @@ export const initializeExamPayment = async (req, res) => {
     await ActivityLog.create({
       userId,
       action: "EXAM_PAYMENT_INITIALIZED",
-      meta:   { registrationId: regId, reference: payment.reference },
+      meta:   { registrationId: regId, reference: payment.transactionRef, rate },
     }).catch(() => {});
 
     res.json({
       paymentUrl: payment.authorizationUrl,
-      reference:  payment.reference,
+      reference:  payment.transactionRef,
       paymentId:  payment.id,
       amount:     payment.amount,
     });
@@ -122,7 +133,7 @@ export const initializeExamPayment = async (req, res) => {
 // ─────────────────────────────────────────────────────────────
 export const verifyExamPayment = async (req, res) => {
   try {
-    const userId      = req.user.id;
+    const userId        = req.user.id;
     const { reference } = req.body;
 
     if (!reference) {
@@ -130,19 +141,14 @@ export const verifyExamPayment = async (req, res) => {
     }
 
     const payment = await ExamPayment.findOne({
-      where:   { reference },
-      include: [{
-        model:    ExamRegistration,
-        as:       "registration",    // ← match your association alias
-        required: false,
-      }],
+      where:   { transactionRef: reference },
+      include: [{ model: ExamRegistration, as: "registration", required: false }],
     });
 
     if (!payment) {
       return res.status(404).json({ message: "Payment record not found" });
     }
 
-    // Idempotent — already verified
     if (payment.status === "success") {
       return res.json({
         message:   "Payment already verified",
@@ -152,7 +158,6 @@ export const verifyExamPayment = async (req, res) => {
       });
     }
 
-    // Verify with Paystack
     const paystackRes = await axios.get(
       `https://api.paystack.co/transaction/verify/${reference}`,
       { headers: { Authorization: `Bearer ${PAYSTACK_SECRET}` } }
@@ -163,7 +168,7 @@ export const verifyExamPayment = async (req, res) => {
 
     await payment.update({
       status:           isSuccess ? "success" : "failed",
-      paystackResponse: txData,
+      gatewayResponse:  txData,
       paidAt:           isSuccess ? new Date() : null,
       channel:          txData.channel,
     });
@@ -192,13 +197,10 @@ export const verifyExamPayment = async (req, res) => {
 
 // ─────────────────────────────────────────────────────────────
 // DOWNLOAD RECEIPT
-// FIX: route is GET /receipt/:id  →  use req.params.id NOT req.params.paymentId
-// Old code had req.params.paymentId which was always undefined → 500
 // ─────────────────────────────────────────────────────────────
 export const downloadReceipt = async (req, res) => {
   try {
     const userId    = req.user.id;
-    // ── FIX: was req.params.paymentId (undefined). Route defines :id ──
     const paymentId = parseInt(req.params.id);
 
     if (!paymentId || isNaN(paymentId)) {
@@ -208,10 +210,10 @@ export const downloadReceipt = async (req, res) => {
     const payment = await ExamPayment.findOne({
       where:   { id: paymentId, userId },
       include: [{
-        model:    ExamRegistration,
-        as:       "registration",
-        required: false,
-        attributes: ["id", "examType", "formData", "status", "createdAt"],
+        model:      ExamRegistration,
+        as:         "registration",
+        required:   false,
+        attributes: ["id", "examType", "data", "status", "createdAt", "amount", "amountNgn", "usdToNgnRateUsed"],
       }],
     });
 
@@ -226,49 +228,46 @@ export const downloadReceipt = async (req, res) => {
       });
     }
 
-    // If a pre-generated PDF URL exists (e.g. Cloudinary), redirect to it
     if (payment.receiptUrl) {
-      return res.json({
-        receiptUrl: payment.receiptUrl,
-        download:   true,
-      });
+      return res.json({ receiptUrl: payment.receiptUrl, download: true });
     }
 
-    // Otherwise build structured receipt data for frontend rendering
     const user = await User.findByPk(userId, {
       attributes: ["fullName", "email"],
       include: [{
-        model:    StudentProfile,
-        as:       "studentProfile",
-        required: false,
+        model:      StudentProfile,
+        as:         "studentProfile",
+        required:   false,
         attributes: ["phone", "address"],
       }],
     });
 
     const receiptData = {
-      receiptNumber:  `GIEVA-${String(payment.id).padStart(6, "0")}`,
-      paymentDate:    payment.paidAt,
-      reference:      payment.reference,
-      amount:         payment.amount,
-      channel:        payment.channel || "card",
-      status:         payment.status,
-      examType:       payment.registration?.examType,
-      registrationId: payment.registrationId,
-      formData:       payment.registration?.formData || {},
+      receiptNumber:   `GIEVA-${String(payment.id).padStart(6, "0")}`,
+      paymentDate:     payment.paidAt,
+      reference:       payment.transactionRef,
+      amount:          payment.amount, // NGN charged
+      usdAmount:       payment.registration?.amount,
+      usdToNgnRate:    payment.registration?.usdToNgnRateUsed,
+      channel:         payment.channel || "card",
+      status:          payment.status,
+      examType:        payment.registration?.examType,
+      registrationId:  payment.registrationId,
+      formData:        payment.registration?.data || {},
       student: {
         name:    user?.fullName,
         email:   user?.email,
         phone:   user?.studentProfile?.phone,
         address: user?.studentProfile?.address,
       },
-      issuedBy:   "GIEVA Learning Platform",
-      issuedAt:   new Date().toISOString(),
+      issuedBy: "GIEVA Learning Platform",
+      issuedAt: new Date().toISOString(),
     };
 
     await ActivityLog.create({
       userId,
       action: "EXAM_RECEIPT_DOWNLOADED",
-      meta:   { paymentId, reference: payment.reference },
+      meta:   { paymentId, reference: payment.transactionRef },
     }).catch(() => {});
 
     res.json({ receipt: receiptData });
@@ -277,7 +276,6 @@ export const downloadReceipt = async (req, res) => {
     res.status(500).json({ message: "Failed to generate receipt" });
   }
 };
-
 
 // import models from "../models/index.js";
 // import sendEmail from "../utils/sendMail.js";

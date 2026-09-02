@@ -39,6 +39,12 @@ export default (sequelize) => {
         defaultValue: "",
       },
 
+      usdToNgnRate: {
+        type: DataTypes.DECIMAL(10, 2),
+        allowNull: false,
+        defaultValue: 1600, // sensible starting point, admin will edit
+      },
+
       // ── Pricing ────────────────────────────────────────────────
       // pricingType "flat"     → use flatPrice
       // pricingType "variants" → use priceVariants array

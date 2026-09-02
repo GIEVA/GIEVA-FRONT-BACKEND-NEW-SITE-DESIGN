@@ -78,6 +78,15 @@ export default (sequelize) => {
         allowNull: false,
         },
 
+        usdToNgnRateUsed: {
+        type: DataTypes.DECIMAL(10, 2),
+        allowNull: true,
+      },
+      amountNgn: {
+        type: DataTypes.DECIMAL(12, 2),
+        allowNull: true,
+      },
+
       paymentStatus: {
         type: DataTypes.ENUM(
             "pending",
