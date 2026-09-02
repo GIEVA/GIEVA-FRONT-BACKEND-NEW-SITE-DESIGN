@@ -19,7 +19,7 @@ import {
 } from "@mui/material";
 
 import {
-  verifyExamPayment,
+  verifyExamPayment, downloadReceiptFile,
 } from "../../services/examService";
 
 export default function ExamPaymentCallback() {
@@ -229,11 +229,16 @@ const registration = result?.payment?.registration;
 
           <Button
             variant="outlined"
-            onClick={() =>
-              navigate(
-                `/exam-payments/receipt/${result?.paymentId}`
-              )
-            }
+            onClick={async () => {
+              try {
+                await downloadReceiptFile(
+                  result?.paymentId,
+                  `GIEVA-receipt-${registration?.registrationCode || result?.paymentId}.pdf`
+                );
+              } catch (err) {
+                console.error("Failed to download receipt:", err);
+              }
+            }}
           >
             Download Receipt
           </Button>
