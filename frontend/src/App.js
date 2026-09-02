@@ -369,7 +369,7 @@ function App() {
 
 
           <Route
-            path="/exam-payment/callback"
+            path="/exam-payments/verify"
             element={
               <ExamPaymentCallback />
             }
