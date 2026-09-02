@@ -126,8 +126,7 @@ export default function ExamPaymentCallback() {
     );
   }
 
-  const registration =
-    result?.registration;
+const registration = result?.payment?.registration;
 
   return (
     <Box
@@ -186,13 +185,8 @@ export default function ExamPaymentCallback() {
               Amount
             </Typography>
 
-            <Typography
-              variant="h6"
-            >
-              ₦
-              {Number(
-                result?.amountPaid
-              ).toLocaleString()}
+            <Typography variant="h6">
+              ₦{Number(result?.payment?.amount).toLocaleString()}
             </Typography>
           </Box>
 

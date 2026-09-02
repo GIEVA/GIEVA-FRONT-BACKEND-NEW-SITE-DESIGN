@@ -33,7 +33,7 @@ export const initializeExamPayment = async (req, res) => {
     if (!registration) {
       return res.status(404).json({ message: "Registration not found" });
     }
-    if (registration.status === "paid") {
+    if (registration.paymentStatus === "success") {
       return res.status(400).json({ message: "Registration already paid" });
     }
 
