@@ -42,6 +42,15 @@ import RegistrationStatusChip
 import PaymentStatusChip
   from "../../components/exams/PaymentStatusChip";
 
+
+  const formatUsd = (amount) =>
+  new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2 })
+    .format(amount);
+
+const formatNgn = (amount) =>
+  new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN", minimumFractionDigits: 2 })
+    .format(amount);
+
 export default function ExamRegistrations() {
 
   const navigate =
@@ -224,29 +233,15 @@ export default function ExamRegistrations() {
               width: 200,
             }}
           >
-            <MenuItem value="">
-              All
-            </MenuItem>
-
-            <MenuItem value="submitted">
-              Submitted
-            </MenuItem>
-
-            <MenuItem value="under_review">
-              Under Review
-            </MenuItem>
-
-            <MenuItem value="processing">
-              Processing
-            </MenuItem>
-
-            <MenuItem value="completed">
-              Completed
-            </MenuItem>
-
-            <MenuItem value="rejected">
-              Rejected
-            </MenuItem>
+            <MenuItem value="">All</MenuItem>
+            <MenuItem value="draft">Draft</MenuItem>
+            <MenuItem value="payment_pending">Payment Pending</MenuItem>
+            <MenuItem value="submitted">Submitted</MenuItem>
+            <MenuItem value="under_review">Under Review</MenuItem>
+            <MenuItem value="processing">Processing</MenuItem>
+            <MenuItem value="completed">Completed</MenuItem>
+            <MenuItem value="rejected">Rejected</MenuItem>
+            <MenuItem value="cancelled">Cancelled</MenuItem>
           </TextField>
 
           <TextField
@@ -394,12 +389,14 @@ export default function ExamRegistrations() {
                   </TableCell>
 
                   <TableCell>
-
-                    ₦
-                    {Number(
-                      registration.amount
-                    ).toLocaleString()}
-
+                    <Typography sx={{ fontWeight: 600, fontSize: 13 }}>
+                      {formatUsd(registration.amount)}
+                    </Typography>
+                    <Typography sx={{ fontSize: 12, color: "text.secondary" }}>
+                      {registration.amountNgn
+                        ? `${formatNgn(registration.amountNgn)} @ ₦${Number(registration.usdToNgnRateUsed).toLocaleString()}`
+                        : "Not yet quoted"}
+                    </Typography>
                   </TableCell>
 
                   <TableCell>
