@@ -394,7 +394,7 @@ export default function ExamRegistrations() {
                     </Typography>
                     <Typography sx={{ fontSize: 12, color: "text.secondary" }}>
                       {registration.amountNgn
-                        ? `${formatNgn(registration.amountNgn)} @ ₦${Number(registration.usdToNgnRateUsed).toLocaleString()}`
+                        ? `${formatNgn(registration.amountNgn)} @ $${Number(registration.usdToNgnRateUsed).toLocaleString()}`
                         : "Not yet quoted"}
                     </Typography>
                   </TableCell>
