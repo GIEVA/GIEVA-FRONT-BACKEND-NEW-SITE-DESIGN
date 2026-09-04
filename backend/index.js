@@ -152,6 +152,10 @@ app.use("/api/gieva/history", historyRoutes);
 app.use("/api/admin/heals", adminHealsRoutes);
 app.use("/api/service", serviceRoutes);
 app.use(
+  "/public/user/campaigns",
+  userGetCampaignRoutes
+);
+app.use(
   "/api/campaigns",
   campaignRoutes
 );
@@ -231,10 +235,7 @@ app.use(
 //   campaignRoutes
 // );
 
-app.use(
-  "/api/user/campaigns",
-  userGetCampaignRoutes
-);
+
 
 app.use(
   "/api/admin",

@@ -4,7 +4,7 @@
 
 import api from "./api";
 
-const BASE = "/api/user/campaigns";
+const BASE = "/public/user/campaigns";
 
 /**
  * Fetch all active campaigns
