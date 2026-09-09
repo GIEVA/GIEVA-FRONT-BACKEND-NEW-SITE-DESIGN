@@ -29,7 +29,7 @@ import {
 } from "../services/liveQuizService";
 
 import MathTextField from "../components/quiz/MathTextField";
-import QuestionPreview from "../../components/quiz/QuestionPreview";
+
 
 
 // ─── Design tokens ────────────────────────────────────────────
