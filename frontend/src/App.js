@@ -149,6 +149,7 @@ import ParticipantQuizPage from "./pages/ParticipantLiveQuizPage";
 import AudienceQuizPage from "./pages/AudienceQuizPage";
 import PanelistQuizPage from "./pages/PanelistQuizPage";
 
+import "katex/dist/katex.min.css";
 
 
 

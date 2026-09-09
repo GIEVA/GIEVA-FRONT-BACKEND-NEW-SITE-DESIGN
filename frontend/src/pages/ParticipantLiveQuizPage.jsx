@@ -31,6 +31,8 @@ import {
 import { getEventState, joinEvent, submitAnswer, getMyResults, sendHeartbeat, } from "../services/liveQuizService";
 
 import API from "../services/api";
+import QuestionPreview from "../components/quiz/QuestionPreview";
+
 
 // ─── Design tokens (matches AdminQuizManager) ─────────────────
 const NAVY   = "#0B1F3A";
@@ -649,9 +651,13 @@ function QuestionCard({ currentQuestion, selected, myAnswer, secondsLeft, submit
       )}
 
       <Typography sx={{ fontWeight: 800, fontSize: 12, color: MUTED, mb: 0.5 }}>{q.subject}</Typography>
-      <Typography sx={{ fontWeight: 700, fontSize: 18, color: TEXT, mb: 3, lineHeight: 1.4 }}>
+      <QuestionPreview
+        text={q.questionText}
+        sx={{ fontWeight: 700, fontSize: 18, color: TEXT, mb: 3, lineHeight: 1.4 }}
+      />
+      {/* <Typography sx={{ fontWeight: 700, fontSize: 18, color: TEXT, mb: 3, lineHeight: 1.4 }}>
         {q.questionText}
-      </Typography>
+      </Typography> */}
 
       <Stack spacing={1.5}>
         {["A", "B", "C", "D"].map((opt) => (
@@ -673,7 +679,9 @@ function QuestionCard({ currentQuestion, selected, myAnswer, secondsLeft, submit
               undefined
             }
           >
-            <Box component="span" sx={{ fontWeight: 800, mr: 1.5 }}>{opt}.</Box> {q.options?.[opt]}
+            {/* <Box component="span" sx={{ fontWeight: 800, mr: 1.5 }}>{opt}.</Box> {q.options?.[opt]} */}
+            <Box component="span" sx={{ fontWeight: 800, mr: 1.5 }}>{opt}.</Box>
+            <QuestionPreview text={q.options?.[opt] || ""} variant="span" sx={{ display: "inline" }} />
           </Button>
         ))}
       </Stack>
@@ -701,8 +709,13 @@ function QuestionCard({ currentQuestion, selected, myAnswer, secondsLeft, submit
         </Alert>
       )}
       {isRevealed && q.explanation && (
-        <Alert severity="info" sx={{ mt: 3, borderRadius: 2 }}>{q.explanation}</Alert>
+        <Alert severity="info" sx={{ mt: 3, borderRadius: 2 }}>
+          <QuestionPreview text={q.explanation} variant="span" />
+        </Alert>
       )}
+      {/* {isRevealed && q.explanation && (
+        <Alert severity="info" sx={{ mt: 3, borderRadius: 2 }}>{q.explanation}</Alert>
+      )} */}
       {myScore && (
         <Typography sx={{ fontSize: 12, color: MUTED, mt: 2, textAlign: "right" }}>
           Score so far: <strong style={{ color: TEXT }}>{myScore.totalMarks}</strong>

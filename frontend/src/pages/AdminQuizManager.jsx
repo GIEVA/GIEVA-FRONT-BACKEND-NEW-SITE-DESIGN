@@ -28,6 +28,10 @@ import {
   voidQuestion, adjustScore, getPanelistDashboard, exportResults, getFinalRankingReview,
 } from "../services/liveQuizService";
 
+import MathTextField from "../components/quiz/MathTextField";
+import QuestionPreview from "../../components/quiz/QuestionPreview";
+
+
 // ─── Design tokens ────────────────────────────────────────────
 const NAVY   = "#0B1F3A";
 const GREEN  = "#1E7F4F";
@@ -204,14 +208,33 @@ function AddQuestionDialog({ open, onClose, eventId, onAdded }) {
               {["easy","medium","hard"].map((d) => <MenuItem key={d} value={d}>{d}</MenuItem>)}
             </TextField>
           </Grid>
+
           <Grid item xs={12}>
+          <MathTextField
+            label="Question Text *"
+            value={form.questionText}
+            onChange={(v) => setForm((f) => ({ ...f, questionText: v }))}
+            multiline
+            rows={3}
+          />
+        </Grid>
+        {["A","B","C","D"].map((opt) => (
+          <Grid item xs={12} sm={6} key={opt}>
+            <MathTextField
+              label={`Option ${opt} *`}
+              value={form.options[opt]}
+              onChange={(v) => setForm((f) => ({ ...f, options: { ...f.options, [opt]: v } }))}
+            />
+          </Grid>
+        ))}
+          {/* <Grid item xs={12}>
             <TextField fullWidth multiline rows={3} label="Question Text *" value={form.questionText} onChange={set("questionText")} sx={sx} />
           </Grid>
           {["A","B","C","D"].map((opt) => (
             <Grid item xs={12} sm={6} key={opt}>
               <TextField fullWidth label={`Option ${opt} *`} value={form.options[opt]} onChange={setOpt(opt)} sx={sx} />
             </Grid>
-          ))}
+          ))} */}
           <Grid item xs={6}>
             <TextField fullWidth select label="Correct Answer *" value={form.correctAnswer} onChange={set("correctAnswer")} sx={sx}>
               {["A","B","C","D"].map((o) => <MenuItem key={o} value={o}>Option {o}</MenuItem>)}
@@ -221,8 +244,17 @@ function AddQuestionDialog({ open, onClose, eventId, onAdded }) {
             <TextField fullWidth type="number" label="Marks" value={form.marks} onChange={set("marks")} sx={sx} />
           </Grid>
           <Grid item xs={12}>
-            <TextField fullWidth multiline rows={2} label="Explanation (optional)" value={form.explanation} onChange={set("explanation")} sx={sx} />
+            <MathTextField
+              label="Explanation (optional)"
+              value={form.explanation}
+              onChange={(v) => setForm((f) => ({ ...f, explanation: v }))}
+              multiline
+              rows={2}
+            />
           </Grid>
+          {/* <Grid item xs={12}>
+            <TextField fullWidth multiline rows={2} label="Explanation (optional)" value={form.explanation} onChange={set("explanation")} sx={sx} />
+          </Grid> */}
         </Grid>
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 2.5, gap: 1 }}>

@@ -8,7 +8,7 @@ import { useParams, useSearchParams } from "react-router-dom";
 import { Box, Typography, Paper, Chip, Stack, Avatar, CircularProgress, Alert } from "@mui/material";
 import { EmojiEvents } from "@mui/icons-material";
 import { getAudienceState } from "../services/liveQuizService";
-
+import QuestionPreview from "../components/quiz/QuestionPreview";
 
 const NAVY = "#0B1F3A", GREEN = "#1E7F4F", GOLD = "#D4A017", BORDER = "#E6E9F0", TEXT = "#0F172A", MUTED = "#64748B";
 const POLL_MS = 4000;
