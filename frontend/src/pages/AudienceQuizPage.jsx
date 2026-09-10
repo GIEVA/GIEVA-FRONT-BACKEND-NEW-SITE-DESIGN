@@ -71,7 +71,12 @@ export default function AudienceQuizPage() {
             size="small"
             sx={{ mb: 2, bgcolor: `${NAVY}10`, color: NAVY, fontWeight: 800 }}
           />
-          <Typography sx={{ fontWeight: 700, fontSize: 20, color: TEXT }}>{q.question?.questionText}</Typography>
+          <QuestionPreview
+              text={q.question?.questionText}
+              sx={{ fontWeight: 700, fontSize: 20, color: TEXT }}
+            />
+          {/* <Typography sx={{ fontWeight: 700, fontSize: 20, color: TEXT }}>
+            {q.question?.questionText}</Typography> */}
         </Paper>
       )}
 
