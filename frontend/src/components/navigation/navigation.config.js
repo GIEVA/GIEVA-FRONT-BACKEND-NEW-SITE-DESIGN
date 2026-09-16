@@ -9,6 +9,11 @@ export const publicNavigation = [
     
   },
   {
+    label: "Join Quiz",
+    path: "/quiz/join"
+  },
+
+  {
     label: "Consultancy",
     children: [
       {
