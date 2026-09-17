@@ -500,11 +500,22 @@ export const completeRound = async (req, res) => {
     await round.save();
 
     // Compute round rankings
+       // Compute round rankings
     const scores = await QuizScore.findAll({
       where:   { eventId: event.id, roundId: round.id },
       order:   [["totalMarks","DESC"]],
       include: [{ model: QuizParticipant }],
     });
+
+    // Dense ranking — tied totals share a rank rather than being split
+    // by array position, matching the live scoreboard and leaderboard.
+    let rank = 0, lastScore = null;
+    for (const score of scores) {
+      const total = Number(score.totalMarks);
+      if (lastScore === null || total !== lastScore) { rank += 1; lastScore = total; }
+      score.roundRank = rank;
+      await score.save();
+    }
 
     for (let i = 0; i < scores.length; i++) {
       scores[i].roundRank = i + 1;
@@ -641,9 +652,13 @@ export const confirmElimination = async (req, res) => {
 };
 
 // ======================================================
-// START TIEBREAK  (supplementary 10-question quiz)
+// START TIEBREAK
 // POST /api/quiz/events/:id/start-tiebreak
-// Body: { tiedParticipantIds: [1,2,...] }
+// Body: { tiedParticipantIds: [1,2,...], questionIds?: [5,9,...] }
+//
+// If questionIds is provided, those exact approved questions are used
+// (admin-curated set). Otherwise falls back to the old random pick from
+// the approved "tiebreak"-tagged pool.
 // ======================================================
 export const startTiebreak = async (req, res) => {
   try {
@@ -652,67 +667,60 @@ export const startTiebreak = async (req, res) => {
     const event = await QuizEvent.findByPk(req.params.id);
     if (!event) return res.status(404).json({ message: "Event not found" });
 
-    const { tiedParticipantIds } = req.body;
+    const { tiedParticipantIds, questionIds } = req.body;
     if (!Array.isArray(tiedParticipantIds) || tiedParticipantIds.length < 2)
       return res.status(400).json({ message: "Need at least 2 tied participant IDs" });
 
-    // Get tiebreak questions — approved questions assigned to "tiebreak"
-    const tbQuestions = await QuizQuestion.findAll({
-      where: {
-        eventId: event.id,
-        status:  "approved",
-        roundAssignment: "tiebreak",
-      },
-      limit: event.tiebreakQuestionCount,
-      order: sequelize.random(),
-    });
-
-    if (tbQuestions.length < event.tiebreakQuestionCount)
-      return res.status(400).json({
-        message: `Need ${event.tiebreakQuestionCount} approved tiebreak questions. Found ${tbQuestions.length}.`,
+    let tbQuestions;
+    if (Array.isArray(questionIds) && questionIds.length > 0) {
+      tbQuestions = await QuizQuestion.findAll({
+        where: { id: { [Op.in]: questionIds }, eventId: event.id, status: "approved" },
       });
+      if (tbQuestions.length !== questionIds.length)
+        return res.status(400).json({ message: "One or more selected questions are not approved for this event." });
+    } else {
+      tbQuestions = await QuizQuestion.findAll({
+        where: { eventId: event.id, status: "approved", roundAssignment: "tiebreak" },
+        limit: event.tiebreakQuestionCount,
+        order: sequelize.random(),
+      });
+      if (tbQuestions.length < event.tiebreakQuestionCount)
+        return res.status(400).json({
+          message: `Need ${event.tiebreakQuestionCount} approved tiebreak questions, or select questions manually. Found ${tbQuestions.length}.`,
+        });
+    }
 
-    // Create tiebreak round (roundNumber = 99)
     const tbRound = await QuizRound.create({
-      eventId:     event.id,
+      eventId: event.id,
       roundNumber: 99,
-      label:       "Tiebreak",
+      label: "Tiebreak",
       participantLimit: tiedParticipantIds.length,
-      questionCount:    event.tiebreakQuestionCount,
-      status:      "active",
-      startedAt:   new Date(),
+      questionCount: tbQuestions.length,
+      status: "active",
+      startedAt: new Date(),
       tiebreakParticipants: tiedParticipantIds,
     });
 
-    // Assign questions
     await QuizRoundQuestion.bulkCreate(
       tbQuestions.map((q, idx) => ({
-        roundId:        tbRound.id,
-        questionId:     q.id,
-        sequenceNumber: idx + 1,
-        status:         "pending",
+        roundId: tbRound.id, questionId: q.id, sequenceNumber: idx + 1, status: "pending",
       }))
     );
 
-    // Mark tied participants as tiebreak status
-    await QuizParticipant.update(
-      { status: "tiebreak" },
-      { where: { id: { [Op.in]: tiedParticipantIds } } }
-    );
+    await QuizParticipant.update({ status: "tiebreak" }, { where: { id: { [Op.in]: tiedParticipantIds } } });
 
-    event.status      = "tiebreak_active";
+    event.status = "tiebreak_active";
     event.activeRound = 99;
     event.currentQuestionIdx = 0;
     await event.save();
 
     await audit(event.id, req.user.id, "tiebreak_started", {
-      description: `Tiebreak started for ${tiedParticipantIds.length} participants`,
-      afterValue:  { tiedParticipantIds },
+      description: `Tiebreak started for ${tiedParticipantIds.length} participants with ${tbQuestions.length} questions`,
+      afterValue: { tiedParticipantIds, questionIds: tbQuestions.map((q) => q.id) },
     });
 
     broadcast(req, event.id, "quiz:tiebreak_started", {
-      tiedParticipantIds,
-      questionCount: event.tiebreakQuestionCount,
+      tiedParticipantIds, questionCount: tbQuestions.length,
     });
 
     res.json({ message: "Tiebreak started", tiebreakRound: tbRound });
@@ -1021,10 +1029,20 @@ export const getPanelistDashboard = async (req, res) => {
       where: { eventId: event.id, roundNumber: event.activeRound },
     });
 
-    const scores = await QuizScore.findAll({
+    const rawScores = await QuizScore.findAll({
       where:   { eventId: event.id, roundId: round?.id },
       include: [{ model: QuizParticipant }],
       order:   [["totalMarks","DESC"]],
+    });
+
+    // Dense ranking: tied totals share a rank, next distinct score gets
+    // the next rank number (1, 1, 2 — not 1, 1, 3), matching the
+    // audience leaderboard and avoiding a false 2nd/3rd place split.
+    let rank = 0, lastScore = null;
+    const scores = rawScores.map((s) => {
+      const total = Number(s.totalMarks);
+      if (lastScore === null || total !== lastScore) { rank += 1; lastScore = total; }
+      return { ...s.toJSON(), rank };
     });
 
     const currentRQ = await QuizRoundQuestion.findOne({
@@ -1033,7 +1051,6 @@ export const getPanelistDashboard = async (req, res) => {
       order:   [["sequenceNumber","DESC"]],
     });
 
-    // Per-question results for the current question (after locked/revealed)
     let questionResults = null;
     if (currentRQ && ["locked","revealed"].includes(currentRQ.status)) {
       const answers = await QuizEventAnswer.findAll({
@@ -1165,5 +1182,244 @@ export const getEventByCode = async (req, res) => {
     res.json({ event });
   } catch (err) {
     res.status(500).json({ message: "Failed to fetch event" });
+  }
+};
+
+// ======================================================
+// RESTART EVENT
+// PATCH /api/quiz/events/:id/restart
+// Wipes the live run (answers, scores, round-question state,
+// tiebreak rounds) but keeps the participant roster and the
+// question bank intact so the admin doesn't have to redo setup.
+// ======================================================
+export const restartEvent = async (req, res) => {
+  const t = await sequelize.transaction();
+  try {
+    if (!isAdmin(req.user)) { await t.rollback(); return res.status(403).json({ message: "Unauthorized" }); }
+
+    const event = await QuizEvent.findByPk(req.params.id, { transaction: t });
+    if (!event) { await t.rollback(); return res.status(404).json({ message: "Event not found" }); }
+    if (event.status === "draft") {
+      await t.rollback();
+      return res.status(400).json({ message: "Event hasn't started yet — nothing to restart." });
+    }
+
+    cancelAutoFlow(event.id); // stop any pending auto-lock/reveal/advance timers
+
+    const rounds   = await QuizRound.findAll({ where: { eventId: event.id }, transaction: t });
+    const roundIds = rounds.map((r) => r.id);
+
+    if (roundIds.length) {
+      await QuizEventAnswer.destroy({ where: { eventId: event.id }, transaction: t });
+      await QuizScore.destroy({ where: { eventId: event.id }, transaction: t });
+      await QuizRoundQuestion.update(
+        { status: "pending", openedAt: null, lockedAt: null, revealedAt: null,
+          timerExtendedSeconds: 0, pausedAt: null, pauseDurationSeconds: 0 },
+        { where: { roundId: { [Op.in]: roundIds } }, transaction: t }
+      );
+    }
+
+    // Tiebreak rounds (roundNumber 99) were created for a specific run's
+    // ties — drop them entirely rather than trying to reuse them.
+    const tiebreakRounds  = rounds.filter((r) => r.roundNumber === 99);
+    const permanentRounds = rounds.filter((r) => r.roundNumber !== 99);
+    for (const tb of tiebreakRounds) {
+      await QuizRoundQuestion.destroy({ where: { roundId: tb.id }, transaction: t });
+      await tb.destroy({ transaction: t });
+    }
+    if (permanentRounds.length) {
+      await QuizRound.update(
+        { status: "pending", startedAt: null, completedAt: null, currentQuestionIdx: 0 },
+        { where: { id: { [Op.in]: permanentRounds.map((r) => r.id) } }, transaction: t }
+      );
+    }
+
+    // Reset participants to their pre-event state. Disqualified participants
+    // stay disqualified — that's a standing decision, not a run artifact.
+    await QuizParticipant.update(
+      {
+        status: "registered",
+        connectionStatus: "not_connected",
+        eliminatedAfterRound: null, eliminationReason: null,
+        eliminationConfirmedBy: null, eliminatedAt: null,
+        finalRank: null,
+      },
+      { where: { eventId: event.id, status: { [Op.ne]: "disqualified" } }, transaction: t }
+    );
+
+    // Un-void any questions voided during the previous run
+    await QuizQuestion.update(
+      { status: "approved", voidReason: null, voidedBy: null, voidedAt: null },
+      { where: { eventId: event.id, status: "voided" }, transaction: t }
+    );
+
+    event.status             = "published";
+    event.activeRound        = null;
+    event.currentQuestionIdx = null;
+    event.pausedFromStatus   = null;
+    event.startedAt          = null;
+    event.completedAt        = null;
+    await event.save({ transaction: t });
+
+    await QuizAuditEvent.create({
+      eventId: event.id, userId: req.user.id, action: "event_restarted",
+      description: "Event restarted by admin — participants and questions preserved",
+    }, { transaction: t });
+
+    await t.commit();
+
+    broadcast(req, event.id, "event:state_change", { status: event.status, activeRound: null, restarted: true });
+    res.json({ message: "Event restarted. Participants and questions preserved.", event });
+  } catch (err) {
+    await t.rollback();
+    console.error("restartEvent:", err);
+    res.status(500).json({ message: "Failed to restart event" });
+  }
+};
+
+// ======================================================
+// UPDATE QUESTION
+// PATCH /api/quiz/events/:id/questions/:qid
+// ======================================================
+export const updateQuestion = async (req, res) => {
+  try {
+    if (!isAdmin(req.user)) return res.status(403).json({ message: "Unauthorized" });
+
+    const question = await QuizQuestion.findByPk(req.params.qid);
+    if (!question) return res.status(404).json({ message: "Question not found" });
+
+    const liveUse = await QuizRoundQuestion.count({
+      where: { questionId: question.id, status: { [Op.in]: ["open", "locked", "revealed"] } },
+    });
+    if (liveUse > 0)
+      return res.status(400).json({ message: "This question has already been shown live and can no longer be edited." });
+
+    const {
+      subject, classLevel, roundAssignment, questionText,
+      options, correctAnswer, explanation, difficulty, marks,
+    } = req.body;
+
+    if (correctAnswer && !["A", "B", "C", "D"].includes(correctAnswer))
+      return res.status(400).json({ message: "correctAnswer must be A, B, C, or D" });
+
+    await question.update({
+      subject:         subject         ?? question.subject,
+      classLevel:      classLevel      ?? question.classLevel,
+      roundAssignment: roundAssignment ?? question.roundAssignment,
+      questionText:    questionText?.trim() ?? question.questionText,
+      options:         options         ?? question.options,
+      correctAnswer:   correctAnswer   ?? question.correctAnswer,
+      explanation:     explanation     ?? question.explanation,
+      difficulty:      difficulty      ?? question.difficulty,
+      marks:           marks           ?? question.marks,
+      // An edit to a previously-approved question sends it back to draft —
+      // a changed answer/option shouldn't slip into a round unreviewed.
+      status: question.status === "approved" ? "draft" : question.status,
+    });
+
+    await audit(question.eventId, req.user.id, "question_edited", { relatedQuestionId: question.id });
+
+    res.json({ message: "Question updated — re-approval required before it can be assigned.", question });
+  } catch (err) {
+    console.error("updateQuestion:", err);
+    res.status(500).json({ message: "Failed to update question" });
+  }
+};
+
+// ======================================================
+// DELETE QUESTION
+// DELETE /api/quiz/events/:id/questions/:qid
+// ======================================================
+export const deleteQuestion = async (req, res) => {
+  try {
+    if (!isAdmin(req.user)) return res.status(403).json({ message: "Unauthorized" });
+
+    const question = await QuizQuestion.findByPk(req.params.qid);
+    if (!question) return res.status(404).json({ message: "Question not found" });
+
+    const liveUse = await QuizRoundQuestion.count({
+      where: { questionId: question.id, status: { [Op.in]: ["open", "locked", "revealed"] } },
+    });
+    if (liveUse > 0)
+      return res.status(400).json({ message: "This question has already been shown live and can no longer be deleted." });
+
+    await QuizRoundQuestion.destroy({ where: { questionId: question.id } });
+    await question.destroy();
+
+    await audit(Number(req.params.id), req.user.id, "question_deleted", { relatedQuestionId: question.id });
+
+    res.json({ message: "Question deleted" });
+  } catch (err) {
+    console.error("deleteQuestion:", err);
+    res.status(500).json({ message: "Failed to delete question" });
+  }
+};
+
+
+// ======================================================
+// UPDATE PARTICIPANT
+// PATCH /api/quiz/events/:id/participants/:pid
+// ======================================================
+export const updateParticipant = async (req, res) => {
+  try {
+    if (!isAdmin(req.user)) return res.status(403).json({ message: "Unauthorized" });
+
+    const participant = await QuizParticipant.findOne({
+      where: { id: req.params.pid, eventId: req.params.id },
+    });
+    if (!participant) return res.status(404).json({ message: "Participant not found" });
+
+    const { name, school, classLevel, photoUrl } = req.body;
+    if (name !== undefined && !name.trim())
+      return res.status(400).json({ message: "Name cannot be empty" });
+
+    await participant.update({
+      name:       name?.trim() ?? participant.name,
+      school:     school     ?? participant.school,
+      classLevel: classLevel ?? participant.classLevel,
+      photoUrl:   photoUrl   ?? participant.photoUrl,
+    });
+
+    await audit(Number(req.params.id), req.user.id, "participant_edited", {
+      relatedParticipantId: participant.id,
+    });
+
+    res.json({ message: "Participant updated", participant });
+  } catch (err) {
+    console.error("updateParticipant:", err);
+    res.status(500).json({ message: "Failed to update participant" });
+  }
+};
+
+// ======================================================
+// DELETE PARTICIPANT
+// DELETE /api/quiz/events/:id/participants/:pid
+// ======================================================
+export const deleteParticipant = async (req, res) => {
+  try {
+    if (!isAdmin(req.user)) return res.status(403).json({ message: "Unauthorized" });
+
+    const participant = await QuizParticipant.findOne({
+      where: { id: req.params.pid, eventId: req.params.id },
+    });
+    if (!participant) return res.status(404).json({ message: "Participant not found" });
+
+    const hasAnswered = await QuizEventAnswer.count({ where: { participantId: participant.id } });
+    if (hasAnswered > 0)
+      return res.status(400).json({
+        message: "This participant has already submitted answers and can't be deleted. Disqualify them instead.",
+      });
+
+    await QuizScore.destroy({ where: { participantId: participant.id } });
+    await participant.destroy();
+
+    await audit(Number(req.params.id), req.user.id, "participant_deleted", {
+      relatedParticipantId: participant.id,
+    });
+
+    res.json({ message: "Participant deleted" });
+  } catch (err) {
+    console.error("deleteParticipant:", err);
+    res.status(500).json({ message: "Failed to delete participant" });
   }
 };

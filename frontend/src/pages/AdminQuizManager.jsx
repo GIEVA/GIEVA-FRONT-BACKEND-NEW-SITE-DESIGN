@@ -19,6 +19,7 @@ import {
   Cancel, Pause, PlayCircle, EmojiEvents, Group, Quiz,
   Warning, Download, Refresh, Close,
 } from "@mui/icons-material";
+
 import {
   createEvent, listEvents, getEvent, publishEvent,
   addParticipant, addQuestion, approveQuestion, assignQuestions,
@@ -26,6 +27,7 @@ import {
   completeRound, pauseEvent, resumeEvent, completeEvent,
   getEliminationReview, confirmElimination, startTiebreak,
   voidQuestion, adjustScore, getPanelistDashboard, exportResults, getFinalRankingReview,
+  restartEvent, updateQuestion, deleteQuestion, updateParticipant, deleteParticipant,
 } from "../services/liveQuizService";
 
 import MathTextField from "../components/quiz/MathTextField";
@@ -43,6 +45,10 @@ const CARD   = "#FFFFFF";
 const BORDER = "#E6E9F0";
 const TEXT   = "#0F172A";
 const MUTED  = "#64748B";
+
+const SILVER = "#94a3b8";
+const BRONZE = "#B45309";
+const medalColor = (rank) => rank === 1 ? GOLD : rank === 2 ? SILVER : rank === 3 ? BRONZE : null;
 
 const STATUS_CFG = {
   draft:                    { label: "Draft",           color: MUTED,   bg: "#F1F5F9" },
@@ -156,40 +162,68 @@ function CreateEventDialog({ open, onClose, onCreated }) {
 }
 
 // ─── Add Question Dialog ──────────────────────────────────────
-function AddQuestionDialog({ open, onClose, eventId, onAdded }) {
-  const [form, setForm] = useState({
+function QuestionDialog({ open, onClose, eventId, editing, onSaved }) {
+  const blank = {
     subject: "Biology", classLevel: "both", roundAssignment: "1",
     questionText: "", options: { A: "", B: "", C: "", D: "" },
     correctAnswer: "A", explanation: "", difficulty: "medium", marks: 1,
-  });
+  };
+  const [form, setForm] = useState(blank);
   const [saving, setSaving] = useState(false);
   const [error,  setError]  = useState("");
 
+  useEffect(() => {
+    if (editing) {
+      setForm({
+        subject: editing.subject, classLevel: editing.classLevel || "both",
+        roundAssignment: editing.roundAssignment || "1",
+        questionText: editing.questionText,
+        options: editing.options || { A: "", B: "", C: "", D: "" },
+        correctAnswer: editing.correctAnswer,
+        explanation: editing.explanation || "",
+        difficulty: editing.difficulty || "medium",
+        marks: editing.marks || 1,
+      });
+    } else {
+      setForm(blank);
+    }
+    setError("");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editing, open]);
+
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
-  const setOpt = (k) => (e) => setForm((f) => ({ ...f, options: { ...f.options, [k]: e.target.value } }));
 
   const handleSave = async () => {
     if (!form.questionText.trim() || !form.options.A || !form.options.B || !form.options.C || !form.options.D)
       return setError("Question text and all 4 options are required.");
     try {
       setSaving(true); setError("");
-      const res = await addQuestion(eventId, form);
-      onAdded(res.question);
+      if (editing) {
+        const res = await updateQuestion(eventId, editing.id, form);
+        onSaved(res.question);
+      } else {
+        const res = await addQuestion(eventId, form);
+        onSaved(res.question);
+      }
       onClose();
-      setForm({ subject: "Biology", classLevel: "both", roundAssignment: "1",
-        questionText: "", options: { A: "", B: "", C: "", D: "" },
-        correctAnswer: "A", explanation: "", difficulty: "medium", marks: 1 });
     } catch (err) {
-      setError(err?.response?.data?.message || "Failed to add question");
+      setError(err?.response?.data?.message || `Failed to ${editing ? "update" : "add"} question`);
     } finally { setSaving(false); }
   };
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth
       PaperProps={{ sx: { borderRadius: 3 } }}>
-      <DialogTitle sx={{ fontWeight: 800, fontSize: 18, color: TEXT }}>Add Question</DialogTitle>
+      <DialogTitle sx={{ fontWeight: 800, fontSize: 18, color: TEXT }}>
+        {editing ? "Edit Question" : "Add Question"}
+      </DialogTitle>
       <DialogContent dividers>
         {error && <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>{error}</Alert>}
+        {editing?.status === "approved" && (
+          <Alert severity="info" sx={{ mb: 2, borderRadius: 2 }}>
+            This question is approved — saving changes will move it back to draft for re-approval.
+          </Alert>
+        )}
         <Grid container spacing={2}>
           <Grid item xs={6} sm={4}>
             <TextField fullWidth select label="Subject" value={form.subject} onChange={set("subject")} sx={sx}>
@@ -208,33 +242,16 @@ function AddQuestionDialog({ open, onClose, eventId, onAdded }) {
               {["easy","medium","hard"].map((d) => <MenuItem key={d} value={d}>{d}</MenuItem>)}
             </TextField>
           </Grid>
-
           <Grid item xs={12}>
-          <MathTextField
-            label="Question Text *"
-            value={form.questionText}
-            onChange={(v) => setForm((f) => ({ ...f, questionText: v }))}
-            multiline
-            rows={3}
-          />
-        </Grid>
-        {["A","B","C","D"].map((opt) => (
-          <Grid item xs={12} sm={6} key={opt}>
-            <MathTextField
-              label={`Option ${opt} *`}
-              value={form.options[opt]}
-              onChange={(v) => setForm((f) => ({ ...f, options: { ...f.options, [opt]: v } }))}
-            />
-          </Grid>
-        ))}
-          {/* <Grid item xs={12}>
-            <TextField fullWidth multiline rows={3} label="Question Text *" value={form.questionText} onChange={set("questionText")} sx={sx} />
+            <MathTextField label="Question Text *" value={form.questionText}
+              onChange={(v) => setForm((f) => ({ ...f, questionText: v }))} multiline rows={3} />
           </Grid>
           {["A","B","C","D"].map((opt) => (
             <Grid item xs={12} sm={6} key={opt}>
-              <TextField fullWidth label={`Option ${opt} *`} value={form.options[opt]} onChange={setOpt(opt)} sx={sx} />
+              <MathTextField label={`Option ${opt} *`} value={form.options[opt]}
+                onChange={(v) => setForm((f) => ({ ...f, options: { ...f.options, [opt]: v } }))} />
             </Grid>
-          ))} */}
+          ))}
           <Grid item xs={6}>
             <TextField fullWidth select label="Correct Answer *" value={form.correctAnswer} onChange={set("correctAnswer")} sx={sx}>
               {["A","B","C","D"].map((o) => <MenuItem key={o} value={o}>Option {o}</MenuItem>)}
@@ -244,24 +261,16 @@ function AddQuestionDialog({ open, onClose, eventId, onAdded }) {
             <TextField fullWidth type="number" label="Marks" value={form.marks} onChange={set("marks")} sx={sx} />
           </Grid>
           <Grid item xs={12}>
-            <MathTextField
-              label="Explanation (optional)"
-              value={form.explanation}
-              onChange={(v) => setForm((f) => ({ ...f, explanation: v }))}
-              multiline
-              rows={2}
-            />
+            <MathTextField label="Explanation (optional)" value={form.explanation}
+              onChange={(v) => setForm((f) => ({ ...f, explanation: v }))} multiline rows={2} />
           </Grid>
-          {/* <Grid item xs={12}>
-            <TextField fullWidth multiline rows={2} label="Explanation (optional)" value={form.explanation} onChange={set("explanation")} sx={sx} />
-          </Grid> */}
         </Grid>
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 2.5, gap: 1 }}>
         <Button onClick={onClose} sx={{ textTransform: "none", color: MUTED }}>Cancel</Button>
         <Button onClick={handleSave} variant="contained" disabled={saving}
           sx={{ textTransform: "none", bgcolor: NAVY, fontWeight: 700, borderRadius: 2, "&:hover": { bgcolor: GREEN } }}>
-          {saving ? <CircularProgress size={18} color="inherit" /> : "Add Question"}
+          {saving ? <CircularProgress size={18} color="inherit" /> : editing ? "Save Changes" : "Add Question"}
         </Button>
       </DialogActions>
     </Dialog>
@@ -269,7 +278,7 @@ function AddQuestionDialog({ open, onClose, eventId, onAdded }) {
 }
 
 // ─── Live Control Panel ───────────────────────────────────────
-function LiveControlPanel({ event, onRefresh }) {
+function LiveControlPanel({ event, onRefresh, eventQuestions }) {
   const [dashboard,  setDashboard]  = useState(null);
   const [loading,    setLoading]    = useState(false);
   // Tracks whether a control action (open/lock/reveal/pause/etc.) is
@@ -282,8 +291,13 @@ function LiveControlPanel({ event, onRefresh }) {
   const [voidReason, setVoidReason] = useState("");
   const [showVoid,   setShowVoid]   = useState(false);
 
+  const [tiebreakParticipantIds, setTiebreakParticipantIds] = useState([]);
+  const [tiebreakQuestionIds, setTiebreakQuestionIds] = useState([]);
+
   const [finalData, setFinalData] = useState(null);
 const [finalLoading, setFinalLoading] = useState(false);
+
+const [selectedQualified, setSelectedQualified] = useState([]);
 
 const loadFinalReview = async () => {
   try {
@@ -323,17 +337,24 @@ const loadFinalReview = async () => {
     }
   };
 
-  const loadEliminationReview = async () => {
-    try {
-      setElimLoading(true);
-      const res = await getEliminationReview(event.id);
-      setElimData(res);
-    } catch (err) {
-      setToast({ msg: err?.response?.data?.message || "Failed to load elimination review", severity: "error" });
-    } finally {
-      setElimLoading(false);
-    }
-  };
+const loadEliminationReview = async () => {
+  try {
+    setElimLoading(true);
+    const res = await getEliminationReview(event.id);
+    setElimData(res);
+    setSelectedQualified(res.scores.slice(0, res.qualifyCount).map((s) => s.participantId));
+  } catch (err) {
+    setToast({ msg: err?.response?.data?.message || "Failed to load elimination review", severity: "error" });
+  } finally {
+    setElimLoading(false);
+  }
+};
+
+const toggleQualified = (participantId) => {
+  setSelectedQualified((ids) =>
+    ids.includes(participantId) ? ids.filter((id) => id !== participantId) : [...ids, participantId]
+  );
+};
 
 
 
@@ -470,17 +491,27 @@ const loadFinalReview = async () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {dashboard.scores.map((s, i) => (
-                <TableRow key={s.id} sx={{ bgcolor: i < 5 ? `${GREEN}06` : "transparent" }}>
-                  <TableCell sx={{ fontWeight: 800, color: i === 0 ? GOLD : TEXT }}>{i + 1}</TableCell>
-                  <TableCell sx={{ fontWeight: 700 }}>{s.QuizParticipant?.name}</TableCell>
-                  <TableCell sx={{ color: MUTED, fontSize: 12 }}>{s.QuizParticipant?.school}</TableCell>
-                  <TableCell sx={{ color: GREEN, fontWeight: 700 }}>{s.correctCount}</TableCell>
-                  <TableCell sx={{ color: RED }}>{s.incorrectCount}</TableCell>
-                  <TableCell sx={{ color: MUTED }}>{s.unansweredCount}</TableCell>
-                  <TableCell sx={{ fontWeight: 800, fontSize: 15 }}>{s.totalMarks}</TableCell>
-                </TableRow>
-              ))}
+              <TableBody>
+                {dashboard.scores.map((s) => {
+                  const medal = medalColor(s.rank);
+                  return (
+                    <TableRow key={s.id} sx={{ bgcolor: s.rank <= 5 ? `${GREEN}06` : "transparent" }}>
+                      <TableCell sx={{ fontWeight: 800, color: medal || TEXT }}>
+                        {medal
+                          ? <EmojiEvents sx={{ fontSize: 16, color: medal, verticalAlign: "middle", mr: 0.5 }} />
+                          : null}
+                        {s.rank}
+                      </TableCell>
+                      <TableCell sx={{ fontWeight: 700 }}>{s.QuizParticipant?.name}</TableCell>
+                      <TableCell sx={{ color: MUTED, fontSize: 12 }}>{s.QuizParticipant?.school}</TableCell>
+                      <TableCell sx={{ color: GREEN, fontWeight: 700 }}>{s.correctCount}</TableCell>
+                      <TableCell sx={{ color: RED }}>{s.incorrectCount}</TableCell>
+                      <TableCell sx={{ color: MUTED }}>{s.unansweredCount}</TableCell>
+                      <TableCell sx={{ fontWeight: 800, fontSize: 15 }}>{s.totalMarks}</TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
             </TableBody>
           </Table>
         </Paper>
@@ -556,62 +587,63 @@ const loadFinalReview = async () => {
       {/* Elimination review dialog */}
       {elimData && (
         <Dialog open={!!elimData} onClose={() => setElimData(null)} maxWidth="md" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
-          <DialogTitle sx={{ fontWeight: 800, color: TEXT }}>Elimination Review</DialogTitle>
+          <DialogTitle sx={{ fontWeight: 800, color: TEXT }}>Elimination Review — Choose who advances</DialogTitle>
           <DialogContent dividers>
-            {elimData.hasTie && (
-              <Alert severity="warning" sx={{ mb: 2, borderRadius: 2 }}>
-                <strong>Tie detected at boundary score {elimData.boundaryScore}!</strong>
-                <br />Participants at positions {elimData.tiedParticipants.map((p) => p.QuizParticipant?.name).join(", ")} are tied.
-                Resolve this with a tiebreak before confirming — a positional cutoff would decide the tie
-                arbitrarily.
-              </Alert>
-            )}
+            <Alert severity="info" sx={{ mb: 2, borderRadius: 2 }}>
+              Boxes are pre-checked using the top {elimData.baseQualifyCount} by score (expanded to {elimData.qualifyCount} to
+              keep tied scores together). Check or uncheck freely — you have the final say.
+            </Alert>
             <Table size="small">
               <TableHead>
                 <TableRow>
-                  {["Rank","Name","School","Score","Status"].map((h) => (
+                  {["Advance","Rank","Name","School","Score"].map((h) => (
                     <TableCell key={h} sx={{ fontWeight: 700, color: MUTED, fontSize: 12 }}>{h}</TableCell>
                   ))}
                 </TableRow>
               </TableHead>
               <TableBody>
                 {elimData.scores.map((s, i) => {
-                  const qualifies = i < elimData.qualifyCount;
+                  const checked = selectedQualified.includes(s.participantId);
                   return (
-                    <TableRow key={s.id} sx={{ bgcolor: qualifies ? `${GREEN}08` : `rgba(239,68,68,0.05)` }}>
-                      <TableCell sx={{ fontWeight: 800, color: qualifies ? GREEN : RED }}>{i + 1}</TableCell>
+                    <TableRow key={s.id} sx={{ bgcolor: checked ? `${GREEN}08` : `rgba(239,68,68,0.05)` }}>
+                      <TableCell padding="checkbox">
+                        <input type="checkbox" checked={checked} onChange={() => toggleQualified(s.participantId)} />
+                      </TableCell>
+                      <TableCell sx={{ fontWeight: 800, color: checked ? GREEN : RED }}>{i + 1}</TableCell>
                       <TableCell sx={{ fontWeight: 700 }}>{s.QuizParticipant?.name}</TableCell>
                       <TableCell sx={{ color: MUTED }}>{s.QuizParticipant?.school}</TableCell>
                       <TableCell sx={{ fontWeight: 800 }}>{s.totalMarks}</TableCell>
-                      <TableCell>
-                        <Chip size="small" label={qualifies ? "Qualifies" : "Eliminated"}
-                          sx={{ fontWeight: 800, bgcolor: qualifies ? `${GREEN}15` : "rgba(239,68,68,0.1)",
-                                color: qualifies ? GREEN : RED }} />
-                      </TableCell>
                     </TableRow>
                   );
                 })}
               </TableBody>
             </Table>
           </DialogContent>
-            <DialogActions sx={{ px: 3, pb: 2.5, gap: 1, flexWrap: "wrap" }}>
+          <DialogActions sx={{ px: 3, pb: 2.5, gap: 1, flexWrap: "wrap" }}>
+            <Typography sx={{ fontSize: 12, color: MUTED, mr: "auto", alignSelf: "center" }}>
+              {selectedQualified.length} advancing to Round 2
+            </Typography>
             <Button onClick={() => setElimData(null)} sx={{ textTransform: "none", color: MUTED }}>Close</Button>
-            <Button variant="contained" disabled={submitting}
+            <Button variant="contained" disabled={submitting || selectedQualified.length === 0}
               onClick={async () => {
-                const qualified  = elimData.scores.slice(0, elimData.qualifyCount).map((s) => s.participantId);
-                const eliminated = elimData.scores.slice(elimData.qualifyCount).map((s) => s.participantId);
+                const eliminated = elimData.scores
+                  .map((s) => s.participantId)
+                  .filter((id) => !selectedQualified.includes(id));
                 await action(
-                  () => confirmElimination(event.id, { qualifiedParticipantIds: qualified, eliminatedParticipantIds: eliminated }),
+                  () => confirmElimination(event.id, {
+                    qualifiedParticipantIds: selectedQualified,
+                    eliminatedParticipantIds: eliminated,
+                  }),
                   "Round 2 started!"
-                  );
-                  setElimData(null);
-                }}
-                sx={{ textTransform: "none", bgcolor: NAVY, fontWeight: 700, borderRadius: 2, "&:hover": { bgcolor: GREEN } }}>
-                Confirm & Start Round 2
-              </Button>
-            </DialogActions>
-          </Dialog>
-        )}
+                );
+                setElimData(null);
+              }}
+              sx={{ textTransform: "none", bgcolor: NAVY, fontWeight: 700, borderRadius: 2, "&:hover": { bgcolor: GREEN } }}>
+              Confirm & Start Round 2
+            </Button>
+          </DialogActions>
+        </Dialog>
+      )}
 
 
       {/* ← ADD THE NEW FINAL RANKING DIALOG HERE */}
@@ -620,28 +652,80 @@ const loadFinalReview = async () => {
           <DialogTitle sx={{ fontWeight: 800 }}>Final Ranking Review</DialogTitle>
           <DialogContent dividers>
             {!finalData.hasTies && (
-              <Alert severity="success" sx={{ borderRadius: 2 }}>No ties — ranking is final.</Alert>
+              <Alert severity="success" sx={{ mb: 2, borderRadius: 2 }}>No ties detected — ranking is final.</Alert>
             )}
             {finalData.tiedGroups.map((g, idx) => (
-              <Box key={idx} sx={{ mb: 2 }}>
-                <Alert severity="warning" sx={{ mb: 1, borderRadius: 2 }}>
-                  Rank {g.rankStart}{g.rankStart !== g.rankEnd ? `–${g.rankEnd}` : ""} tied at score {g.score}:
-                  {" "}{g.participants.map((p) => p.QuizParticipant?.name).join(", ")}
-                </Alert>
-                <Button variant="outlined" size="small"
-                  onClick={async () => {
-                    const tiedIds = g.participants.map((p) => p.participantId);
-                    await action(() => startTiebreak(event.id, tiedIds), "Tiebreak started!");
-                    setFinalData(null);
-                  }}
-                  sx={{ textTransform: "none", borderColor: GOLD, color: GOLD, fontWeight: 700 }}>
-                  Start Tiebreak for this group
-                </Button>
-              </Box>
+              <Alert key={idx} severity="warning" sx={{ mb: 1, borderRadius: 2 }}>
+                Rank {g.rankStart}{g.rankStart !== g.rankEnd ? `–${g.rankEnd}` : ""} tied at score {g.score}:{" "}
+                {g.participants.map((p) => p.QuizParticipant?.name).join(", ")}
+              </Alert>
             ))}
+
+            <Divider sx={{ my: 2 }}><Typography sx={{ fontSize: 12, color: MUTED }}>SELECT TIEBREAK PARTICIPANTS</Typography></Divider>
+            <Table size="small">
+              <TableHead>
+                <TableRow>{["Include","Name","School","Round 2 Score"].map((h) =>
+                  <TableCell key={h} sx={{ fontWeight: 700, color: MUTED, fontSize: 12 }}>{h}</TableCell>)}</TableRow>
+              </TableHead>
+              <TableBody>
+                {finalData.scores.map((s) => {
+                  const checked = tiebreakParticipantIds.includes(s.participantId);
+                  return (
+                    <TableRow key={s.id}>
+                      <TableCell padding="checkbox">
+                        <input type="checkbox" checked={checked}
+                          onChange={() => setTiebreakParticipantIds((ids) =>
+                            checked ? ids.filter((id) => id !== s.participantId) : [...ids, s.participantId])} />
+                      </TableCell>
+                      <TableCell sx={{ fontWeight: 700 }}>{s.QuizParticipant?.name}</TableCell>
+                      <TableCell sx={{ color: MUTED }}>{s.QuizParticipant?.school}</TableCell>
+                      <TableCell sx={{ fontWeight: 800 }}>{s.totalMarks}</TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+
+            <Divider sx={{ my: 2 }}><Typography sx={{ fontSize: 12, color: MUTED }}>SELECT TIEBREAK QUESTIONS (approved only)</Typography></Divider>
+            <Stack spacing={0.5} sx={{ maxHeight: 220, overflowY: "auto" }}>
+              {(eventQuestions || []).filter((q) => q.status === "approved").map((q) => {
+                const checked = tiebreakQuestionIds.includes(q.id);
+                return (
+                  <Box key={q.id} sx={{ display: "flex", alignItems: "flex-start", gap: 1, p: 0.75,
+                                        border: `1px solid ${BORDER}`, borderRadius: 1.5 }}>
+                    <input type="checkbox" checked={checked} style={{ marginTop: 4 }}
+                      onChange={() => setTiebreakQuestionIds((ids) =>
+                        checked ? ids.filter((id) => id !== q.id) : [...ids, q.id])} />
+                    <Box>
+                      <Typography sx={{ fontSize: 12, fontWeight: 600 }} noWrap>{q.questionText}</Typography>
+                      <Typography sx={{ fontSize: 10, color: MUTED }}>{q.subject} · {q.difficulty}</Typography>
+                    </Box>
+                  </Box>
+                );
+              })}
+            </Stack>
           </DialogContent>
-          <DialogActions sx={{ px: 3, pb: 2.5 }}>
+          <DialogActions sx={{ px: 3, pb: 2.5, gap: 1 }}>
+            <Typography sx={{ fontSize: 12, color: MUTED, mr: "auto", alignSelf: "center" }}>
+              {tiebreakParticipantIds.length} participants · {tiebreakQuestionIds.length} questions
+            </Typography>
             <Button onClick={() => setFinalData(null)} sx={{ textTransform: "none", color: MUTED }}>Close</Button>
+            <Button variant="contained" disabled={submitting || tiebreakParticipantIds.length < 2 || tiebreakQuestionIds.length === 0}
+              onClick={async () => {
+                await action(
+                  () => startTiebreak(event.id, {
+                    tiedParticipantIds: tiebreakParticipantIds,
+                    questionIds: tiebreakQuestionIds,
+                  }),
+                  "Tiebreak started!"
+                );
+                setFinalData(null);
+                setTiebreakParticipantIds([]);
+                setTiebreakQuestionIds([]);
+              }}
+              sx={{ textTransform: "none", bgcolor: GOLD, color: NAVY, fontWeight: 700, borderRadius: 2 }}>
+              Start Tiebreak
+            </Button>
           </DialogActions>
         </Dialog>
       )}
@@ -669,6 +753,13 @@ export default function AdminQuizManager() {
 
   const [selectedQIds, setSelectedQIds] = useState([]);
   const [assigning, setAssigning] = useState(false);
+
+  const [editingQuestion, setEditingQuestion] = useState(null); // null = add mode, object = edit mode
+  const [deleteQTarget, setDeleteQTarget] = useState(null);
+
+  const [editingParticipant, setEditingParticipant] = useState(null);
+  const [deletePTarget, setDeletePTarget] = useState(null);
+  const [restarting, setRestarting] = useState(false);
 
   const toggleSelect = (qId) => {
     setSelectedQIds((ids) => ids.includes(qId) ? ids.filter((i) => i !== qId) : [...ids, qId]);
@@ -820,6 +911,25 @@ export default function AdminQuizManager() {
                             sx={{ textTransform: "none", borderColor: BORDER, color: MUTED, fontWeight: 700, borderRadius: 2 }}>
                             Export
                           </Button>
+
+                          {eventDetail.status !== "draft" && (
+                          <Button variant="outlined" size="small" disabled={restarting}
+                            onClick={async () => {
+                              if (!window.confirm("Restart this event? All answers and scores will be cleared. Participants and questions are kept.")) return;
+                              try {
+                                setRestarting(true);
+                                await restartEvent(eventDetail.id);
+                                loadDetail(eventDetail.id);
+                                setTab(0);
+                                setToast({ msg: "Event restarted", severity: "success" });
+                              } catch (err) {
+                                setToast({ msg: err?.response?.data?.message || "Failed to restart", severity: "error" });
+                              } finally { setRestarting(false); }
+                            }}
+                            sx={{ textTransform: "none", borderColor: RED, color: RED, fontWeight: 700, borderRadius: 2 }}>
+                            {restarting ? <CircularProgress size={16} /> : "Restart Event"}
+                          </Button>
+                        )}
                         </Stack>
                       </Box>
 
@@ -833,15 +943,21 @@ export default function AdminQuizManager() {
                             <Paper elevation={0} sx={{ border: `1px solid ${BORDER}`, borderRadius: 2, p: 1.5 }}>
                               <Typography sx={{ fontWeight: 700, fontSize: 13, color: TEXT }}>{p.displayNumber}. {p.name}</Typography>
                               <Typography sx={{ fontSize: 11, color: MUTED }}>{p.school} · {p.participantCode}</Typography>
-                              <Button
-                                size="small"
-                                onClick={() => {
-                                  navigator.clipboard.writeText(`${window.location.origin}/quiz/join/${p.participantCode}`);
-                                }}
-                                sx={{ mt: 0.5, textTransform: "none", fontSize: 10, p: 0, minWidth: 0, color: GREEN }}
-                              >
-                                Copy join link
-                              </Button>
+                              <Stack direction="row" spacing={1} sx={{ mt: 0.5 }}>
+                                <Button size="small"
+                                  onClick={() => navigator.clipboard.writeText(`${window.location.origin}/quiz/join/${p.participantCode}`)}
+                                  sx={{ textTransform: "none", fontSize: 10, p: 0, minWidth: 0, color: GREEN }}>
+                                  Copy link
+                                </Button>
+                                <Button size="small" onClick={() => setEditingParticipant(p)}
+                                  sx={{ textTransform: "none", fontSize: 10, p: 0, minWidth: 0, color: NAVY }}>
+                                  Edit
+                                </Button>
+                                <Button size="small" onClick={() => setDeletePTarget(p)}
+                                  sx={{ textTransform: "none", fontSize: 10, p: 0, minWidth: 0, color: RED }}>
+                                  Delete
+                                </Button>
+                              </Stack>
                               <Chip label={p.connectionStatus} size="small"
                                 sx={{ mt: 0.5, height: 16, fontSize: 9, display: "block", width: "fit-content",
                                       bgcolor: p.connectionStatus === "ready" ? `${GREEN}15` : "#F1F5F9",
@@ -873,6 +989,93 @@ export default function AdminQuizManager() {
                       ))}
                     </Box>
                   )}
+
+                  {editingParticipant && (
+                    <Dialog open={!!editingParticipant} onClose={() => setEditingParticipant(null)} maxWidth="xs" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
+                      <DialogTitle sx={{ fontWeight: 800 }}>Edit Participant</DialogTitle>
+                      <DialogContent dividers>
+                        <Stack spacing={2} sx={{ mt: 0.5 }}>
+                          <TextField fullWidth label="Name" value={editingParticipant.name}
+                            onChange={(e) => setEditingParticipant((p) => ({ ...p, name: e.target.value }))} sx={sx} />
+                          <TextField fullWidth label="School" value={editingParticipant.school || ""}
+                            onChange={(e) => setEditingParticipant((p) => ({ ...p, school: e.target.value }))} sx={sx} />
+                          <TextField fullWidth select label="Class" value={editingParticipant.classLevel || "SS3"}
+                            onChange={(e) => setEditingParticipant((p) => ({ ...p, classLevel: e.target.value }))} sx={sx}>
+                            <MenuItem value="SS2">SS2</MenuItem>
+                            <MenuItem value="SS3">SS3</MenuItem>
+                          </TextField>
+                        </Stack>
+                      </DialogContent>
+                      <DialogActions sx={{ px: 3, pb: 2.5, gap: 1 }}>
+                        <Button onClick={() => setEditingParticipant(null)} sx={{ textTransform: "none", color: MUTED }}>Cancel</Button>
+                        <Button variant="contained"
+                          onClick={async () => {
+                            try {
+                              await updateParticipant(eventDetail.id, editingParticipant.id, {
+                                name: editingParticipant.name, school: editingParticipant.school, classLevel: editingParticipant.classLevel,
+                              });
+                              setToast({ msg: "Participant updated", severity: "success" });
+                              loadDetail(eventDetail.id);
+                            } catch (err) {
+                              setToast({ msg: err?.response?.data?.message || "Failed to update", severity: "error" });
+                            } finally { setEditingParticipant(null); }
+                          }}
+                          sx={{ textTransform: "none", bgcolor: NAVY, fontWeight: 700, borderRadius: 2 }}>
+                          Save
+                        </Button>
+                      </DialogActions>
+                    </Dialog>
+                  )}
+
+                  <Dialog open={!!deletePTarget} onClose={() => setDeletePTarget(null)} maxWidth="xs" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
+                    <DialogTitle sx={{ fontWeight: 800 }}>Delete Participant?</DialogTitle>
+                    <DialogContent>
+                      <Typography sx={{ fontSize: 14, color: MUTED }}>
+                        This can't be undone. If they've already answered questions, delete will be blocked — disqualify them instead.
+                      </Typography>
+                    </DialogContent>
+                    <DialogActions sx={{ px: 3, pb: 2.5, gap: 1 }}>
+                      <Button onClick={() => setDeletePTarget(null)} sx={{ textTransform: "none", color: MUTED }}>Cancel</Button>
+                      <Button variant="contained"
+                        onClick={async () => {
+                          try {
+                            await deleteParticipant(eventDetail.id, deletePTarget.id);
+                            setToast({ msg: "Participant deleted", severity: "success" });
+                            loadDetail(eventDetail.id);
+                          } catch (err) {
+                            setToast({ msg: err?.response?.data?.message || "Failed to delete", severity: "error" });
+                          } finally { setDeletePTarget(null); }
+                        }}
+                        sx={{ textTransform: "none", bgcolor: RED, fontWeight: 700, borderRadius: 2 }}>
+                        Delete
+                      </Button>
+                    </DialogActions>
+                  </Dialog>
+
+                  <Dialog open={!!deleteQTarget} onClose={() => setDeleteQTarget(null)} maxWidth="xs" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
+                    <DialogTitle sx={{ fontWeight: 800 }}>Delete Question?</DialogTitle>
+                    <DialogContent>
+                      <Typography sx={{ fontSize: 14, color: MUTED }}>
+                        This removes it from the question bank and any pending round assignment. This can't be undone.
+                      </Typography>
+                    </DialogContent>
+                    <DialogActions sx={{ px: 3, pb: 2.5, gap: 1 }}>
+                      <Button onClick={() => setDeleteQTarget(null)} sx={{ textTransform: "none", color: MUTED }}>Cancel</Button>
+                      <Button variant="contained"
+                        onClick={async () => {
+                          try {
+                            await deleteQuestion(eventDetail.id, deleteQTarget.id);
+                            setToast({ msg: "Question deleted", severity: "success" });
+                            loadDetail(eventDetail.id);
+                          } catch (err) {
+                            setToast({ msg: err?.response?.data?.message || "Failed to delete", severity: "error" });
+                          } finally { setDeleteQTarget(null); }
+                        }}
+                        sx={{ textTransform: "none", bgcolor: RED, fontWeight: 700, borderRadius: 2 }}>
+                        Delete
+                      </Button>
+                    </DialogActions>
+                  </Dialog>
 
                   {/* QUESTIONS TAB */}
                   {tab === 1 && (
@@ -948,6 +1151,29 @@ export default function AdminQuizManager() {
                                   </Button>
                                 )}
                               </TableCell>
+                              <TableCell>
+                                <Stack direction="row" spacing={0.5}>
+                                  {q.status === "draft" && (
+                                    <Button size="small" variant="outlined"
+                                      onClick={async () => {
+                                        await approveQuestion(eventDetail.id, q.id);
+                                        loadDetail(eventDetail.id);
+                                        setToast({ msg: "Question approved", severity: "success" });
+                                      }}
+                                      sx={{ textTransform: "none", fontSize: 11, borderColor: GREEN, color: GREEN }}>
+                                      Approve
+                                    </Button>
+                                  )}
+                                  <Button size="small" onClick={() => setEditingQuestion(q)}
+                                    sx={{ textTransform: "none", fontSize: 11, color: NAVY, minWidth: 0 }}>
+                                    Edit
+                                  </Button>
+                                  <Button size="small" onClick={() => setDeleteQTarget(q)}
+                                    sx={{ textTransform: "none", fontSize: 11, color: RED, minWidth: 0 }}>
+                                    Delete
+                                  </Button>
+                                </Stack>
+                              </TableCell>
                             </TableRow>
                           ))}
                           {(!eventDetail.questions || eventDetail.questions.length === 0) && (
@@ -964,7 +1190,7 @@ export default function AdminQuizManager() {
 
                   {/* LIVE CONTROL TAB */}
                   {tab === 2 && (
-                    <LiveControlPanel event={eventDetail} onRefresh={() => loadDetail(eventDetail.id)} />
+                    <LiveControlPanel event={eventDetail} onRefresh={() => loadDetail(eventDetail.id)} eventQuestions={eventDetail.questions} />
                   )}
                 </Box>
               </Paper>
@@ -977,9 +1203,13 @@ export default function AdminQuizManager() {
         onCreated={(ev) => { setEvents((e) => [ev, ...e]); setSelectedEvt(ev.id); setCreateOpen(false); }} />
 
       {eventDetail && (
-        <AddQuestionDialog open={addQOpen} onClose={() => setAddQOpen(false)}
-          eventId={eventDetail.id}
-          onAdded={() => { loadDetail(eventDetail.id); setAddQOpen(false); }} />
+        <QuestionDialog
+            open={addQOpen || !!editingQuestion}
+            onClose={() => { setAddQOpen(false); setEditingQuestion(null); }}
+            eventId={eventDetail?.id}
+            editing={editingQuestion}
+            onSaved={() => { loadDetail(eventDetail.id); setAddQOpen(false); setEditingQuestion(null); }}
+          />
       )}
 
       <Snackbar open={!!toast} autoHideDuration={4000} onClose={() => setToast(null)}

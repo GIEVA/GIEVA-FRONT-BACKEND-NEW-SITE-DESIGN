@@ -96,6 +96,12 @@ router.get("/events/by-code/:eventCode", authenticate, getEventByCode);
 
 router.get("/events/:id/final-ranking-review", authenticate, getFinalRankingReview);
 
+router.patch ("/events/:id/restart",                    authenticate, restartEvent);
+router.patch ("/events/:id/questions/:qid",              authenticate, updateQuestion);
+router.delete("/events/:id/questions/:qid",              authenticate, deleteQuestion);
+router.patch ("/events/:id/participants/:pid",           authenticate, updateParticipant);
+router.delete("/events/:id/participants/:pid",           authenticate, deleteParticipant);
+
 // ══════════════════════════════════════════════════════════════
 // PARTICIPANT — No auth (join by code)
 // ══════════════════════════════════════════════════════════════

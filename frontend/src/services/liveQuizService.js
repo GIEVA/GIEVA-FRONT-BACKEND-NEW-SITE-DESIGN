@@ -40,8 +40,8 @@ export const completeEvent         = (id)          => API.patch(`${BASE}/events/
 // Elimination & tiebreak
 export const getEliminationReview  = (id)          => API.get(`${BASE}/events/${id}/elimination-review`).then((r) => r.data);
 export const confirmElimination    = (id, body)    => API.post(`${BASE}/events/${id}/confirm-elimination`, body).then((r) => r.data);
-export const startTiebreak         = (id, tiedParticipantIds) =>
-  API.post(`${BASE}/events/${id}/start-tiebreak`, { tiedParticipantIds }).then((r) => r.data);
+// export const startTiebreak         = (id, tiedParticipantIds) =>
+//   API.post(`${BASE}/events/${id}/start-tiebreak`, { tiedParticipantIds }).then((r) => r.data);
 
 // Score & questions
 export const voidQuestion          = (id, rqId, reason) =>
@@ -59,6 +59,32 @@ export const getEventByCode = (eventCode) =>
   API.get(`${BASE}/events/by-code/${eventCode}`).then((r) => r.data);
 
 export const getFinalRankingReview = (id) => API.get(`${BASE}/events/${id}/final-ranking-review`).then((r) => r.data);
+
+
+
+// modification on admin privilges
+
+
+export const restartEvent = (id) =>
+  API.patch(`${BASE}/events/${id}/restart`).then((r) => r.data);
+
+export const updateQuestion = (eventId, qid, data) =>
+  API.patch(`${BASE}/events/${eventId}/questions/${qid}`, data).then((r) => r.data);
+
+export const deleteQuestion = (eventId, qid) =>
+  API.delete(`${BASE}/events/${eventId}/questions/${qid}`).then((r) => r.data);
+
+export const updateParticipant = (eventId, pid, data) =>
+  API.patch(`${BASE}/events/${eventId}/participants/${pid}`, data).then((r) => r.data);
+
+export const deleteParticipant = (eventId, pid) =>
+  API.delete(`${BASE}/events/${eventId}/participants/${pid}`).then((r) => r.data);
+
+// startTiebreak now takes a payload object instead of a bare array
+export const startTiebreak = (eventId, payload) =>
+  API.post(`${BASE}/events/${eventId}/start-tiebreak`, payload).then((r) => r.data);
+
+
 
 // ── Participant — no auth ──────────────────────────────────────
 export const joinEvent             = (participantCode) =>

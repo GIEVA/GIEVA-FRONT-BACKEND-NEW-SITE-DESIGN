@@ -11,7 +11,11 @@ import { getAudienceState } from "../services/liveQuizService";
 import QuestionPreview from "../components/quiz/QuestionPreview";
 
 const NAVY = "#0B1F3A", GREEN = "#1E7F4F", GOLD = "#D4A017", BORDER = "#E6E9F0", TEXT = "#0F172A", MUTED = "#64748B";
+const SILVER = "#94a3b8", BRONZE = "#B45309"; // add these
 const POLL_MS = 4000;
+
+
+const medalColor = (rank) => rank === 1 ? GOLD : rank === 2 ? SILVER : rank === 3 ? BRONZE : null;
 
 export default function AudienceQuizPage() {
   const { code } = useParams();
@@ -85,21 +89,24 @@ export default function AudienceQuizPage() {
           <Typography sx={{ fontWeight: 800, color: TEXT }}>Leaderboard</Typography>
         </Box>
         <Stack divider={<Box sx={{ borderBottom: `1px solid ${BORDER}` }} />}>
-          {data.leaderboard?.map((row) => (
-            <Stack key={row.displayNumber} direction="row" alignItems="center" spacing={2} sx={{ px: 3, py: 1.5 }}>
-              <Typography sx={{ width: 28, fontWeight: 800, color: row.rank === 1 ? GOLD : TEXT }}>
-                {row.rank === 1 ? <EmojiEvents sx={{ fontSize: 20, color: GOLD }} /> : `#${row.rank}`}
-              </Typography>
-              <Avatar src={row.photoUrl} sx={{ width: 32, height: 32, bgcolor: NAVY, fontSize: 13 }}>
-                {row.name?.[0]}
-              </Avatar>
-              <Box sx={{ flex: 1 }}>
-                <Typography sx={{ fontWeight: 700, fontSize: 14, color: TEXT }}>{row.name}</Typography>
-                <Typography sx={{ fontSize: 11, color: MUTED }}>{row.school}</Typography>
-              </Box>
-              <Typography sx={{ fontWeight: 800, fontSize: 16, color: TEXT }}>{row.totalMarks}</Typography>
-            </Stack>
-          ))}
+          {data.leaderboard?.map((row) => {
+            const medal = medalColor(row.rank);
+            return (
+              <Stack key={row.displayNumber} direction="row" alignItems="center" spacing={2} sx={{ px: 3, py: 1.5 }}>
+                <Typography sx={{ width: 28, fontWeight: 800, color: medal || TEXT }}>
+                  {medal ? <EmojiEvents sx={{ fontSize: 20, color: medal }} /> : `#${row.rank}`}
+                </Typography>
+                <Avatar src={row.photoUrl} sx={{ width: 32, height: 32, bgcolor: NAVY, fontSize: 13 }}>
+                  {row.name?.[0]}
+                </Avatar>
+                <Box sx={{ flex: 1 }}>
+                  <Typography sx={{ fontWeight: 700, fontSize: 14, color: TEXT }}>{row.name}</Typography>
+                  <Typography sx={{ fontSize: 11, color: MUTED }}>{row.school}</Typography>
+                </Box>
+                <Typography sx={{ fontWeight: 800, fontSize: 16, color: TEXT }}>{row.totalMarks}</Typography>
+              </Stack>
+            );
+          })}
           {!data.leaderboard?.length && (
             <Typography sx={{ p: 3, textAlign: "center", color: MUTED, fontSize: 13 }}>
               Scores will appear once Round 1 begins.

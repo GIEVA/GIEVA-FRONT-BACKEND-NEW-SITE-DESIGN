@@ -459,6 +459,7 @@ export const getAudienceState = async (req, res) => {
     }
 
     // Leaderboard (scores, no individual answers)
+       // Leaderboard (scores, no individual answers)
     const scores = round
       ? await QuizScore.findAll({
           where:   { eventId: event.id, roundId: round.id },
@@ -467,19 +468,34 @@ export const getAudienceState = async (req, res) => {
         })
       : [];
 
-    res.json({
-      event:           { id: event.id, name: event.name, status: event.status, category: event.category },
-      activeRound:     event.activeRound,
-      currentQuestion,
-      leaderboard:     scores.map((s, i) => ({
-        rank:          i + 1,
+    // Dense ranking: tied scores share a rank, and the next distinct
+    // score takes the very next rank (1, 1, 2, 3 — not 1, 1, 3, 4).
+    // Two people tied for gold both show rank 1; the next person down
+    // is silver (rank 2), whatever their position in the array.
+    let rank = 0;
+    let lastScore = null;
+    const leaderboard = scores.map((s) => {
+      const total = Number(s.totalMarks);
+      if (lastScore === null || total !== lastScore) {
+        rank += 1;
+        lastScore = total;
+      }
+      return {
+        rank,
         name:          s.QuizParticipant?.name,
         school:        s.QuizParticipant?.school,
         displayNumber: s.QuizParticipant?.displayNumber,
         photoUrl:      s.QuizParticipant?.photoUrl,
         totalMarks:    s.totalMarks,
         correctCount:  s.correctCount,
-      })),
+      };
+    });
+
+    res.json({
+      event:           { id: event.id, name: event.name, status: event.status, category: event.category },
+      activeRound:     event.activeRound,
+      currentQuestion,
+      leaderboard,
     });
   } catch (err) {
     console.error("getAudienceState:", err);
