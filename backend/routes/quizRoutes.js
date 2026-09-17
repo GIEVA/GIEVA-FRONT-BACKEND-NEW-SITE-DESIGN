@@ -32,6 +32,7 @@ import {
   logIncident,
   getEventByCode,
   getFinalRankingReview,
+ restartEvent, updateQuestion, deleteQuestion, updateParticipant, deleteParticipant,
 } from "../controllers/adminQuizEventController.js";
 
 import {
