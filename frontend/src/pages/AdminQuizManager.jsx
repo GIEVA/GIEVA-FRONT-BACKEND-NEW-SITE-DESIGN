@@ -172,7 +172,8 @@ function CreateEventDialog({ open, onClose, editing, onSaved }) {
     round1ParticipantLimit: 10, round1QuestionCount: 12,
     round2ParticipantLimit: 5,  round2QuestionCount: 12,
     eliminateAfterRound1: 5, questionsPerSubject: 3,
-    questionTimerSeconds: 60, tiebreakQuestionCount: 10,
+    questionTimerSeconds: 60, round1TiebreakQuestionCount: 5,
+     tiebreakQuestionCount: 10,
   };
   const [form, setForm] = useState(blank);
   const [saving, setSaving] = useState(false);
@@ -186,6 +187,7 @@ function CreateEventDialog({ open, onClose, editing, onSaved }) {
         round1QuestionCount: editing.round1QuestionCount, round2ParticipantLimit: editing.round2ParticipantLimit,
         round2QuestionCount: editing.round2QuestionCount, eliminateAfterRound1: editing.eliminateAfterRound1,
         questionsPerSubject: editing.questionsPerSubject, questionTimerSeconds: editing.questionTimerSeconds,
+        round1TiebreakQuestionCount: editing.round1TiebreakQuestionCount ?? 5,
         tiebreakQuestionCount: editing.tiebreakQuestionCount,
       });
     } else {
@@ -260,7 +262,12 @@ function CreateEventDialog({ open, onClose, editing, onSaved }) {
             <TextField fullWidth type="number" label="Questions per subject" value={form.questionsPerSubject} onChange={set("questionsPerSubject")} sx={sx} />
           </Grid>
           <Grid item xs={6} sm={4}>
-            <TextField fullWidth type="number" label="Tiebreak questions" value={form.tiebreakQuestionCount} onChange={set("tiebreakQuestionCount")} sx={sx} />
+            <TextField fullWidth type="number" label="R1 Tiebreak Questions"
+              value={form.round1TiebreakQuestionCount} onChange={set("round1TiebreakQuestionCount")} sx={sx} />
+          </Grid>
+          <Grid item xs={6} sm={4}>
+            <TextField fullWidth type="number" label="R2/Final Tiebreak Questions"
+              value={form.tiebreakQuestionCount} onChange={set("tiebreakQuestionCount")} sx={sx} />
           </Grid>
         </Grid>
       </DialogContent>

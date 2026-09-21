@@ -69,7 +69,11 @@ export const openNextQuestion = async (io, eventId, userId = null) => {
   const event = await QuizEvent.findByPk(eventId);
   if (!event) return { ok: false, message: "Event not found" };
 
-  const validStates = ["round1_intro","round1_result_revealed","round2_intro","round2_result_revealed","tiebreak_active"];
+  const validStates = [
+  "round1_intro", "round1_result_revealed",
+  "round2_intro", "round2_result_revealed",
+  "round1_tiebreak_active", "tiebreak_active",
+];
   if (!validStates.includes(event.status))
     return { ok: false, message: `Cannot open next question from state: ${event.status}` };
 
@@ -91,9 +95,16 @@ export const openNextQuestion = async (io, eventId, userId = null) => {
   await rq.save();
 
   event.currentQuestionIdx = nextIdx + 1;
-  event.status = event.activeRound === 1
-    ? "round1_question_open"
-    : (event.activeRound === 99 ? "tiebreak_active" : "round2_question_open");
+  // event.status = event.activeRound === 1
+  //   ? "round1_question_open"
+  //   : (event.activeRound === 99 ? "tiebreak_active" : "round2_question_open");
+  const openStatusMap = {
+  1: "round1_question_open",
+  2: "round2_question_open",
+  98: "round1_tiebreak_active",
+  99: "tiebreak_active",
+};
+event.status = openStatusMap[event.activeRound] || "round1_question_open";
   await event.save();
 
   await audit(event.id, userId, "question_opened", {
@@ -139,7 +150,7 @@ export const lockQuestion = async (io, eventId, userId = null) => {
   await rq.save();
 
   const participantWhere = { eventId: event.id };
-  if (event.activeRound === 99) {
+  if ([98, 99].includes(event.activeRound)) {
     participantWhere.id = { [Op.in]: round.tiebreakParticipants || [] };
   } else {
     participantWhere.status = { [Op.in]: ["active","qualified_round2","tiebreak"] };
@@ -178,7 +189,12 @@ export const lockQuestion = async (io, eventId, userId = null) => {
     await score.save();
   }
 
-  const stateMap = { 1: "round1_question_locked", 2: "round2_question_locked", 99: "tiebreak_active" };
+  const stateMap = {
+  1: "round1_question_locked",
+  2: "round2_question_locked",
+  98: "round1_tiebreak_active",
+  99: "tiebreak_active",
+};
   event.status = stateMap[event.activeRound] || "round1_question_locked";
   await event.save();
 
@@ -216,8 +232,13 @@ export const revealResult = async (io, eventId, userId = null) => {
   rq.revealedAt = new Date();
   await rq.save();
 
-  const stateMap = { 1: "round1_result_revealed", 2: "round2_result_revealed" };
-  event.status = stateMap[event.activeRound] || "round1_result_revealed";
+  const stateMap = {
+  1: "round1_result_revealed",
+  2: "round2_result_revealed",
+  98: "round1_tiebreak_active",
+  99: "tiebreak_active",
+};
+event.status = stateMap[event.activeRound] || "round1_result_revealed";
   await event.save();
 
   const scores = await QuizScore.findAll({
@@ -267,8 +288,8 @@ export const checkEarlyLock = async (io, eventId, roundQuestionId) => {
   if (!event) return;
 
   const participantWhere = { eventId: Number(eventId) };
-  if (rq.QuizRound.roundNumber === 99) {
-    participantWhere.id = { [Op.in]: rq.QuizRound.tiebreakParticipants || [] };
+  if ([98, 99].includes(rq.QuizRound.roundNumber)) {
+  participantWhere.id = { [Op.in]: rq.QuizRound.tiebreakParticipants || [] };
   } else {
     participantWhere.status = { [Op.in]: ["active","qualified_round2","tiebreak"] };
   }
@@ -296,6 +317,7 @@ export const recoverPendingTimers = async (io) => {
       status: {
         [Op.in]: [
           "round1_question_open", "round2_question_open", "tiebreak_active",
+          "round1_tiebreak_active", 
           "round1_question_locked", "round2_question_locked",
           "round1_result_revealed", "round2_result_revealed",
         ],

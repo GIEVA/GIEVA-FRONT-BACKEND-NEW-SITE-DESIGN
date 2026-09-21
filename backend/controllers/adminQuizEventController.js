@@ -168,7 +168,7 @@ export const createEvent = async (req, res) => {
       marksPerCorrect, negativeMarking, negativeMarkValue,
       questionTimerSeconds, immediateFeedback,
       finalScoreRule, round2Weight,
-      tiebreakSubject, tiebreakQuestionCount,
+      tiebreakSubject, round1TiebreakQuestionCount, tiebreakQuestionCount,
       subjectOrder, audienceScreenMode,
     } = req.body;
 
@@ -194,6 +194,7 @@ export const createEvent = async (req, res) => {
       finalScoreRule:        finalScoreRule        || "sum",
       round2Weight:          round2Weight          || 1,
       tiebreakSubject:       tiebreakSubject       || null,
+      round1TiebreakQuestionCount: round1TiebreakQuestionCount || 5,
       tiebreakQuestionCount: tiebreakQuestionCount || 10,
       subjectOrder:          subjectOrder          || ["Biology","Physics","Chemistry","Mathematics"],
       audienceScreenMode:    audienceScreenMode    || "public",
@@ -690,14 +691,26 @@ export const startRound1Tiebreak = async (req, res) => {
     const { tiedParticipantIds, questionIds } = req.body;
     if (!Array.isArray(tiedParticipantIds) || tiedParticipantIds.length < 2)
       return res.status(400).json({ message: "Need at least 2 tied participant IDs" });
-    if (!Array.isArray(questionIds) || questionIds.length === 0)
-      return res.status(400).json({ message: "Select at least one question for the tiebreak" });
 
-    const tbQuestions = await QuizQuestion.findAll({
-      where: { id: { [Op.in]: questionIds }, eventId: event.id, status: "approved" },
-    });
-    if (tbQuestions.length !== questionIds.length)
-      return res.status(400).json({ message: "One or more selected questions are not approved for this event." });
+    let tbQuestions;
+    if (Array.isArray(questionIds) && questionIds.length > 0) {
+      tbQuestions = await QuizQuestion.findAll({
+        where: { id: { [Op.in]: questionIds }, eventId: event.id, status: "approved" },
+      });
+      if (tbQuestions.length !== questionIds.length)
+        return res.status(400).json({ message: "One or more selected questions are not approved for this event." });
+    } else {
+      tbQuestions = await QuizQuestion.findAll({
+        where: { eventId: event.id, status: "approved", roundAssignment: "tiebreak" },
+        limit: event.round1TiebreakQuestionCount,
+        order: sequelize.random(),
+      });
+      if (tbQuestions.length < event.round1TiebreakQuestionCount)
+        return res.status(400).json({
+          message: `Need ${event.round1TiebreakQuestionCount} approved tiebreak questions, or select questions manually. Found ${tbQuestions.length}.`,
+        });
+    }
+
 
     const tbRound = await QuizRound.create({
       eventId: event.id,

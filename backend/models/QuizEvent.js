@@ -59,6 +59,11 @@ export default (sequelize) => {
     tiebreakSubject:         { type: DataTypes.STRING(50), allowNull: true }, // null = sudden death
     tiebreakQuestionCount:   { type: DataTypes.INTEGER,   defaultValue: 10 },
 
+      round1TiebreakQuestionCount: {
+        type: DataTypes.INTEGER,
+        defaultValue: 5,
+      },
+
     // Subject order (JSON array)
     subjectOrder: {
       type: DataTypes.JSON,
