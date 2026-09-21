@@ -86,6 +86,15 @@ export const startTiebreak = (eventId, payload) =>
 
 
 
+export const deleteEvent = (id) =>
+  API.delete(`${BASE}/events/${id}`).then((r) => r.data);
+
+export const startRound1Tiebreak = (eventId, payload) =>
+  API.post(`${BASE}/events/${eventId}/start-round1-tiebreak`, payload).then((r) => r.data);
+
+export const getRound1TiebreakReview = (eventId) =>
+  API.get(`${BASE}/events/${eventId}/round1-tiebreak-review`).then((r) => r.data);
+
 // ── Participant — no auth ──────────────────────────────────────
 export const joinEvent             = (participantCode) =>
   PUBLIC_API.post(`${BASE}/join`, { participantCode }).then((r) => r.data);

@@ -14,21 +14,22 @@ export default (sequelize) => {
     category:    { type: DataTypes.ENUM("SS2", "SS3", "SS2_SS3"), defaultValue: "SS2_SS3" },
 
     // State machine — matches doc section 14
-    status: {
-      type: DataTypes.ENUM(
-        "draft", "published", "ready",
-        "round1_intro", "round1_question_open", "round1_question_locked",
-        "round1_result_revealed", "round1_completed",
-        "elimination_review",
-        "tiebreak_active",          // supplementary quiz for ties
-        "round2_intro",
-        "round2_question_open", "round2_question_locked",
-        "round2_result_revealed", "round2_completed",
-        "final_review", "completed",
-        "paused", "cancelled"
-      ),
-      defaultValue: "draft",
-    },
+        status: {
+          type: DataTypes.ENUM(
+            "draft", "published", "ready",
+            "round1_intro", "round1_question_open", "round1_question_locked",
+            "round1_result_revealed", "round1_completed",
+            "elimination_review",
+            "round1_tiebreak_active", "round1_tiebreak_completed",
+            "tiebreak_active", "tiebreak_completed",
+            "round2_intro",
+            "round2_question_open", "round2_question_locked",
+            "round2_result_revealed", "round2_completed",
+            "final_review", "completed",
+            "paused", "cancelled"
+          ),
+          defaultValue: "draft",
+        },
 
     // State before pause (so we can resume to the right state)
     pausedFromStatus: { type: DataTypes.STRING(60), allowNull: true },

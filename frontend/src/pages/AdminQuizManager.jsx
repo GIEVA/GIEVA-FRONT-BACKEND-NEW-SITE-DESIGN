@@ -21,11 +21,12 @@ import {
 } from "@mui/icons-material";
 
 import {
-  createEvent, listEvents, getEvent, publishEvent,
+  createEvent, listEvents, getEvent, updateEvent, deleteEvent, publishEvent,
   addParticipant, addQuestion, approveQuestion, assignQuestions,
   startEvent, openNextQuestion, lockQuestion, revealResult,
   completeRound, pauseEvent, resumeEvent, completeEvent,
   getEliminationReview, confirmElimination, startTiebreak,
+  startRound1Tiebreak, getRound1TiebreakReview,
   voidQuestion, adjustScore, getPanelistDashboard, exportResults, getFinalRankingReview,
   restartEvent, updateQuestion, deleteQuestion, updateParticipant, deleteParticipant,
 } from "../services/liveQuizService";
@@ -69,22 +70,130 @@ const STATUS_CFG = {
   completed:                { label: "Completed",       color: GREEN,   bg: `${GREEN}15` },
   paused:                   { label: "Paused",          color: GOLD,    bg: `rgba(212,160,23,0.1)` },
   cancelled:                { label: "Cancelled",       color: RED,     bg: `rgba(239,68,68,0.1)` },
+  round1_tiebreak_active:   { label: "R1 Tiebreak",   color: GOLD, bg: `rgba(212,160,23,0.1)` },
+  round1_tiebreak_completed:{ label: "R1 TB Done",    color: MUTED, bg: "#F1F5F9" },
+  tiebreak_completed:       { label: "Tiebreak Done", color: MUTED, bg: "#F1F5F9" },
+
 };
 
 const sx = { "& fieldset": { borderColor: BORDER } };
 
 // ─── Create Event Dialog ──────────────────────────────────────
-function CreateEventDialog({ open, onClose, onCreated }) {
-  const [form, setForm] = useState({
+// function CreateEventDialog({ open, onClose, onCreated }) {
+//   const [form, setForm] = useState({
+//     name: "", description: "", venue: "", category: "SS2_SS3",
+//     round1ParticipantLimit: 10, round1QuestionCount: 12,
+//     round2ParticipantLimit: 5,  round2QuestionCount: 12,
+//     eliminateAfterRound1: 5, questionsPerSubject: 3,
+//     questionTimerSeconds: 60, tiebreakQuestionCount: 10,
+//   });
+//   const [saving, setSaving] = useState(false);
+//   const [error,  setError]  = useState("");
+
+
+//   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+
+//   const handleSave = async () => {
+//     if (!form.name.trim()) { setError("Event name is required."); return; }
+//     try {
+//       setSaving(true); setError("");
+//       const res = await createEvent(form);
+//       onCreated(res.event);
+//       onClose();
+//     } catch (err) {
+//       setError(err?.response?.data?.message || "Failed to create event");
+//     } finally { setSaving(false); }
+//   };
+
+//   return (
+//     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth
+//       PaperProps={{ sx: { borderRadius: 3 } }}>
+//       <DialogTitle sx={{ fontWeight: 800, fontSize: 18, color: TEXT }}>
+//         Create Quiz Event
+//       </DialogTitle>
+//       <DialogContent dividers>
+//         {error && <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>{error}</Alert>}
+//         <Grid container spacing={2.5}>
+//           <Grid item xs={12} sm={8}>
+//             <TextField fullWidth label="Event Name *" value={form.name} onChange={set("name")} sx={sx} />
+//           </Grid>
+//           <Grid item xs={12} sm={4}>
+//             <TextField fullWidth select label="Category" value={form.category} onChange={set("category")} sx={sx}>
+//               {["SS2","SS3","SS2_SS3"].map((c) => <MenuItem key={c} value={c}>{c}</MenuItem>)}
+//             </TextField>
+//           </Grid>
+//           <Grid item xs={12}>
+//             <TextField fullWidth multiline rows={2} label="Description" value={form.description} onChange={set("description")} sx={sx} />
+//           </Grid>
+//           <Grid item xs={12} sm={6}>
+//             <TextField fullWidth label="Venue" value={form.venue} onChange={set("venue")} sx={sx} />
+//           </Grid>
+//           <Grid item xs={12} sm={6}>
+//             <TextField fullWidth type="number" label="Timer per question (seconds)" value={form.questionTimerSeconds} onChange={set("questionTimerSeconds")} sx={sx} />
+//           </Grid>
+//           <Grid item xs={12}><Divider><Typography sx={{ fontSize: 12, color: MUTED }}>ROUND CONFIGURATION</Typography></Divider></Grid>
+//           <Grid item xs={6} sm={3}>
+//             <TextField fullWidth type="number" label="R1 Participants" value={form.round1ParticipantLimit} onChange={set("round1ParticipantLimit")} sx={sx} />
+//           </Grid>
+//           <Grid item xs={6} sm={3}>
+//             <TextField fullWidth type="number" label="R1 Questions" value={form.round1QuestionCount} onChange={set("round1QuestionCount")} sx={sx} />
+//           </Grid>
+//           <Grid item xs={6} sm={3}>
+//             <TextField fullWidth type="number" label="R2 Participants" value={form.round2ParticipantLimit} onChange={set("round2ParticipantLimit")} sx={sx} />
+//           </Grid>
+//           <Grid item xs={6} sm={3}>
+//             <TextField fullWidth type="number" label="R2 Questions" value={form.round2QuestionCount} onChange={set("round2QuestionCount")} sx={sx} />
+//           </Grid>
+//           <Grid item xs={6} sm={4}>
+//             <TextField fullWidth type="number" label="Eliminate after R1 (keep top N)" value={form.eliminateAfterRound1} onChange={set("eliminateAfterRound1")} sx={sx} />
+//           </Grid>
+//           <Grid item xs={6} sm={4}>
+//             <TextField fullWidth type="number" label="Questions per subject" value={form.questionsPerSubject} onChange={set("questionsPerSubject")} sx={sx} />
+//           </Grid>
+//           <Grid item xs={6} sm={4}>
+//             <TextField fullWidth type="number" label="Tiebreak questions" value={form.tiebreakQuestionCount} onChange={set("tiebreakQuestionCount")} sx={sx} />
+//           </Grid>
+//         </Grid>
+//       </DialogContent>
+//       <DialogActions sx={{ px: 3, pb: 2.5, gap: 1 }}>
+//         <Button onClick={onClose} sx={{ textTransform: "none", color: MUTED }}>Cancel</Button>
+//         <Button onClick={handleSave} variant="contained" disabled={saving}
+//           sx={{ textTransform: "none", bgcolor: NAVY, fontWeight: 700, borderRadius: 2, "&:hover": { bgcolor: GREEN } }}>
+//           {saving ? <CircularProgress size={18} color="inherit" /> : "Create Event"}
+//         </Button>
+//       </DialogActions>
+//     </Dialog>
+//   );
+// }
+
+function CreateEventDialog({ open, onClose, editing, onSaved }) {
+  const blank = {
     name: "", description: "", venue: "", category: "SS2_SS3",
     round1ParticipantLimit: 10, round1QuestionCount: 12,
     round2ParticipantLimit: 5,  round2QuestionCount: 12,
     eliminateAfterRound1: 5, questionsPerSubject: 3,
     questionTimerSeconds: 60, tiebreakQuestionCount: 10,
-  });
+  };
+  const [form, setForm] = useState(blank);
   const [saving, setSaving] = useState(false);
   const [error,  setError]  = useState("");
 
+  useEffect(() => {
+    if (editing) {
+      setForm({
+        name: editing.name, description: editing.description || "", venue: editing.venue || "",
+        category: editing.category, round1ParticipantLimit: editing.round1ParticipantLimit,
+        round1QuestionCount: editing.round1QuestionCount, round2ParticipantLimit: editing.round2ParticipantLimit,
+        round2QuestionCount: editing.round2QuestionCount, eliminateAfterRound1: editing.eliminateAfterRound1,
+        questionsPerSubject: editing.questionsPerSubject, questionTimerSeconds: editing.questionTimerSeconds,
+        tiebreakQuestionCount: editing.tiebreakQuestionCount,
+      });
+    } else {
+      setForm(blank);
+    }
+    setError("");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editing, open]);
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
@@ -92,11 +201,16 @@ function CreateEventDialog({ open, onClose, onCreated }) {
     if (!form.name.trim()) { setError("Event name is required."); return; }
     try {
       setSaving(true); setError("");
-      const res = await createEvent(form);
-      onCreated(res.event);
+      if (editing) {
+        const res = await updateEvent(editing.id, form);
+        onSaved(res.event);
+      } else {
+        const res = await createEvent(form);
+        onSaved(res.event);
+      }
       onClose();
     } catch (err) {
-      setError(err?.response?.data?.message || "Failed to create event");
+      setError(err?.response?.data?.message || `Failed to ${editing ? "update" : "create"} event`);
     } finally { setSaving(false); }
   };
 
@@ -104,7 +218,7 @@ function CreateEventDialog({ open, onClose, onCreated }) {
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth
       PaperProps={{ sx: { borderRadius: 3 } }}>
       <DialogTitle sx={{ fontWeight: 800, fontSize: 18, color: TEXT }}>
-        Create Quiz Event
+        {editing ? "Edit Quiz Event" : "Create Quiz Event"}
       </DialogTitle>
       <DialogContent dividers>
         {error && <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>{error}</Alert>}
@@ -154,7 +268,7 @@ function CreateEventDialog({ open, onClose, onCreated }) {
         <Button onClick={onClose} sx={{ textTransform: "none", color: MUTED }}>Cancel</Button>
         <Button onClick={handleSave} variant="contained" disabled={saving}
           sx={{ textTransform: "none", bgcolor: NAVY, fontWeight: 700, borderRadius: 2, "&:hover": { bgcolor: GREEN } }}>
-          {saving ? <CircularProgress size={18} color="inherit" /> : "Create Event"}
+          {saving ? <CircularProgress size={18} color="inherit" /> : editing ? "Save Changes" : "Create Event"}
         </Button>
       </DialogActions>
     </Dialog>
@@ -299,6 +413,31 @@ const [finalLoading, setFinalLoading] = useState(false);
 
 const [selectedQualified, setSelectedQualified] = useState([]);
 
+const [r1tbQuestionIds, setR1tbQuestionIds] = useState([]);
+const [r1tbData, setR1tbData] = useState(null);       // review of the round-98 tiebreak results
+const [r1tbLoading, setR1tbLoading] = useState(false);
+const [selectedR1tbWinners, setSelectedR1tbWinners] = useState([]);
+
+
+const loadRound1TiebreakReview = async () => {
+  try {
+    setR1tbLoading(true);
+    const res = await getRound1TiebreakReview(event.id);
+    setR1tbData(res);
+    setSelectedR1tbWinners(res.tiebreakScores.slice(0, res.remainingSlots).map((s) => s.participantId));
+  } catch (err) {
+    setToast({ msg: err?.response?.data?.message || "Failed to load round 1 tiebreak review", severity: "error" });
+  } finally {
+    setR1tbLoading(false);
+  }
+};
+
+const toggleR1tbWinner = (participantId) => {
+  setSelectedR1tbWinners((ids) =>
+    ids.includes(participantId) ? ids.filter((id) => id !== participantId) : [...ids, participantId]
+  );
+};
+
 const loadFinalReview = async () => {
   try {
     setFinalLoading(true);
@@ -337,12 +476,27 @@ const loadFinalReview = async () => {
     }
   };
 
+// const loadEliminationReview = async () => {
+//   try {
+//     setElimLoading(true);
+//     const res = await getEliminationReview(event.id);
+//     setElimData(res);
+//     setSelectedQualified(res.scores.slice(0, res.qualifyCount).map((s) => s.participantId));
+//   } catch (err) {
+//     setToast({ msg: err?.response?.data?.message || "Failed to load elimination review", severity: "error" });
+//   } finally {
+//     setElimLoading(false);
+//   }
+// };
+
 const loadEliminationReview = async () => {
   try {
     setElimLoading(true);
     const res = await getEliminationReview(event.id);
     setElimData(res);
-    setSelectedQualified(res.scores.slice(0, res.qualifyCount).map((s) => s.participantId));
+    if (!res.needsTiebreak) {
+      setSelectedQualified([...res.clearlyQualifiedIds, ...res.tiedGroupIds]);
+    }
   } catch (err) {
     setToast({ msg: err?.response?.data?.message || "Failed to load elimination review", severity: "error" });
   } finally {
@@ -362,19 +516,46 @@ const toggleQualified = (participantId) => {
   // Once auto-advance is live, the server changes state without any admin
   // click, so these buttons must react to the polled dashboard, not just
   // to onRefresh() (which only fires after this admin's own action).
-  const s = dashboard?.event?.status ?? event.status;
-  const activeRoundDisplay = dashboard?.event?.activeRound ?? event.activeRound;
+  // const s = dashboard?.event?.status ?? event.status;
+  // const activeRoundDisplay = dashboard?.event?.activeRound ?? event.activeRound;
 
-  const isR1Open    = s === "round1_question_open";
-  const isR2Open    = s === "round2_question_open";
-  const isOpen      = isR1Open || isR2Open || s === "tiebreak_active";
-  const isLocked    = s === "round1_question_locked" || s === "round2_question_locked";
-  const isRevealed  = s === "round1_result_revealed"  || s === "round2_result_revealed";
-  const isIntro     = s === "round1_intro" || s === "round2_intro";
-  const isR1Done    = s === "round1_completed";
-  const isR2Done    = s === "round2_completed";
-  const isPaused    = s === "paused";
-  const canVoid     = isOpen || isLocked;
+  // const isR1Open    = s === "round1_question_open";
+  // const isR2Open    = s === "round2_question_open";
+  // const isOpen      = isR1Open || isR2Open || s === "tiebreak_active";
+  // const isLocked    = s === "round1_question_locked" || s === "round2_question_locked";
+  // const isRevealed  = s === "round1_result_revealed"  || s === "round2_result_revealed";
+  // const isIntro     = s === "round1_intro" || s === "round2_intro";
+  // const isR1Done    = s === "round1_completed";
+  // const isR2Done    = s === "round2_completed";
+  // const isPaused    = s === "paused";
+  // const canVoid     = isOpen || isLocked;
+
+    const s = dashboard?.event?.status ?? event.status;
+  const activeRoundDisplay = dashboard?.event?.activeRound ?? event.activeRound;
+  const cq = dashboard?.currentQuestion; // the live QuizRoundQuestion record, or null/undefined
+
+  // Question-phase state comes from the actual round-question record —
+  // this works uniformly for Round 1, Round 2, and the tiebreak (round 99),
+  // none of which get their own per-question event.status strings.
+  const isOpen     = cq?.status === "open";
+  const isLocked   = cq?.status === "locked";
+  const isRevealed = cq?.status === "revealed";
+
+  // "Ready to open the next question" — no live question right now, but
+  // we're in an active round phase (round intro, post-reveal, or anywhere
+  // inside an ongoing tiebreak) rather than a round-boundary/admin-review state.
+const roundInProgress = [
+  "round1_intro", "round1_question_open", "round1_question_locked", "round1_result_revealed",
+  "round1_tiebreak_active",   // ← add this
+  "round2_intro", "round2_question_open", "round2_question_locked", "round2_result_revealed",
+  "tiebreak_active",
+].includes(s);
+  const isIntro = roundInProgress && !cq;
+
+  const isR1Done = s === "round1_completed";
+  const isR2Done = s === "round2_completed";
+  const isPaused = s === "paused";
+  const canVoid  = isOpen || isLocked;
 
   const cfg = STATUS_CFG[s] || STATUS_CFG.draft;
 
@@ -412,6 +593,61 @@ const toggleQualified = (participantId) => {
           }
         </Stack>
       </Paper>
+
+      {r1tbData && (
+        <Dialog open={!!r1tbData} onClose={() => setR1tbData(null)} maxWidth="md" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
+          <DialogTitle sx={{ fontWeight: 800 }}>Round 1 Tiebreak Result — Choose who advances</DialogTitle>
+          <DialogContent dividers>
+            <Alert severity="info" sx={{ mb: 2, borderRadius: 2 }}>
+              {r1tbData.remainingSlots} slot(s) remain for Round 2. Top {r1tbData.remainingSlots} by tiebreak score are
+              pre-checked — adjust as needed.
+            </Alert>
+            <Table size="small">
+              <TableHead>
+                <TableRow>{["Advance","Name","School","Tiebreak Score"].map((h) =>
+                  <TableCell key={h} sx={{ fontWeight: 700, color: MUTED, fontSize: 12 }}>{h}</TableCell>)}</TableRow>
+              </TableHead>
+              <TableBody>
+                {r1tbData.tiebreakScores.map((s) => {
+                  const checked = selectedR1tbWinners.includes(s.participantId);
+                  return (
+                    <TableRow key={s.id} sx={{ bgcolor: checked ? `${GREEN}08` : "transparent" }}>
+                      <TableCell padding="checkbox">
+                        <input type="checkbox" checked={checked} onChange={() => toggleR1tbWinner(s.participantId)} />
+                      </TableCell>
+                      <TableCell sx={{ fontWeight: 700 }}>{s.QuizParticipant?.name}</TableCell>
+                      <TableCell sx={{ color: MUTED }}>{s.QuizParticipant?.school}</TableCell>
+                      <TableCell sx={{ fontWeight: 800 }}>{s.totalMarks}</TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </DialogContent>
+          <DialogActions sx={{ px: 3, pb: 2.5, gap: 1 }}>
+            <Typography sx={{ fontSize: 12, color: MUTED, mr: "auto", alignSelf: "center" }}>
+              {selectedR1tbWinners.length} advancing from the tiebreak
+            </Typography>
+            <Button onClick={() => setR1tbData(null)} sx={{ textTransform: "none", color: MUTED }}>Close</Button>
+            <Button variant="contained" disabled={submitting || selectedR1tbWinners.length === 0}
+              onClick={async () => {
+                const qualified  = [...r1tbData.clearlyQualifiedIds, ...selectedR1tbWinners];
+                const eliminated = [
+                  ...r1tbData.clearlyEliminatedIds,
+                  ...r1tbData.tiebreakScores.map((s) => s.participantId).filter((id) => !selectedR1tbWinners.includes(id)),
+                ];
+                await action(
+                  () => confirmElimination(event.id, { qualifiedParticipantIds: qualified, eliminatedParticipantIds: eliminated }),
+                  "Round 2 started!"
+                );
+                setR1tbData(null);
+              }}
+              sx={{ textTransform: "none", bgcolor: NAVY, fontWeight: 700, borderRadius: 2, "&:hover": { bgcolor: GREEN } }}>
+              Confirm & Start Round 2
+            </Button>
+          </DialogActions>
+        </Dialog>
+      )}
 
       {/* Action buttons */}
       <Paper elevation={0} sx={{ border: `1px solid ${BORDER}`, borderRadius: 3, p: 2.5, mb: 3 }}>
@@ -452,6 +688,13 @@ const toggleQualified = (participantId) => {
               {elimLoading ? <CircularProgress size={18} color="inherit" /> : "Elimination Review"}
             </Button>
           )}
+          {s === "round1_tiebreak_completed" && (
+              <Button variant="contained" startIcon={<Group />} disabled={r1tbLoading}
+                onClick={loadRound1TiebreakReview}
+                sx={{ textTransform: "none", bgcolor: RED, fontWeight: 700, borderRadius: 2 }}>
+                {r1tbLoading ? <CircularProgress size={18} color="inherit" /> : "Review Round 1 Tiebreak Result"}
+              </Button>
+            )}
          {isR2Done && (
             <Button variant="contained" startIcon={<Group />} disabled={finalLoading}
               onClick={loadFinalReview}
@@ -585,65 +828,122 @@ const toggleQualified = (participantId) => {
       </Dialog>
 
       {/* Elimination review dialog */}
-      {elimData && (
-        <Dialog open={!!elimData} onClose={() => setElimData(null)} maxWidth="md" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
-          <DialogTitle sx={{ fontWeight: 800, color: TEXT }}>Elimination Review — Choose who advances</DialogTitle>
-          <DialogContent dividers>
-            <Alert severity="info" sx={{ mb: 2, borderRadius: 2 }}>
-              Boxes are pre-checked using the top {elimData.baseQualifyCount} by score (expanded to {elimData.qualifyCount} to
-              keep tied scores together). Check or uncheck freely — you have the final say.
-            </Alert>
-            <Table size="small">
-              <TableHead>
-                <TableRow>
-                  {["Advance","Rank","Name","School","Score"].map((h) => (
-                    <TableCell key={h} sx={{ fontWeight: 700, color: MUTED, fontSize: 12 }}>{h}</TableCell>
-                  ))}
+    {elimData && (
+  <Dialog open={!!elimData} onClose={() => setElimData(null)} maxWidth="md" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
+    <DialogTitle sx={{ fontWeight: 800, color: TEXT }}>Elimination Review</DialogTitle>
+    <DialogContent dividers>
+      {elimData.needsTiebreak ? (
+        <>
+          <Alert severity="warning" sx={{ mb: 2, borderRadius: 2 }}>
+            <strong>{elimData.tiedGroup.length} participants are tied at score {elimData.boundaryScore}</strong>,
+            but only {elimData.remainingSlots} slot(s) remain after the {elimData.clearlyQualified.length} clear
+            qualifier(s). Run a tiebreak among the tied group to decide who fills the remaining slot(s) —
+            a positional cutoff would decide this arbitrarily.
+          </Alert>
+
+          <Typography sx={{ fontWeight: 700, fontSize: 13, color: TEXT, mb: 1 }}>Tied participants</Typography>
+          <Table size="small" sx={{ mb: 2 }}>
+            <TableHead>
+              <TableRow>{["Name","School","Score"].map((h) =>
+                <TableCell key={h} sx={{ fontWeight: 700, color: MUTED, fontSize: 12 }}>{h}</TableCell>)}</TableRow>
+            </TableHead>
+            <TableBody>
+              {elimData.tiedGroup.map((s) => (
+                <TableRow key={s.id}>
+                  <TableCell sx={{ fontWeight: 700 }}>{s.QuizParticipant?.name}</TableCell>
+                  <TableCell sx={{ color: MUTED }}>{s.QuizParticipant?.school}</TableCell>
+                  <TableCell sx={{ fontWeight: 800 }}>{s.totalMarks}</TableCell>
                 </TableRow>
-              </TableHead>
-              <TableBody>
-                {elimData.scores.map((s, i) => {
-                  const checked = selectedQualified.includes(s.participantId);
-                  return (
-                    <TableRow key={s.id} sx={{ bgcolor: checked ? `${GREEN}08` : `rgba(239,68,68,0.05)` }}>
-                      <TableCell padding="checkbox">
-                        <input type="checkbox" checked={checked} onChange={() => toggleQualified(s.participantId)} />
-                      </TableCell>
-                      <TableCell sx={{ fontWeight: 800, color: checked ? GREEN : RED }}>{i + 1}</TableCell>
-                      <TableCell sx={{ fontWeight: 700 }}>{s.QuizParticipant?.name}</TableCell>
-                      <TableCell sx={{ color: MUTED }}>{s.QuizParticipant?.school}</TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>{s.totalMarks}</TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </DialogContent>
-          <DialogActions sx={{ px: 3, pb: 2.5, gap: 1, flexWrap: "wrap" }}>
-            <Typography sx={{ fontSize: 12, color: MUTED, mr: "auto", alignSelf: "center" }}>
-              {selectedQualified.length} advancing to Round 2
-            </Typography>
-            <Button onClick={() => setElimData(null)} sx={{ textTransform: "none", color: MUTED }}>Close</Button>
-            <Button variant="contained" disabled={submitting || selectedQualified.length === 0}
-              onClick={async () => {
-                const eliminated = elimData.scores
-                  .map((s) => s.participantId)
-                  .filter((id) => !selectedQualified.includes(id));
-                await action(
-                  () => confirmElimination(event.id, {
-                    qualifiedParticipantIds: selectedQualified,
-                    eliminatedParticipantIds: eliminated,
-                  }),
-                  "Round 2 started!"
-                );
-                setElimData(null);
-              }}
-              sx={{ textTransform: "none", bgcolor: NAVY, fontWeight: 700, borderRadius: 2, "&:hover": { bgcolor: GREEN } }}>
-              Confirm & Start Round 2
-            </Button>
-          </DialogActions>
-        </Dialog>
+              ))}
+            </TableBody>
+          </Table>
+
+          <Divider sx={{ my: 2 }}><Typography sx={{ fontSize: 12, color: MUTED }}>SELECT TIEBREAK QUESTIONS (approved only)</Typography></Divider>
+          <Stack spacing={0.5} sx={{ maxHeight: 220, overflowY: "auto" }}>
+            {(eventQuestions || []).filter((q) => q.status === "approved").map((q) => {
+              const checked = r1tbQuestionIds.includes(q.id);
+              return (
+                <Box key={q.id} sx={{ display: "flex", alignItems: "flex-start", gap: 1, p: 0.75,
+                                       border: `1px solid ${BORDER}`, borderRadius: 1.5 }}>
+                  <input type="checkbox" checked={checked} style={{ marginTop: 4 }}
+                    onChange={() => setR1tbQuestionIds((ids) =>
+                      checked ? ids.filter((id) => id !== q.id) : [...ids, q.id])} />
+                  <Box>
+                    <Typography sx={{ fontSize: 12, fontWeight: 600 }} noWrap>{q.questionText}</Typography>
+                    <Typography sx={{ fontSize: 10, color: MUTED }}>{q.subject} · {q.difficulty}</Typography>
+                  </Box>
+                </Box>
+              );
+            })}
+          </Stack>
+        </>
+      ) : (
+        <Table size="small">
+          <TableHead>
+            <TableRow>
+              {["Advance","Name","School","Score"].map((h) => (
+                <TableCell key={h} sx={{ fontWeight: 700, color: MUTED, fontSize: 12 }}>{h}</TableCell>
+              ))}
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {elimData.scores.map((s) => {
+              const checked = selectedQualified.includes(s.participantId);
+              return (
+                <TableRow key={s.id} sx={{ bgcolor: checked ? `${GREEN}08` : `rgba(239,68,68,0.05)` }}>
+                  <TableCell padding="checkbox">
+                    <input type="checkbox" checked={checked} onChange={() => toggleQualified(s.participantId)} />
+                  </TableCell>
+                  <TableCell sx={{ fontWeight: 700 }}>{s.QuizParticipant?.name}</TableCell>
+                  <TableCell sx={{ color: MUTED }}>{s.QuizParticipant?.school}</TableCell>
+                  <TableCell sx={{ fontWeight: 800 }}>{s.totalMarks}</TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
       )}
+    </DialogContent>
+    <DialogActions sx={{ px: 3, pb: 2.5, gap: 1, flexWrap: "wrap" }}>
+      <Button onClick={() => setElimData(null)} sx={{ textTransform: "none", color: MUTED }}>Close</Button>
+      {elimData.needsTiebreak ? (
+        <Button variant="contained" disabled={submitting || r1tbQuestionIds.length === 0}
+          onClick={async () => {
+            await action(
+              () => startRound1Tiebreak(event.id, {
+                tiedParticipantIds: elimData.tiedGroupIds,
+                questionIds: r1tbQuestionIds,
+              }),
+              "Round 1 tiebreak started!"
+            );
+            setElimData(null);
+            setR1tbQuestionIds([]);
+          }}
+          sx={{ textTransform: "none", bgcolor: GOLD, color: NAVY, fontWeight: 700, borderRadius: 2 }}>
+          Start Round 1 Tiebreak
+        </Button>
+      ) : (
+        <Button variant="contained" disabled={submitting || selectedQualified.length === 0}
+          onClick={async () => {
+            const eliminated = elimData.scores
+              .map((s) => s.participantId)
+              .filter((id) => !selectedQualified.includes(id));
+            await action(
+              () => confirmElimination(event.id, {
+                qualifiedParticipantIds: selectedQualified,
+                eliminatedParticipantIds: eliminated,
+              }),
+              "Round 2 started!"
+            );
+            setElimData(null);
+          }}
+          sx={{ textTransform: "none", bgcolor: NAVY, fontWeight: 700, borderRadius: 2, "&:hover": { bgcolor: GREEN } }}>
+          Confirm & Start Round 2
+        </Button>
+      )}
+    </DialogActions>
+  </Dialog>
+)}
 
 
       {/* ← ADD THE NEW FINAL RANKING DIALOG HERE */}
@@ -761,6 +1061,9 @@ export default function AdminQuizManager() {
   const [deletePTarget, setDeletePTarget] = useState(null);
   const [restarting, setRestarting] = useState(false);
 
+  const [editingEvent, setEditingEvent] = useState(null); // null = create mode
+  const [deleteEventTarget, setDeleteEventTarget] = useState(null);
+
   const toggleSelect = (qId) => {
     setSelectedQIds((ids) => ids.includes(qId) ? ids.filter((i) => i !== qId) : [...ids, qId]);
   };
@@ -831,9 +1134,22 @@ export default function AdminQuizManager() {
                           <Typography sx={{ fontWeight: 800, fontSize: 15, color: TEXT }} noWrap>{ev.name}</Typography>
                           <Typography sx={{ fontSize: 12, color: MUTED }}>{ev.category} · #{ev.eventCode}</Typography>
                         </Box>
-                        <Chip label={cfg.label} size="small"
-                          sx={{ bgcolor: cfg.bg, color: cfg.color, fontWeight: 800, flexShrink: 0 }} />
+                        <Chip label={(STATUS_CFG[ev.status] || STATUS_CFG.draft).label} size="small"
+                          sx={{ bgcolor: (STATUS_CFG[ev.status] || STATUS_CFG.draft).bg,
+                                color: (STATUS_CFG[ev.status] || STATUS_CFG.draft).color, fontWeight: 800, flexShrink: 0 }} />
                       </Box>
+                      <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
+                        {["draft","published","ready"].includes(ev.status) && (
+                          <Button size="small" onClick={(e) => { e.stopPropagation(); setEditingEvent(ev); }}
+                            sx={{ textTransform: "none", fontSize: 11, p: 0, minWidth: 0, color: NAVY }}>
+                            Edit
+                          </Button>
+                        )}
+                        <Button size="small" onClick={(e) => { e.stopPropagation(); setDeleteEventTarget(ev); }}
+                          sx={{ textTransform: "none", fontSize: 11, p: 0, minWidth: 0, color: RED }}>
+                          Delete
+                        </Button>
+                      </Stack>
                     </Paper>
                   );
                 })}
@@ -846,6 +1162,33 @@ export default function AdminQuizManager() {
               </Stack>
             )}
           </Grid>
+
+          <Dialog open={!!deleteEventTarget} onClose={() => setDeleteEventTarget(null)} maxWidth="xs" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
+            <DialogTitle sx={{ fontWeight: 800 }}>Delete Event?</DialogTitle>
+            <DialogContent>
+              <Alert severity="warning" sx={{ borderRadius: 2 }}>
+                This permanently deletes "{deleteEventTarget?.name}" — participants, questions, rounds, scores, and audit
+                history included. This can't be undone.
+              </Alert>
+            </DialogContent>
+            <DialogActions sx={{ px: 3, pb: 2.5, gap: 1 }}>
+              <Button onClick={() => setDeleteEventTarget(null)} sx={{ textTransform: "none", color: MUTED }}>Cancel</Button>
+              <Button variant="contained"
+                onClick={async () => {
+                  try {
+                    await deleteEvent(deleteEventTarget.id);
+                    setEvents((evs) => evs.filter((e) => e.id !== deleteEventTarget.id));
+                    if (selectedEvt === deleteEventTarget.id) { setSelectedEvt(null); setEventDetail(null); }
+                    setToast({ msg: "Event deleted", severity: "success" });
+                  } catch (err) {
+                    setToast({ msg: err?.response?.data?.message || "Failed to delete event", severity: "error" });
+                  } finally { setDeleteEventTarget(null); }
+                }}
+                sx={{ textTransform: "none", bgcolor: RED, fontWeight: 700, borderRadius: 2 }}>
+                Delete Permanently
+              </Button>
+            </DialogActions>
+          </Dialog>
 
           {/* Event detail */}
           {selectedEvt && eventDetail && (
@@ -1199,8 +1542,20 @@ export default function AdminQuizManager() {
         </Grid>
       </Box>
 
-      <CreateEventDialog open={createOpen} onClose={() => setCreateOpen(false)}
-        onCreated={(ev) => { setEvents((e) => [ev, ...e]); setSelectedEvt(ev.id); setCreateOpen(false); }} />
+      <CreateEventDialog  open={createOpen || !!editingEvent}
+    onClose={() => { setCreateOpen(false); setEditingEvent(null); }}
+    editing={editingEvent}
+    onSaved={(ev) => {
+      if (editingEvent) {
+        setEvents((evs) => evs.map((e) => (e.id === ev.id ? ev : e)));
+        if (selectedEvt === ev.id) loadDetail(ev.id);
+      } else {
+        setEvents((evs) => [ev, ...evs]);
+        setSelectedEvt(ev.id);
+      }
+      setCreateOpen(false);
+      setEditingEvent(null);
+  }} />
 
       {eventDetail && (
         <QuestionDialog

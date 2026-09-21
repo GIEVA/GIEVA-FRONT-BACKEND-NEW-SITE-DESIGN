@@ -27,15 +27,20 @@ export default (sequelize) => {
         allowNull: false,
       },
 
+      // examType: {
+      //   type: DataTypes.ENUM(
+      //     "SAT",
+      //     "GRE",
+      //     "IELTS",
+      //     "TOEFL",
+      //     "ACT",
+      //     "SEVIS"
+      //   ),
+      //   allowNull: false,
+      // },
+
       examType: {
-        type: DataTypes.ENUM(
-          "SAT",
-          "GRE",
-          "IELTS",
-          "TOEFL",
-          "ACT",
-          "SEVIS"
-        ),
+        type: DataTypes.STRING(50),   // was ENUM("SAT","GRE","IELTS","TOEFL","ACT","SEVIS")
         allowNull: false,
       },
 

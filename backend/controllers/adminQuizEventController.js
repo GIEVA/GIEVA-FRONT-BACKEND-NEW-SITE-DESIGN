@@ -21,12 +21,49 @@ const isAdmin = (u) => u && ADMIN_ROLES.includes(u.role);
 
 // ── Helpers ────────────────────────────────────────────────────
 
+
+
+
 const audit = async (eventId, userId, action, extras = {}) => {
   try {
     await QuizAuditEvent.create({ eventId, userId, action, ...extras });
   } catch (err) {
     console.error("audit() failed:", err);
   }
+};
+
+// Splits Round 1 scores into three groups relative to the qualifying
+// cutoff: clearly qualified (safely above the line), the tied group
+// sitting exactly at the cutoff score (the source of any overflow),
+// and clearly eliminated. Used by both the elimination review screen
+// and the round-1 tiebreak review screen so the two stay consistent.
+const classifyRound1Qualification = async (event) => {
+  const round1 = await QuizRound.findOne({ where: { eventId: event.id, roundNumber: 1 } });
+  const scores = await QuizScore.findAll({
+    where:   { eventId: event.id, roundId: round1.id },
+    order:   [["totalMarks", "DESC"]],
+    include: [{ model: QuizParticipant }],
+  });
+
+  const baseQualify = event.round1ParticipantLimit - event.eliminateAfterRound1;
+
+  if (scores.length === 0) {
+    return { scores, baseQualify, clearlyQualified: [], tiedGroup: [], clearlyEliminated: [],
+             remainingSlots: baseQualify, boundaryScore: null, needsTiebreak: false };
+  }
+
+  const cutoffIdx     = Math.min(baseQualify, scores.length) - 1;
+  const boundaryScore = Number(scores[cutoffIdx]?.totalMarks);
+
+  const clearlyQualified  = scores.filter((s) => Number(s.totalMarks) >  boundaryScore);
+  const tiedGroup         = scores.filter((s) => Number(s.totalMarks) === boundaryScore);
+  const clearlyEliminated = scores.filter((s) => Number(s.totalMarks) <  boundaryScore);
+
+  const remainingSlots = baseQualify - clearlyQualified.length;
+  const needsTiebreak  = remainingSlots > 0 && tiedGroup.length > remainingSlots;
+
+  return { scores, baseQualify, clearlyQualified, tiedGroup, clearlyEliminated,
+           remainingSlots, boundaryScore, needsTiebreak };
 };
 
 // Broadcast current event state to all connected sockets in the event room.
@@ -219,17 +256,6 @@ export const getEvent = async (req, res) => {
   } catch (err) { res.status(500).json({ message: "Failed to fetch event" }); }
 };
 
-export const updateEvent = async (req, res) => {
-  try {
-    if (!isAdmin(req.user)) return res.status(403).json({ message: "Unauthorized" });
-    const event = await QuizEvent.findByPk(req.params.id);
-    if (!event) return res.status(404).json({ message: "Event not found" });
-    if (!["draft","published"].includes(event.status))
-      return res.status(400).json({ message: "Cannot edit a started event" });
-    await event.update(req.body);
-    res.json({ message: "Event updated", event });
-  } catch (err) { res.status(500).json({ message: "Failed to update event" }); }
-};
 
 // ======================================================
 // PUBLISH EVENT
@@ -522,7 +548,10 @@ export const completeRound = async (req, res) => {
       await scores[i].save();
     }
 
-    const stateMap = { 1: "round1_completed", 2: "round2_completed" };
+    // const stateMap = { 1: "round1_completed", 2: "round2_completed" };
+    // event.status = stateMap[event.activeRound] || "round1_completed";
+
+    const stateMap = { 1: "round1_completed", 2: "round2_completed", 98: "round1_tiebreak_completed", 99: "tiebreak_completed" };
     event.status = stateMap[event.activeRound] || "round1_completed";
     await event.save();
 
@@ -558,30 +587,18 @@ export const getEliminationReview = async (req, res) => {
     const event = await QuizEvent.findByPk(req.params.id);
     if (!event) return res.status(404).json({ message: "Event not found" });
 
-    const round1 = await QuizRound.findOne({ where: { eventId: event.id, roundNumber: 1 } });
-    const scores = await QuizScore.findAll({
-      where:   { eventId: event.id, roundId: round1.id },
-      order:   [["totalMarks","DESC"]],
-      include: [{ model: QuizParticipant }],
-    });
-
-    const baseQualify = event.round1ParticipantLimit - event.eliminateAfterRound1;
-
-    // Round 1 never needs a tiebreak — everyone tied at the cutoff
-    // score advances together, so the qualifying count expands to
-    // include them rather than arbitrarily cutting the tie.
-    const boundaryScore = scores[baseQualify - 1]?.totalMarks;
-    let qualifyCount = baseQualify;
-    if (boundaryScore !== undefined) {
-      qualifyCount = scores.filter((s) => Number(s.totalMarks) >= Number(boundaryScore)).length;
-    }
+    const c = await classifyRound1Qualification(event);
 
     res.json({
-      scores,
-      qualifyCount,
-      baseQualifyCount: baseQualify,
-      expanded: qualifyCount > baseQualify,
-      boundaryScore: boundaryScore ?? null,
+      scores:              c.scores,
+      baseQualifyCount:    c.baseQualify,
+      remainingSlots:      c.remainingSlots,
+      boundaryScore:       c.boundaryScore ?? null,
+      needsTiebreak:       c.needsTiebreak,
+      clearlyQualified:    c.clearlyQualified,
+      clearlyQualifiedIds: c.clearlyQualified.map((s) => s.participantId),
+      tiedGroup:           c.tiedGroup,
+      tiedGroupIds:        c.tiedGroup.map((s) => s.participantId),
     });
   } catch (err) {
     console.error("getEliminationReview:", err);
@@ -595,7 +612,8 @@ export const confirmElimination = async (req, res) => {
 
     const event = await QuizEvent.findByPk(req.params.id);
     if (!event) return res.status(404).json({ message: "Event not found" });
-    if (event.status !== "round1_completed" && event.status !== "elimination_review" && event.status !== "tiebreak_completed")
+    if (event.status !== "round1_completed" && event.status !== "elimination_review"
+        && event.status !== "round1_tiebreak_completed" && event.status !== "tiebreak_completed")
       return res.status(400).json({ message: "Not in elimination review phase" });
 
     // qualifiedIds must be sent by admin after reviewing
@@ -648,6 +666,115 @@ export const confirmElimination = async (req, res) => {
   } catch (err) {
     console.error("confirmElimination:", err);
     res.status(500).json({ message: "Failed to confirm elimination" });
+  }
+};
+
+
+// ======================================================
+// START ROUND 1 BOUNDARY TIEBREAK
+// POST /api/quiz/events/:id/start-round1-tiebreak
+// Body: { tiedParticipantIds: [...], questionIds: [...] }
+//
+// Round numbered 98 (distinct from the final-ranking tiebreak, 99) so
+// completeRound / dashboards can tell the two apart.
+// ======================================================
+export const startRound1Tiebreak = async (req, res) => {
+  try {
+    if (!isAdmin(req.user)) return res.status(403).json({ message: "Unauthorized" });
+
+    const event = await QuizEvent.findByPk(req.params.id);
+    if (!event) return res.status(404).json({ message: "Event not found" });
+    if (!["round1_completed", "elimination_review"].includes(event.status))
+      return res.status(400).json({ message: "Round 1 tiebreak can only be started from the elimination review stage." });
+
+    const { tiedParticipantIds, questionIds } = req.body;
+    if (!Array.isArray(tiedParticipantIds) || tiedParticipantIds.length < 2)
+      return res.status(400).json({ message: "Need at least 2 tied participant IDs" });
+    if (!Array.isArray(questionIds) || questionIds.length === 0)
+      return res.status(400).json({ message: "Select at least one question for the tiebreak" });
+
+    const tbQuestions = await QuizQuestion.findAll({
+      where: { id: { [Op.in]: questionIds }, eventId: event.id, status: "approved" },
+    });
+    if (tbQuestions.length !== questionIds.length)
+      return res.status(400).json({ message: "One or more selected questions are not approved for this event." });
+
+    const tbRound = await QuizRound.create({
+      eventId: event.id,
+      roundNumber: 98,
+      label: "Round 1 Tiebreak",
+      participantLimit: tiedParticipantIds.length,
+      questionCount: tbQuestions.length,
+      status: "active",
+      startedAt: new Date(),
+      tiebreakParticipants: tiedParticipantIds,
+    });
+
+    await QuizRoundQuestion.bulkCreate(
+      tbQuestions.map((q, idx) => ({
+        roundId: tbRound.id, questionId: q.id, sequenceNumber: idx + 1, status: "pending",
+      }))
+    );
+
+    await QuizParticipant.update({ status: "tiebreak" }, { where: { id: { [Op.in]: tiedParticipantIds } } });
+
+    event.status = "round1_tiebreak_active";
+    event.activeRound = 98;
+    event.currentQuestionIdx = 0;
+    await event.save();
+
+    await audit(event.id, req.user.id, "round1_tiebreak_started", {
+      description: `Round 1 boundary tiebreak started for ${tiedParticipantIds.length} participants`,
+      afterValue: { tiedParticipantIds, questionIds: tbQuestions.map((q) => q.id) },
+    });
+
+    broadcast(req, event.id, "quiz:tiebreak_started", {
+      tiedParticipantIds, questionCount: tbQuestions.length,
+    });
+
+    res.json({ message: "Round 1 tiebreak started", tiebreakRound: tbRound });
+  } catch (err) {
+    console.error("startRound1Tiebreak:", err);
+    res.status(500).json({ message: "Failed to start round 1 tiebreak" });
+  }
+};
+
+// ======================================================
+// ROUND 1 TIEBREAK REVIEW — after the round-98 tiebreak completes,
+// shows just the tied group's tiebreak scores so the admin can pick
+// who fills the remaining Round 2 slot(s).
+// GET /api/quiz/events/:id/round1-tiebreak-review
+// ======================================================
+export const getRound1TiebreakReview = async (req, res) => {
+  try {
+    if (!isAdmin(req.user)) return res.status(403).json({ message: "Unauthorized" });
+
+    const event = await QuizEvent.findByPk(req.params.id);
+    if (!event) return res.status(404).json({ message: "Event not found" });
+
+    const c = await classifyRound1Qualification(event);
+
+    const tbRound = await QuizRound.findOne({
+      where: { eventId: event.id, roundNumber: 98 },
+      order: [["id", "DESC"]],
+    });
+    if (!tbRound) return res.status(404).json({ message: "No round 1 tiebreak found for this event" });
+
+    const tiebreakScores = await QuizScore.findAll({
+      where:   { eventId: event.id, roundId: tbRound.id },
+      order:   [["totalMarks", "DESC"]],
+      include: [{ model: QuizParticipant }],
+    });
+
+    res.json({
+      remainingSlots:       c.remainingSlots,
+      clearlyQualifiedIds:  c.clearlyQualified.map((s) => s.participantId),
+      clearlyEliminatedIds: c.clearlyEliminated.map((s) => s.participantId),
+      tiebreakScores,
+    });
+  } catch (err) {
+    console.error("getRound1TiebreakReview:", err);
+    res.status(500).json({ message: "Failed to load round 1 tiebreak review" });
   }
 };
 
@@ -1423,3 +1550,59 @@ export const deleteParticipant = async (req, res) => {
     res.status(500).json({ message: "Failed to delete participant" });
   }
 };
+
+// ======================================================
+// DELETE EVENT
+// DELETE /api/quiz/events/:id
+// Hard delete — wipes the event and everything under it. No status
+// restriction: this is a deliberate full wipe, distinct from Restart
+// (which keeps participants/questions) and from voiding/eliminating
+// (which are run-level, reversible actions).
+// ======================================================
+export const deleteEvent = async (req, res) => {
+  const t = await sequelize.transaction();
+  try {
+    if (!isAdmin(req.user)) { await t.rollback(); return res.status(403).json({ message: "Unauthorized" }); }
+
+    const event = await QuizEvent.findByPk(req.params.id, { transaction: t });
+    if (!event) { await t.rollback(); return res.status(404).json({ message: "Event not found" }); }
+
+    const rounds   = await QuizRound.findAll({ where: { eventId: event.id }, transaction: t });
+    const roundIds = rounds.map((r) => r.id);
+
+    await QuizEventAnswer.destroy({ where: { eventId: event.id }, transaction: t });
+    if (roundIds.length) {
+      // Scoped by roundId rather than eventId — safe regardless of
+      // whether QuizScore has its own eventId column.
+      await QuizScore.destroy({ where: { roundId: { [Op.in]: roundIds } }, transaction: t });
+      await QuizRoundQuestion.destroy({ where: { roundId: { [Op.in]: roundIds } }, transaction: t });
+      await QuizRound.destroy({ where: { id: { [Op.in]: roundIds } }, transaction: t });
+    }
+    await QuizQuestion.destroy({ where: { eventId: event.id }, transaction: t });
+    await QuizParticipant.destroy({ where: { eventId: event.id }, transaction: t });
+    await QuizPanelist.destroy({ where: { eventId: event.id }, transaction: t });
+    await QuizAuditEvent.destroy({ where: { eventId: event.id }, transaction: t });
+
+    await event.destroy({ transaction: t });
+    await t.commit();
+
+    res.json({ message: "Event deleted" });
+  } catch (err) {
+    await t.rollback();
+    console.error("deleteEvent:", err);
+    res.status(500).json({ message: "Failed to delete event" });
+  }
+};
+
+export const updateEvent = async (req, res) => {
+  try {
+    if (!isAdmin(req.user)) return res.status(403).json({ message: "Unauthorized" });
+    const event = await QuizEvent.findByPk(req.params.id);
+    if (!event) return res.status(404).json({ message: "Event not found" });
+    if (!["draft", "published", "ready"].includes(event.status))
+      return res.status(400).json({ message: "Cannot edit an event that has already started." });
+    await event.update(req.body);
+    res.json({ message: "Event updated", event });
+  } catch (err) { res.status(500).json({ message: "Failed to update event" }); }
+};
+
