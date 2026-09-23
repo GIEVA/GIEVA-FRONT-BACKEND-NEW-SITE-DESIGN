@@ -49,6 +49,10 @@ export default (sequelize) => {
 
     // Timer config (seconds per question, 0 = no timer)
     questionTimerSeconds:  { type: DataTypes.INTEGER, defaultValue: 60 },
+    round1TimerSeconds:         { type: DataTypes.INTEGER, defaultValue: 60 },
+    round2TimerSeconds:         { type: DataTypes.INTEGER, defaultValue: 60 },
+    round1TiebreakTimerSeconds: { type: DataTypes.INTEGER, defaultValue: 30 },
+    round2TiebreakTimerSeconds: { type: DataTypes.INTEGER, defaultValue: 30 },
     immediateFeedback:      { type: DataTypes.BOOLEAN,  defaultValue: true },
 
     // Final score rule: "sum" | "round2_only" | "weighted"

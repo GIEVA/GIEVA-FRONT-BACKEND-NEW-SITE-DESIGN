@@ -173,29 +173,35 @@ function CreateEventDialog({ open, onClose, editing, onSaved }) {
     round2ParticipantLimit: 5,  round2QuestionCount: 12,
     eliminateAfterRound1: 5, questionsPerSubject: 3,
     questionTimerSeconds: 60, round1TiebreakQuestionCount: 5,
-     tiebreakQuestionCount: 10,
+    tiebreakQuestionCount: 10,
+    round1TimerSeconds: 60, round2TimerSeconds: 60,
+    round1TiebreakTimerSeconds: 30, round2TiebreakTimerSeconds: 30,
   };
   const [form, setForm] = useState(blank);
   const [saving, setSaving] = useState(false);
   const [error,  setError]  = useState("");
 
   useEffect(() => {
-    if (editing) {
-      setForm({
-        name: editing.name, description: editing.description || "", venue: editing.venue || "",
-        category: editing.category, round1ParticipantLimit: editing.round1ParticipantLimit,
-        round1QuestionCount: editing.round1QuestionCount, round2ParticipantLimit: editing.round2ParticipantLimit,
-        round2QuestionCount: editing.round2QuestionCount, eliminateAfterRound1: editing.eliminateAfterRound1,
-        questionsPerSubject: editing.questionsPerSubject, questionTimerSeconds: editing.questionTimerSeconds,
-        round1TiebreakQuestionCount: editing.round1TiebreakQuestionCount ?? 5,
-        tiebreakQuestionCount: editing.tiebreakQuestionCount,
-      });
-    } else {
-      setForm(blank);
-    }
-    setError("");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editing, open]);
+  if (editing) {
+    setForm({
+      name: editing.name, description: editing.description || "", venue: editing.venue || "",
+      category: editing.category, round1ParticipantLimit: editing.round1ParticipantLimit,
+      round1QuestionCount: editing.round1QuestionCount, round2ParticipantLimit: editing.round2ParticipantLimit,
+      round2QuestionCount: editing.round2QuestionCount, eliminateAfterRound1: editing.eliminateAfterRound1,
+      questionsPerSubject: editing.questionsPerSubject, questionTimerSeconds: editing.questionTimerSeconds,
+      round1TiebreakQuestionCount: editing.round1TiebreakQuestionCount ?? 5,
+      tiebreakQuestionCount: editing.tiebreakQuestionCount,
+      round1TimerSeconds: editing.round1TimerSeconds ?? 60,
+      round2TimerSeconds: editing.round2TimerSeconds ?? 60,
+      round1TiebreakTimerSeconds: editing.round1TiebreakTimerSeconds ?? 30,
+      round2TiebreakTimerSeconds: editing.round2TiebreakTimerSeconds ?? 30,
+    });
+  } else {
+    setForm(blank);
+  }
+  setError("");
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [editing, open]);
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
@@ -239,10 +245,20 @@ function CreateEventDialog({ open, onClose, editing, onSaved }) {
           <Grid item xs={12} sm={6}>
             <TextField fullWidth label="Venue" value={form.venue} onChange={set("venue")} sx={sx} />
           </Grid>
-          <Grid item xs={12} sm={6}>
-            <TextField fullWidth type="number" label="Timer per question (seconds)" value={form.questionTimerSeconds} onChange={set("questionTimerSeconds")} sx={sx} />
-          </Grid>
           <Grid item xs={12}><Divider><Typography sx={{ fontSize: 12, color: MUTED }}>ROUND CONFIGURATION</Typography></Divider></Grid>
+          <Grid item xs={6} sm={3}>
+            <TextField fullWidth type="number" label="R1 Timer (s)" value={form.round1TimerSeconds} onChange={set("round1TimerSeconds")} sx={sx} />
+          </Grid>
+          <Grid item xs={6} sm={3}>
+            <TextField fullWidth type="number" label="R2 Timer (s)" value={form.round2TimerSeconds} onChange={set("round2TimerSeconds")} sx={sx} />
+          </Grid>
+          <Grid item xs={6} sm={3}>
+            <TextField fullWidth type="number" label="R1 Tiebreak Timer (s)" value={form.round1TiebreakTimerSeconds} onChange={set("round1TiebreakTimerSeconds")} sx={sx} />
+          </Grid>
+          <Grid item xs={6} sm={3}>
+            <TextField fullWidth type="number" label="R2/Final Tiebreak Timer (s)" value={form.round2TiebreakTimerSeconds} onChange={set("round2TiebreakTimerSeconds")} sx={sx} />
+          </Grid>
+          
           <Grid item xs={6} sm={3}>
             <TextField fullWidth type="number" label="R1 Participants" value={form.round1ParticipantLimit} onChange={set("round1ParticipantLimit")} sx={sx} />
           </Grid>
@@ -354,8 +370,8 @@ function QuestionDialog({ open, onClose, eventId, editing, onSaved }) {
           </Grid>
           <Grid item xs={6} sm={4}>
             <TextField fullWidth select label="Round" value={form.roundAssignment} onChange={set("roundAssignment")} sx={sx}>
-              {[["1","Round 1"],["2","Round 2"],["tiebreak","Tiebreak"]].map(([v,l]) =>
-                <MenuItem key={v} value={v}>{l}</MenuItem>)}
+              {[["1","Round 1"],["2","Round 2"],["round1_tiebreak","Round 1 Tiebreak"],["tiebreak","Round 2 / Final Tiebreak"]].map(([v,l]) =>
+              <MenuItem key={v} value={v}>{l}</MenuItem>)}
             </TextField>
           </Grid>
           <Grid item xs={6} sm={4}>
@@ -867,7 +883,7 @@ const roundInProgress = [
 
           <Divider sx={{ my: 2 }}><Typography sx={{ fontSize: 12, color: MUTED }}>SELECT TIEBREAK QUESTIONS (approved only)</Typography></Divider>
           <Stack spacing={0.5} sx={{ maxHeight: 220, overflowY: "auto" }}>
-            {(eventQuestions || []).filter((q) => q.status === "approved").map((q) => {
+            {(eventQuestions || []).filter((q) => q.status === "approved" && q.roundAssignment === "round1_tiebreak").map((q) => {
               const checked = r1tbQuestionIds.includes(q.id);
               return (
                 <Box key={q.id} sx={{ display: "flex", alignItems: "flex-start", gap: 1, p: 0.75,
@@ -995,7 +1011,7 @@ const roundInProgress = [
 
             <Divider sx={{ my: 2 }}><Typography sx={{ fontSize: 12, color: MUTED }}>SELECT TIEBREAK QUESTIONS (approved only)</Typography></Divider>
             <Stack spacing={0.5} sx={{ maxHeight: 220, overflowY: "auto" }}>
-              {(eventQuestions || []).filter((q) => q.status === "approved").map((q) => {
+              {(eventQuestions || []).filter((q) => q.status === "approved" && q.roundAssignment === "tiebreak").map((q) => {
                 const checked = tiebreakQuestionIds.includes(q.id);
                 return (
                   <Box key={q.id} sx={{ display: "flex", alignItems: "flex-start", gap: 1, p: 0.75,

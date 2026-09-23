@@ -6,7 +6,7 @@ import sequelize from "../config/db.js";
 import { Op }  from "sequelize";
 import models  from "../models/index.js";
 
-import { checkEarlyLock } from "../service/quizFlowEngine.js";
+import { checkEarlyLock, timerForRound  } from "../service/quizFlowEngine.js";
 
 const {
   QuizEvent, QuizParticipant, QuizQuestion, QuizRound,
@@ -148,13 +148,25 @@ export const getEventState = async (req, res) => {
     let currentQuestion = null;
     let myAnswer        = null;
     let timerInfo       = null;
+    let waitingForTiebreak = false;
+    
+    
 
-    if (event.activeRound) {
-      const round = await QuizRound.findOne({
-        where: { eventId, roundNumber: event.activeRound },
-      });
+   if (event.activeRound) {
+    const round = await QuizRound.findOne({
+      where: { eventId, roundNumber: event.activeRound },
+      order: [["id","DESC"]],  
+    });
 
-      if (round) {
+    const isTiebreakRound = round && [98, 99].includes(round.roundNumber);
+    const inThisTiebreak = isTiebreakRound
+      ? (round.tiebreakParticipants || []).includes(Number(participantId))
+      : true;
+
+
+      if (isTiebreakRound && !inThisTiebreak) {
+          waitingForTiebreak = true;   // declare this near the top with the other lets
+        }else if (round) {
         const rq = await QuizRoundQuestion.findOne({
           where:   { roundId: round.id, status: { [Op.in]: ["open","locked","revealed"] } },
           include: [{
@@ -183,12 +195,8 @@ export const getEventState = async (req, res) => {
 
           if (rq.status === "open") {
             const elapsed    = (Date.now() - new Date(rq.openedAt).getTime()) / 1000;
-            const remaining  = Math.max(0,
-              event.questionTimerSeconds +
-              (rq.timerExtendedSeconds || 0) -
-              (rq.pauseDurationSeconds || 0) -
-              elapsed
-            );
+            const secs = timerForRound(event, event.activeRound);
+            const remaining = Math.max(0, secs + (rq.timerExtendedSeconds || 0) - (rq.pauseDurationSeconds || 0) - elapsed);
             timerInfo = { elapsed: Math.floor(elapsed), remaining: Math.floor(remaining) };
           }
 
@@ -206,6 +214,7 @@ export const getEventState = async (req, res) => {
     if (event.activeRound) {
       const round = await QuizRound.findOne({
         where: { eventId, roundNumber: event.activeRound },
+        order: [["id","DESC"]],
       });
       if (round) {
         myScore = await QuizScore.findOne({
@@ -219,6 +228,7 @@ export const getEventState = async (req, res) => {
       eventStatus:  event.status,
       activeRound:  event.activeRound,
       participantStatus: participant.status,
+      waitingForTiebreak,
       currentQuestion,
       timerInfo,
       myAnswer,
@@ -262,7 +272,7 @@ export const submitAnswer = async (req, res) => {
       where: { id: roundQuestionId },
       include: [
         { model: QuizQuestion, attributes: ["id","marks"] },
-        { model: QuizRound,    attributes: ["id","eventId"] },
+        { model: QuizRound,    attributes: ["id","eventId","roundNumber","tiebreakParticipants"] }, // add roundNumber, tiebreakParticipants
       ],
     });
     if (!rq || rq.QuizRound?.eventId !== Number(eventId))
@@ -270,6 +280,14 @@ export const submitAnswer = async (req, res) => {
     if (rq.status !== "open")
       return res.status(409).json({ message: "This question is no longer accepting answers" });
 
+    // Tiebreak rounds (98 = round-1 boundary tiebreak, 99 = final tiebreak) only
+    // accept answers from the participants actually named in that tiebreak.
+    // A participant who qualified for Round 2 outright is not eligible here,
+    // even though their overall status ("qualified_round2") passed the check above.
+    if ([98, 99].includes(rq.QuizRound.roundNumber)) {
+      const eligible = (rq.QuizRound.tiebreakParticipants || []).includes(Number(participantId));
+      if (!eligible) return res.status(403).json({ message: "You are not part of this tiebreak." });
+    }
     const existing = await QuizEventAnswer.findOne({ where: { participantId, roundQuestionId } });
 
     let responsePayload;
@@ -435,8 +453,11 @@ export const getAudienceState = async (req, res) => {
 
     // Return sanitised state (no correct answers, no participant answers)
     const round = event.activeRound
-      ? await QuizRound.findOne({ where: { eventId: event.id, roundNumber: event.activeRound } })
-      : null;
+    ? await QuizRound.findOne({
+        where: { eventId: event.id, roundNumber: event.activeRound },
+        order: [["id","DESC"]],
+      })
+    : null;
 
     let currentQuestion = null;
     if (round) {

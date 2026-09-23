@@ -60,6 +60,16 @@ const scoreAnswer = (selectedOption, correctAnswer, marks, negativeMarkValue, ne
   return { isCorrect: false, marksEarned: negativeMarking ? -Math.abs(Number(negativeMarkValue)) : 0 };
 };
 
+export const timerForRound = (event, roundNumber) => {
+  const map = {
+    1: event.round1TimerSeconds,
+    2: event.round2TimerSeconds,
+    98: event.round1TiebreakTimerSeconds,
+    99: event.round2TiebreakTimerSeconds,
+  };
+  return map[roundNumber] || event.questionTimerSeconds || 60;
+};
+
 // ── OPEN NEXT QUESTION ──────────────────────────────────────────
 // userId is null when triggered automatically (vs. an admin's id on
 // a manual click) — audit rows record which happened.
@@ -69,6 +79,8 @@ export const openNextQuestion = async (io, eventId, userId = null) => {
   const event = await QuizEvent.findByPk(eventId);
   if (!event) return { ok: false, message: "Event not found" };
 
+  const timerSeconds = timerForRound(event, event.activeRound);
+
   const validStates = [
   "round1_intro", "round1_result_revealed",
   "round2_intro", "round2_result_revealed",
@@ -77,7 +89,10 @@ export const openNextQuestion = async (io, eventId, userId = null) => {
   if (!validStates.includes(event.status))
     return { ok: false, message: `Cannot open next question from state: ${event.status}` };
 
-  const round = await QuizRound.findOne({ where: { eventId: event.id, roundNumber: event.activeRound } });
+  const round = await QuizRound.findOne({
+  where: { eventId: event.id, roundNumber: event.activeRound },
+  order: [["id","DESC"]],
+});
   const nextIdx = event.currentQuestionIdx || 0;
   const rq = await QuizRoundQuestion.findOne({
     where: { roundId: round.id, sequenceNumber: nextIdx + 1 },
@@ -118,7 +133,7 @@ event.status = openStatusMap[event.activeRound] || "round1_question_open";
     roundQuestionId: rq.id,
     sequenceNumber: rq.sequenceNumber,
     question: safeQuestion,
-    timerSeconds: event.questionTimerSeconds,
+    timerSeconds,
     openedAt: rq.openedAt,
   });
   broadcast(io, event.id, "event:state_change", { status: event.status, activeRound: event.activeRound });
@@ -126,7 +141,7 @@ event.status = openStatusMap[event.activeRound] || "round1_question_open";
   // Schedule the auto-lock for whenever the timer runs out. If everyone
   // answers first, submitAnswer's checkEarlyLock cancels this and fires
   // lockQuestion immediately instead.
-  setTimer(event.id, () => lockQuestion(io, event.id, null), event.questionTimerSeconds * 1000);
+  setTimer(event.id, () => lockQuestion(io, event.id, null), timerSeconds * 1000);
 
   return { ok: true, roundQuestion: rq };
 };
@@ -138,7 +153,10 @@ export const lockQuestion = async (io, eventId, userId = null) => {
   const event = await QuizEvent.findByPk(eventId);
   if (!event) return { ok: false, message: "Event not found" };
 
-  const round = await QuizRound.findOne({ where: { eventId: event.id, roundNumber: event.activeRound } });
+  const round = await QuizRound.findOne({
+  where: { eventId: event.id, roundNumber: event.activeRound },
+  order: [["id","DESC"]],
+});
   const rq = await QuizRoundQuestion.findOne({
     where: { roundId: round.id, status: "open" },
     include: [{ model: QuizQuestion }],
@@ -220,7 +238,10 @@ export const revealResult = async (io, eventId, userId = null) => {
   const event = await QuizEvent.findByPk(eventId);
   if (!event) return { ok: false, message: "Event not found" };
 
-  const round = await QuizRound.findOne({ where: { eventId: event.id, roundNumber: event.activeRound } });
+  const round = await QuizRound.findOne({
+  where: { eventId: event.id, roundNumber: event.activeRound },
+  order: [["id","DESC"]],
+});
   const rq = await QuizRoundQuestion.findOne({
     where: { roundId: round.id, status: "locked" },
     include: [{ model: QuizQuestion }],
@@ -326,13 +347,16 @@ export const recoverPendingTimers = async (io) => {
   });
 
   for (const event of openEvents) {
-    const round = await QuizRound.findOne({ where: { eventId: event.id, roundNumber: event.activeRound } });
+    const round = await QuizRound.findOne({
+  where: { eventId: event.id, roundNumber: event.activeRound },
+  order: [["id","DESC"]],
+});
     if (!round) continue;
 
     const openRq = await QuizRoundQuestion.findOne({ where: { roundId: round.id, status: "open" } });
     if (openRq) {
       const elapsedMs = Date.now() - new Date(openRq.openedAt).getTime();
-      const remainingMs = (event.questionTimerSeconds * 1000) - elapsedMs;
+      const remainingMs = (timerForRound(event, event.activeRound) * 1000) - elapsedMs;
       if (remainingMs <= 0) {
         await lockQuestion(io, event.id, null); // timer already ran out while server was down
       } else {
@@ -361,3 +385,4 @@ export const recoverPendingTimers = async (io) => {
     }
   }
 };
+

@@ -6,7 +6,7 @@ import sequelize from "../config/db.js";
 import { Op }  from "sequelize";
 import models  from "../models/index.js";
 import { nanoid } from "nanoid";
-import { openNextQuestion as engineOpenNext, lockQuestion as engineLock, revealResult as engineReveal, cancelAutoFlow } from "../service/quizFlowEngine.js";
+import { openNextQuestion as engineOpenNext, lockQuestion as engineLock, revealResult as engineReveal, cancelAutoFlow, timerForRound } from "../service/quizFlowEngine.js";
 
 
 
@@ -97,8 +97,8 @@ const recalculateScores = async (eventId, roundId) => {
   // Eligible participant set differs for tiebreak rounds (roundNumber 99),
   // which only ever cover the tied subset, not every active participant.
   const participantWhere = { eventId };
-  if (round.roundNumber === 99) {
-    participantWhere.id = { [Op.in]: round.tiebreakParticipants || [] };
+  if ([98, 99].includes(round.roundNumber)) {
+  participantWhere.id = { [Op.in]: round.tiebreakParticipants || [] };
   } else {
     participantWhere.status = {
       [Op.in]: ["active", "qualified_round2", "tiebreak", "completed"],
@@ -169,7 +169,8 @@ export const createEvent = async (req, res) => {
       questionTimerSeconds, immediateFeedback,
       finalScoreRule, round2Weight,
       tiebreakSubject, round1TiebreakQuestionCount, tiebreakQuestionCount,
-      subjectOrder, audienceScreenMode,
+      subjectOrder, audienceScreenMode, round1TimerSeconds, round2TimerSeconds, 
+      round1TiebreakTimerSeconds, round2TiebreakTimerSeconds 
     } = req.body;
 
     if (!name?.trim()) return res.status(400).json({ message: "Event name is required." });
@@ -190,6 +191,10 @@ export const createEvent = async (req, res) => {
       negativeMarking:       negativeMarking       || false,
       negativeMarkValue:     negativeMarkValue      || 0,
       questionTimerSeconds:  questionTimerSeconds  || 60,
+      round1TimerSeconds:         round1TimerSeconds         || 60,
+      round2TimerSeconds:         round2TimerSeconds         || 60,
+      round1TiebreakTimerSeconds: round1TiebreakTimerSeconds || 30,
+      round2TiebreakTimerSeconds: round2TiebreakTimerSeconds || 30,
       immediateFeedback:     immediateFeedback !== false,
       finalScoreRule:        finalScoreRule        || "sum",
       round2Weight:          round2Weight          || 1,
@@ -518,9 +523,10 @@ export const completeRound = async (req, res) => {
     const event = await QuizEvent.findByPk(req.params.id);
     if (!event) return res.status(404).json({ message: "Event not found" });
 
-    const round = await QuizRound.findOne({
-      where: { eventId: event.id, roundNumber: event.activeRound },
-    });
+   const round = await QuizRound.findOne({
+  where: { eventId: event.id, roundNumber: event.activeRound },
+  order: [["id","DESC"]],
+});
 
     round.status      = "completed";
     round.completedAt = new Date();
@@ -688,6 +694,14 @@ export const startRound1Tiebreak = async (req, res) => {
     if (!["round1_completed", "elimination_review"].includes(event.status))
       return res.status(400).json({ message: "Round 1 tiebreak can only be started from the elimination review stage." });
 
+       // ← ADD THIS BLOCK
+    const existingActive = await QuizRound.findOne({
+      where: { eventId: event.id, roundNumber: 98, status: "active" },
+    });
+    if (existingActive)
+      return res.status(400).json({ message: "A Round 1 tiebreak is already in progress for this event." });
+
+
     const { tiedParticipantIds, questionIds } = req.body;
     if (!Array.isArray(tiedParticipantIds) || tiedParticipantIds.length < 2)
       return res.status(400).json({ message: "Need at least 2 tied participant IDs" });
@@ -701,7 +715,7 @@ export const startRound1Tiebreak = async (req, res) => {
         return res.status(400).json({ message: "One or more selected questions are not approved for this event." });
     } else {
       tbQuestions = await QuizQuestion.findAll({
-        where: { eventId: event.id, status: "approved", roundAssignment: "tiebreak" },
+        where: { eventId: event.id, status: "approved", roundAssignment: "round1_tiebreak" },
         limit: event.round1TiebreakQuestionCount,
         order: sequelize.random(),
       });
@@ -732,6 +746,7 @@ export const startRound1Tiebreak = async (req, res) => {
     await QuizParticipant.update({ status: "tiebreak" }, { where: { id: { [Op.in]: tiedParticipantIds } } });
 
     event.status = "round1_tiebreak_active";
+  
     event.activeRound = 98;
     event.currentQuestionIdx = 0;
     await event.save();
@@ -806,6 +821,12 @@ export const startTiebreak = async (req, res) => {
 
     const event = await QuizEvent.findByPk(req.params.id);
     if (!event) return res.status(404).json({ message: "Event not found" });
+
+      const existingActive = await QuizRound.findOne({
+      where: { eventId: event.id, roundNumber: 99, status: "active" },
+    });
+    if (existingActive)
+      return res.status(400).json({ message: "A tiebreak is already in progress for this event." });
 
     const { tiedParticipantIds, questionIds } = req.body;
     if (!Array.isArray(tiedParticipantIds) || tiedParticipantIds.length < 2)
@@ -891,6 +912,7 @@ export const pauseEvent = async (req, res) => {
     // round only, so pausing one event can't touch another event's timers.
     const activeRound = await QuizRound.findOne({
       where: { eventId: event.id, roundNumber: event.activeRound },
+      order: [["id","DESC"]],
     });
     if (activeRound) {
       await QuizRoundQuestion.update(
@@ -1165,9 +1187,10 @@ export const getPanelistDashboard = async (req, res) => {
     const event = await QuizEvent.findByPk(req.params.id);
     if (!event) return res.status(404).json({ message: "Event not found" });
 
-    const round = await QuizRound.findOne({
-      where: { eventId: event.id, roundNumber: event.activeRound },
-    });
+   const round = await QuizRound.findOne({
+  where: { eventId: event.id, roundNumber: event.activeRound },
+  order: [["id","DESC"]],
+});
 
     const rawScores = await QuizScore.findAll({
       where:   { eventId: event.id, roundId: round?.id },
