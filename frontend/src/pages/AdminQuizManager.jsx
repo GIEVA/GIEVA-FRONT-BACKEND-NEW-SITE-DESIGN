@@ -1162,7 +1162,7 @@ export default function AdminQuizManager() {
                                 color: (STATUS_CFG[ev.status] || STATUS_CFG.draft).color, fontWeight: 800, flexShrink: 0 }} />
                       </Box>
                       <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
-                        {["draft","published","ready"].includes(ev.status) && (
+                        {!["completed","cancelled"].includes(ev.status) && (
                           <Button size="small" onClick={(e) => { e.stopPropagation(); setEditingEvent(ev); }}
                             sx={{ textTransform: "none", fontSize: 11, p: 0, minWidth: 0, color: NAVY }}>
                             Edit

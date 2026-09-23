@@ -1635,10 +1635,43 @@ export const updateEvent = async (req, res) => {
     if (!isAdmin(req.user)) return res.status(403).json({ message: "Unauthorized" });
     const event = await QuizEvent.findByPk(req.params.id);
     if (!event) return res.status(404).json({ message: "Event not found" });
-    if (!["draft", "published", "ready"].includes(event.status))
-      return res.status(400).json({ message: "Cannot edit an event that has already started." });
-    await event.update(req.body);
+
+    if (["completed", "cancelled"].includes(event.status))
+      return res.status(400).json({ message: "Cannot edit a completed or cancelled event." });
+
+    const isPreStart = ["draft", "published", "ready"].includes(event.status);
+
+    if (isPreStart) {
+      // Full edit — nothing has run yet, all fields are safe to change.
+      await event.update(req.body);
+    } else {
+      // Event is live or between rounds — only allow edits that can't
+      // desync a round/question structure that's already in motion.
+      const SAFE_LIVE_FIELDS = [
+        "name", "description", "venue", "eventDate", "startTime",
+        "round1TimerSeconds", "round2TimerSeconds",
+        "round1TiebreakTimerSeconds", "round2TiebreakTimerSeconds",
+        "round1TiebreakQuestionCount", "tiebreakQuestionCount",
+        "audienceScreenMode", "immediateFeedback",
+      ];
+      const updates = {};
+      for (const key of SAFE_LIVE_FIELDS) {
+        if (req.body[key] !== undefined) updates[key] = req.body[key];
+      }
+      if (Object.keys(updates).length === 0)
+        return res.status(400).json({ message: "No editable fields provided for a live event." });
+
+      await event.update(updates);
+
+      await audit(event.id, req.user.id, "event_edited_live", {
+        description: `Live event edited: ${Object.keys(updates).join(", ")}`,
+      });
+    }
+
     res.json({ message: "Event updated", event });
-  } catch (err) { res.status(500).json({ message: "Failed to update event" }); }
+  } catch (err) {
+    console.error("updateEvent:", err);
+    res.status(500).json({ message: "Failed to update event" });
+  }
 };
 
