@@ -303,7 +303,7 @@ app.use("/api/admin/projects/all", adminProjectRoutes);
 app.use("/api/projects/all", projectRoutes);
 
     // Sync models AFTER models are loaded
-    await sequelize.sync({alter:true});
+    await sequelize.sync();
     console.log("🚀 Sequelize models synced");
 
   const httpServer = createServer(app);
