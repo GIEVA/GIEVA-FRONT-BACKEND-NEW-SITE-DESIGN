@@ -38,6 +38,11 @@ export default (sequelize) => {
 
     // Final overall ranking
     finalRank:   { type: DataTypes.INTEGER, allowNull: true },
+    
+    finalScore: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: true,
+    },
 
     lastSeenAt:  { type: DataTypes.DATE, allowNull: true },
     joinedAt:    { type: DataTypes.DATE, allowNull: true },

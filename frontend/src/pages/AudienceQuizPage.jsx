@@ -65,7 +65,7 @@ export default function AudienceQuizPage() {
         {data.event.name}
       </Typography>
       <Typography sx={{ textAlign: "center", opacity: 0.7, mb: 4 }}>
-        Round {data.activeRound || "—"}
+        {data.isFinal ? "Final Results" : `Round ${data.activeRound || "—"}`}
       </Typography>
 
       {q && (
@@ -84,9 +84,19 @@ export default function AudienceQuizPage() {
         </Paper>
       )}
 
+      {data.isFinal && (
+            <Paper elevation={0} sx={{ maxWidth: 720, mx: "auto", mb: 4, borderRadius: 4, p: 3, bgcolor: "#fff", textAlign: "center" }}>
+              <EmojiEvents sx={{ fontSize: 40, color: GOLD, mb: 1 }} />
+              <Typography sx={{ fontWeight: 800, fontSize: 20, color: TEXT }}>Event Complete!</Typography>
+              <Typography sx={{ fontSize: 13, color: MUTED }}>Here's the final ranking.</Typography>
+            </Paper>
+          )}
+
       <Paper elevation={0} sx={{ maxWidth: 720, mx: "auto", borderRadius: 4, overflow: "hidden", bgcolor: "#fff" }}>
         <Box sx={{ px: 3, py: 2, borderBottom: `1px solid ${BORDER}` }}>
-          <Typography sx={{ fontWeight: 800, color: TEXT }}>Leaderboard</Typography>
+          <Typography sx={{ fontWeight: 800, color: TEXT }}>
+            {data.isFinal ? "Final Leaderboard" : "Leaderboard"}
+          </Typography>
         </Box>
         <Stack divider={<Box sx={{ borderBottom: `1px solid ${BORDER}` }} />}>
           {data.leaderboard?.map((row) => {
@@ -107,9 +117,11 @@ export default function AudienceQuizPage() {
               </Stack>
             );
           })}
+
+          
           {!data.leaderboard?.length && (
             <Typography sx={{ p: 3, textAlign: "center", color: MUTED, fontSize: 13 }}>
-              Scores will appear once Round 1 begins.
+              {data.isFinal ? "Final results are being finalized…" : "Scores will appear once Round 1 begins."}
             </Typography>
           )}
         </Stack>

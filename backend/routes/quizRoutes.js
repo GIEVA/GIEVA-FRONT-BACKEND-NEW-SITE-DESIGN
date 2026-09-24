@@ -33,7 +33,7 @@ import {
   getEventByCode,
   getFinalRankingReview,
  restartEvent, updateQuestion, deleteQuestion, updateParticipant, deleteParticipant,
-  deleteEvent, startRound1Tiebreak, getRound1TiebreakReview,
+  deleteEvent, startRound1Tiebreak, getRound1TiebreakReview, getFinalLeaderboard
 } from "../controllers/adminQuizEventController.js";
 
 import {
@@ -89,6 +89,8 @@ router.patch( "/events/:id/adjust-score",          authenticate, adjustScore);
 router.post(  "/events/:id/panelists",             authenticate, addPanelist);
 router.get(   "/events/:id/dashboard",             authenticate, getPanelistDashboard);
 
+
+router.get("/:id/final-leaderboard", authenticate, getFinalLeaderboard);
 
 router.delete("/events/:id",                          authenticate, deleteEvent);
 router.post  ("/events/:id/start-round1-tiebreak",     authenticate, startRound1Tiebreak);

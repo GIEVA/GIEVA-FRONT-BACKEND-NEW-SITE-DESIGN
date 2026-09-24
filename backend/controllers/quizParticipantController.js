@@ -437,18 +437,40 @@ export const getAudienceState = async (req, res) => {
       where: { eventCode: req.params.eventCode },
       attributes: [
         "id","name","status","category","activeRound",
-        "currentQuestionIdx","audienceScreenMode",
+        "currentQuestionIdx","audienceScreenMode","finalScoreRule","round2Weight",
       ],
     });
     if (!event) return res.status(404).json({ message: "Event not found" });
 
     if (event.audienceScreenMode === "private")
       return res.status(403).json({ message: "This event is not public" });
-
     if (event.audienceScreenMode === "link") {
       const { accessCode } = req.query;
       if (accessCode !== event.audienceAccessCode)
         return res.status(403).json({ message: "Invalid access code" });
+    }
+
+       if (event.status === "completed") {
+      const finalists = await QuizParticipant.findAll({
+        where: { eventId: event.id, finalRank: { [Op.ne]: null } },
+        order: [["finalRank", "ASC"]],
+        attributes: ["id","name","school","displayNumber","photoUrl","finalRank","finalScore"],
+      });
+
+      return res.json({
+        event: { id: event.id, name: event.name, status: event.status, category: event.category },
+        activeRound: null,
+        currentQuestion: null,
+        isFinal: true,
+        leaderboard: finalists.map((p) => ({
+          rank: p.finalRank,
+          name: p.name,
+          school: p.school,
+          displayNumber: p.displayNumber,
+          photoUrl: p.photoUrl,
+          totalMarks: p.finalScore,
+        })),
+      });
     }
 
     // Return sanitised state (no correct answers, no participant answers)
@@ -511,6 +533,9 @@ export const getAudienceState = async (req, res) => {
         correctCount:  s.correctCount,
       };
     });
+
+   
+
 
     res.json({
       event:           { id: event.id, name: event.name, status: event.status, category: event.category },

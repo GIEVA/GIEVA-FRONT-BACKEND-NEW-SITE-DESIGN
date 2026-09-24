@@ -29,6 +29,7 @@ import {
   startRound1Tiebreak, getRound1TiebreakReview,
   voidQuestion, adjustScore, getPanelistDashboard, exportResults, getFinalRankingReview,
   restartEvent, updateQuestion, deleteQuestion, updateParticipant, deleteParticipant,
+  getFinalLeaderboard
 } from "../services/liveQuizService";
 
 import MathTextField from "../components/quiz/MathTextField";
@@ -441,6 +442,25 @@ const [r1tbData, setR1tbData] = useState(null);       // review of the round-98 
 const [r1tbLoading, setR1tbLoading] = useState(false);
 const [selectedR1tbWinners, setSelectedR1tbWinners] = useState([]);
 
+const [finalLeaderboard, setFinalLeaderboard] = useState(null);
+const [finalLbLoading, setFinalLbLoading] = useState(false);
+
+const loadFinalLeaderboard = async () => {
+  try {
+    setFinalLbLoading(true);
+    const res = await getFinalLeaderboard(event.id); // add this to liveQuizService.js
+    setFinalLeaderboard(res.finalScores);
+  } catch (err) {
+    setToast({ msg: err?.response?.data?.message || "Failed to load final leaderboard", severity: "error" });
+  } finally {
+    setFinalLbLoading(false);
+  }
+};
+
+useEffect(() => {
+  if (s === "completed") loadFinalLeaderboard();
+}, [s]);
+
 
 const loadRound1TiebreakReview = async () => {
   try {
@@ -780,6 +800,52 @@ const roundInProgress = [
               </TableBody>
             </TableBody>
           </Table>
+        </Paper>
+      )}
+
+            {/* Final Leaderboard — combined Round 1 + Round 2 (+ tiebreak), shown once the event is completed */}
+      {s === "completed" && (
+        <Paper elevation={0} sx={{ border: `1px solid ${BORDER}`, borderRadius: 3, overflow: "hidden", mb: 3 }}>
+          <Box sx={{ px: 2.5, py: 2, borderBottom: `1px solid ${BORDER}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <Typography sx={{ fontWeight: 800, fontSize: 15, color: TEXT }}>Final Leaderboard</Typography>
+            {finalLbLoading && <CircularProgress size={16} />}
+          </Box>
+          {finalLeaderboard?.length > 0 ? (
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  {["#","Participant","School","Final Score"].map((h) => (
+                    <TableCell key={h} sx={{ fontWeight: 700, color: MUTED, fontSize: 12 }}>{h}</TableCell>
+                  ))}
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {finalLeaderboard.map((f) => {
+                  const rank = f.participant.finalRank;
+                  const medal = medalColor(rank);
+                  return (
+                    <TableRow key={f.participant.id} sx={{ bgcolor: rank <= 5 ? `${GREEN}06` : "transparent" }}>
+                      <TableCell sx={{ fontWeight: 800, color: medal || TEXT }}>
+                        {medal
+                          ? <EmojiEvents sx={{ fontSize: 16, color: medal, verticalAlign: "middle", mr: 0.5 }} />
+                          : null}
+                        {rank}
+                      </TableCell>
+                      <TableCell sx={{ fontWeight: 700 }}>{f.participant.name}</TableCell>
+                      <TableCell sx={{ color: MUTED, fontSize: 12 }}>{f.participant.school}</TableCell>
+                      <TableCell sx={{ fontWeight: 800, fontSize: 15 }}>{f.finalScore}</TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          ) : (
+            !finalLbLoading && (
+              <Typography sx={{ p: 3, textAlign: "center", color: MUTED, fontSize: 13 }}>
+                No final results yet.
+              </Typography>
+            )
+          )}
         </Paper>
       )}
 

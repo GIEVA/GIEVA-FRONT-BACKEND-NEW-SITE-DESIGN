@@ -95,6 +95,10 @@ export const startRound1Tiebreak = (eventId, payload) =>
 export const getRound1TiebreakReview = (eventId) =>
   API.get(`${BASE}/events/${eventId}/round1-tiebreak-review`).then((r) => r.data);
 
+export const getFinalLeaderboard = async (eventId) => {
+  const res = await API.get(`${BASE}/events/${eventId}/final-leaderboard`);
+  return res.data;
+};
 // ── Participant — no auth ──────────────────────────────────────
 export const joinEvent             = (participantCode) =>
   PUBLIC_API.post(`${BASE}/join`, { participantCode }).then((r) => r.data);

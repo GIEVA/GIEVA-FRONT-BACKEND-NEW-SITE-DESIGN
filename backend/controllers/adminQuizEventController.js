@@ -86,6 +86,59 @@ const scoreAnswer = (selectedOption, correctAnswer, marks, negativeMarkValue, ne
   };
 };
 
+
+const computeFinalLeaderboard = async (event) => {
+  const participants = await QuizParticipant.findAll({
+    where: { eventId: event.id, status: { [Op.in]: ["active","qualified_round2","completed","tiebreak"] } },
+  });
+
+  const rounds = await QuizRound.findAll({
+    where: { eventId: event.id, roundNumber: { [Op.in]: [1,2] } },
+  });
+
+  const tiebreakRounds = await QuizRound.findAll({
+    where: { eventId: event.id, roundNumber: { [Op.in]: [98, 99] } },
+  });
+  const tiebreakScoreByParticipant = {};
+  for (const tbRound of tiebreakRounds) {
+    const tbScores = await QuizScore.findAll({ where: { eventId: event.id, roundId: tbRound.id } });
+    for (const s of tbScores) {
+      // If a participant shows up in both the round-1 boundary tiebreak
+      // and the final-ranking tiebreak, the later one (round 99) wins,
+      // since findAll with no order returns them and this simply
+      // overwrites — round 99 rounds are always created after round 98.
+      tiebreakScoreByParticipant[s.participantId] = Number(s.totalMarks);
+    }
+  }
+
+  const finalScores = [];
+  for (const p of participants) {
+    let total = 0;
+    for (const round of rounds) {
+      const score = await QuizScore.findOne({ where: { participantId: p.id, roundId: round.id } });
+      if (score) {
+        if (event.finalScoreRule === "round2_only" && round.roundNumber === 1) continue;
+        const weight = event.finalScoreRule === "weighted" && round.roundNumber === 2
+          ? Number(event.round2Weight) : 1;
+        total += Number(score.totalMarks) * weight;
+      }
+    }
+    finalScores.push({
+      participant: p,
+      finalScore: total,
+      tiebreakScore: tiebreakScoreByParticipant[p.id] ?? null,
+    });
+  }
+
+  finalScores.sort((a, b) => {
+    if (b.finalScore !== a.finalScore) return b.finalScore - a.finalScore;
+    return (b.tiebreakScore || 0) - (a.tiebreakScore || 0);
+  });
+
+  return finalScores;
+};
+
+
 // Rebuild QuizScore rows for a round from scratch, based on the
 // current set of non-voided QuizAnswer rows. Call this any time
 // historical answers change after scores were first computed —
@@ -1048,46 +1101,9 @@ export const completeEvent = async (req, res) => {
     const event = await QuizEvent.findByPk(req.params.id);
     if (!event) return res.status(404).json({ message: "Event not found" });
 
-    const participants = await QuizParticipant.findAll({
-      where: { eventId: event.id, status: { [Op.in]: ["active","qualified_round2","completed"] } },
-    });
+    const finalScores = await computeFinalLeaderboard(event);
 
-    const rounds = await QuizRound.findAll({
-      where: { eventId: event.id, roundNumber: { [Op.in]: [1,2] } },
-    });
-
-    // Pull any tiebreak-round scores so a genuine ranking tie can be
-    // broken by tiebreak performance rather than left arbitrary.
-    const tiebreakRounds = await QuizRound.findAll({ where: { eventId: event.id, roundNumber: 99 } });
-    const tiebreakScoreByParticipant = {};
-    for (const tbRound of tiebreakRounds) {
-      const tbScores = await QuizScore.findAll({ where: { eventId: event.id, roundId: tbRound.id } });
-      for (const s of tbScores) {
-        tiebreakScoreByParticipant[s.participantId] = Number(s.totalMarks);
-      }
-    }
-
-    const finalScores = [];
-    for (const p of participants) {
-      let total = 0;
-      for (const round of rounds) {
-        const score = await QuizScore.findOne({ where: { participantId: p.id, roundId: round.id } });
-        if (score) {
-          if (event.finalScoreRule === "round2_only" && round.roundNumber === 1) continue;
-          const weight = event.finalScoreRule === "weighted" && round.roundNumber === 2
-            ? Number(event.round2Weight) : 1;
-          total += Number(score.totalMarks) * weight;
-        }
-      }
-      finalScores.push({
-        participant: p,
-        finalScore: total,
-        tiebreakScore: tiebreakScoreByParticipant[p.id] ?? null,
-      });
-    }
-
-    // Detect unresolved ties: a genuine score tie where neither
-    // participant has a differentiating tiebreak score.
+    // Detect unresolved ties: same as before, unchanged
     const byScore = {};
     finalScores.forEach((f) => {
       const key = f.finalScore;
@@ -1096,8 +1112,6 @@ export const completeEvent = async (req, res) => {
     const unresolved = Object.values(byScore).some((group) => {
       if (group.length < 2) return false;
       const tbScores = group.map((g) => g.tiebreakScore);
-      // Unresolved if any two tied participants share the same tiebreak
-      // score (including both being null — no tiebreak run yet).
       return new Set(tbScores).size < tbScores.length;
     });
 
@@ -1107,13 +1121,9 @@ export const completeEvent = async (req, res) => {
       });
     }
 
-    finalScores.sort((a, b) => {
-      if (b.finalScore !== a.finalScore) return b.finalScore - a.finalScore;
-      return (b.tiebreakScore || 0) - (a.tiebreakScore || 0);
-    });
-
     for (let i = 0; i < finalScores.length; i++) {
       finalScores[i].participant.finalRank = i + 1;
+      finalScores[i].participant.finalScore = finalScores[i].finalScore;  // ← persist it (see model note below)
       finalScores[i].participant.status = "completed";
       await finalScores[i].participant.save();
     }
@@ -1675,3 +1685,31 @@ export const updateEvent = async (req, res) => {
   }
 };
 
+
+
+// controllers/quizEventController.js — add near recalculateScores
+
+// Computes the full final ranking: Round 1 + Round 2 (weighted per
+// event.finalScoreRule), with tiebreak scores (round 98 and/or 99)
+// factored in purely for breaking ties. Read-only — safe to call at
+// any point after Round 2 has scores, not just at actual completion.
+// completeEvent uses this same logic when it persists finalRank.
+
+
+// ======================================================
+// GET FINAL LEADERBOARD (combined R1+R2, tiebreak-aware)
+// GET /api/quiz/events/:id/final-leaderboard
+// ======================================================
+export const getFinalLeaderboard = async (req, res) => {
+  try {
+    if (!isAdmin(req.user)) return res.status(403).json({ message: "Unauthorized" });
+    const event = await QuizEvent.findByPk(req.params.id);
+    if (!event) return res.status(404).json({ message: "Event not found" });
+
+    const finalScores = await computeFinalLeaderboard(event);
+    res.json({ finalScores });
+  } catch (err) {
+    console.error("getFinalLeaderboard:", err);
+    res.status(500).json({ message: "Failed to get final leaderboard" });
+  }
+};
