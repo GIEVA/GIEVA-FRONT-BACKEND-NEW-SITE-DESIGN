@@ -71,6 +71,7 @@ export default function ParticipantQuizPage() {
   const [connected,          setConnected]         = useState(false);
   const [toast,              setToast]             = useState(null);
   const [finalResults,       setFinalResults]      = useState(null);
+  const [waitingForTiebreak, setWaitingForTiebreak] = useState(false);
 
   const socketRef        = useRef(null);
   const timerIntervalRef = useRef(null);
@@ -230,6 +231,7 @@ export default function ParticipantQuizPage() {
         setParticipantStatus("eliminated");
       } else if (qualifiedParticipantIds?.includes(participant.id)) {
         setParticipantStatus("qualified_round2");
+        setWaitingForTiebreak(false);
         setToast({ msg: "You qualified for Round 2!", severity: "success" });
       }
     });
@@ -283,6 +285,7 @@ export default function ParticipantQuizPage() {
       const res = await getEventState(event.id, participant.id);
       setEventStatus(res.eventStatus);
       setParticipantStatus(res.participantStatus);
+      setWaitingForTiebreak(res.waitingForTiebreak || false);
 
       if (res.currentQuestion) {
         const isNewQuestion = currentQuestionRef.current?.roundQuestionId !== res.currentQuestion.roundQuestionId;
@@ -307,6 +310,12 @@ export default function ParticipantQuizPage() {
         if (res.timerInfo && res.currentQuestion.status === "open") {
           setSecondsLeft(res.timerInfo.remaining);
         }
+      }else if (currentQuestionRef.current) {
+        // Poll caught a transition to "no active question for you" that the
+        // socket missed (e.g. you're now excluded from an active tiebreak).
+        setCurrentQuestion(null);
+        setSelected(null);
+        stopTimer();
       }
 
       // Always sync to the server's answer for the current question —
@@ -430,9 +439,11 @@ export default function ParticipantQuizPage() {
         </Alert>
       )}
 
-      <Box sx={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", p: 3 }}>
+            <Box sx={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", p: 3 }}>
         {eventStatus === "paused" ? (
           <PausedCard />
+        ) : waitingForTiebreak ? (
+          <TiebreakWaitingCard myScore={myScore} />
         ) : currentQuestion ? (
           <QuestionCard
             currentQuestion={currentQuestion}
@@ -497,23 +508,46 @@ function JoinScreen({ codeInput, setCodeInput, onJoin, joining, error }) {
 // ─── Waiting screen (between questions / before start) ─────
 function WaitingCard({ eventStatus, myScore }) {
   const messages = {
-    published: "Waiting for the event to start…",
-    ready: "Waiting for the event to start…",
-    round1_intro: "Round 1 is about to begin — get ready!",
-    round2_intro: "Round 2 is about to begin — get ready!",
-    round1_result_revealed: "Waiting for the next question…",
-    round2_result_revealed: "Waiting for the next question…",
-    round1_completed: "Round 1 is complete. Waiting for the organiser…",
-    round2_completed: "Round 2 is complete. Waiting for final results…",
-    elimination_review: "The panel is reviewing Round 1 results…",
-    tiebreak_active: "Get ready — tiebreak question coming up!",
-  };
+  published: "Waiting for the event to start…",
+  ready: "Waiting for the event to start…",
+  round1_intro: "Round 1 is about to begin — get ready!",
+  round2_intro: "Round 2 is about to begin — get ready!",
+  round1_result_revealed: "Waiting for the next question…",
+  round2_result_revealed: "Waiting for the next question…",
+  round1_completed: "Round 1 is complete. Waiting for the organiser…",
+  round2_completed: "Round 2 is complete. Waiting for final results…",
+  elimination_review: "The panel is reviewing Round 1 results…",
+  round1_tiebreak_active: "Tiebreak in progress — get ready for the next question!",
+  round1_tiebreak_completed: "Tiebreak complete. Waiting for the panel's review…",
+  tiebreak_active: "Get ready — tiebreak question coming up!",
+  tiebreak_completed: "Tiebreak complete. Waiting for final results…",
+};
   return (
     <Paper elevation={0} sx={{ maxWidth: 420, width: "100%", borderRadius: 4, p: 5, textAlign: "center",
                                 border: `1px solid ${BORDER}` }}>
       <CircularProgress sx={{ color: GREEN, mb: 3 }} />
       <Typography sx={{ fontWeight: 800, fontSize: 18, color: TEXT, mb: 1 }}>
         {messages[eventStatus] || "Waiting…"}
+      </Typography>
+      {myScore && (
+        <Typography sx={{ fontSize: 13, color: MUTED, mt: 2 }}>
+          Your score so far: <strong style={{ color: TEXT }}>{myScore.totalMarks}</strong>
+        </Typography>
+      )}
+    </Paper>
+  );
+}
+
+function TiebreakWaitingCard({ myScore }) {
+  return (
+    <Paper elevation={0} sx={{ maxWidth: 420, width: "100%", borderRadius: 4, p: 5, textAlign: "center",
+                                border: `1px solid ${BORDER}` }}>
+      <CircularProgress sx={{ color: GOLD, mb: 3 }} />
+      <Typography sx={{ fontWeight: 800, fontSize: 18, color: TEXT, mb: 1 }}>
+        Hold on — a tiebreak is in progress
+      </Typography>
+      <Typography sx={{ fontSize: 13, color: MUTED }}>
+        A small group of participants is settling a tie. You've already qualified — the next round will begin shortly.
       </Typography>
       {myScore && (
         <Typography sx={{ fontSize: 13, color: MUTED, mt: 2 }}>
