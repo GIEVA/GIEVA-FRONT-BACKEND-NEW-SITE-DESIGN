@@ -457,9 +457,7 @@ const loadFinalLeaderboard = async () => {
   }
 };
 
-useEffect(() => {
-  if (s === "completed") loadFinalLeaderboard();
-}, [s]);
+
 
 
 const loadRound1TiebreakReview = async () => {
@@ -602,7 +600,9 @@ const roundInProgress = [
 
   const cfg = STATUS_CFG[s] || STATUS_CFG.draft;
 
-
+useEffect(() => {
+  if (s === "completed") loadFinalLeaderboard();
+}, [s]);
 
 
 
