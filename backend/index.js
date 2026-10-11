@@ -106,7 +106,8 @@ import liveQuizeRoutes from "./routes/quizRoutes.js"
 import courseQuizRoutes from "./routes/courseQuizRoutes.js";
 
 import { recoverPendingTimers } from "./service/quizFlowEngine.js";
-
+import healsPaymentRoutes from "./routes/healsPaymentRoutes.js";
+import { healsPaystackWebhook } from "./controllers/healsPaymentController.js";
 
 
 
@@ -133,6 +134,13 @@ startConsultationReminderJob();
 startCampaignAutoCloseJob();
 startCampaignEmailScheduler();
 startEmailScheduler();
+
+// Paystack webhook needs the raw body to verify the signature, so it must come BEFORE express.json()
+app.post(
+  "/api/heals-payments/webhook",
+  express.raw({ type: "application/json" }),
+  healsPaystackWebhook
+);
 
 
 // app.use(bodyParser.json());
@@ -180,6 +188,7 @@ app.use('/api', tutorPrivilegeRoutes);
 app.use('/api', studentDashboardroutes);
 app.use("/api/student", studentCourseRoutes);
 app.use("/api/applicant", healsApplicationRoutes);
+app.use("/api/heals-payments", healsPaymentRoutes);
 app.use(
   "/api/admin/tutor-assignments",
   adminTutorAssignmentRoutes

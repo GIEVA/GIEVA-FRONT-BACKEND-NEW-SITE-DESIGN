@@ -2,7 +2,6 @@ import express from "express";
 
 import {
   createApplication,
-  submitApplication,
   getMyApplications,
   getApplicationById,
   updateApplication,
@@ -17,45 +16,53 @@ from "../middleware/auth.js";
 import upload
 from "../middleware/upload.js";
 
+import { ALL_DOC_FIELDS } from "../config/healsRequirements.js";
+
+
+
 const router = express.Router();
 
 
+
+const applicationUploads = upload.fields(
+  ALL_DOC_FIELDS.map((name) => ({ name, maxCount: 1 }))
+);
 // ======================================================
 // MULTI FILE CONFIG
 // ======================================================
 
-const applicationUploads =
-  upload.fields([
-    {
-      name: "passport",
-      maxCount: 1,
-    },
+// const applicationUploads =
+//   upload.fields([
+//     {
+//       name: "passport",
+//       maxCount: 1,
+//     },
 
-    {
-      name: "transcript",
-      maxCount: 1,
-    },
+//     {
+//       name: "transcript",
+//       maxCount: 1,
+//     },
 
-    {
-      name: "sop",
-      maxCount: 1,
-    },
+//     {
+//       name: "sop",
+//       maxCount: 1,
+//     },
 
-    {
-      name: "recommendation",
-      maxCount: 1,
-    },
+//     {
+//       name: "recommendation",
+//       maxCount: 1,
+//     },
 
-    {
-      name: "bankStatement",
-      maxCount: 1,
-    },
+//     {
+//       name: "bankStatement",
+//       maxCount: 1,
+//     },
 
-    {
-      name: "otherDoc",
-      maxCount: 1,
-    },
-  ]);
+//     {
+//       name: "otherDoc",
+//       maxCount: 1,
+//     },
+//   ]);
 
 
 // ======================================================
@@ -92,13 +99,13 @@ router.post(
 // SUBMIT APPLICATION
 // ======================================================
 
-router.post(
-  "/:id/submit",
+// router.post(
+//   "/:id/submit",
 
-  authenticate,
+//   authenticate,
 
-  submitApplication
-);
+//   submitApplication
+// );
 
 
 // ======================================================

@@ -148,6 +148,8 @@ import AdminQuizManager from "./pages/AdminQuizManager";
 import ParticipantQuizPage from "./pages/ParticipantLiveQuizPage";
 import AudienceQuizPage from "./pages/AudienceQuizPage";
 import PanelistQuizPage from "./pages/PanelistQuizPage";
+import HealsPaymentCallback from "./pages/HealsPaymentCallback";
+
 
 import "katex/dist/katex.min.css";
 
@@ -325,6 +327,8 @@ function App() {
               </ProtectedRoute>
             }
           />
+
+          <Route path="/heals/payment/callback" element={<ProtectedRoute><HealsPaymentCallback /> </ProtectedRoute>} />
 
           <Route
             path="/heals/application/:id"

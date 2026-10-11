@@ -20,7 +20,7 @@ import { useParams } from "react-router-dom";
 import { io } from "socket.io-client";
 import {
   Box, Typography, Paper, Button, Chip, Stack, TextField,
-  CircularProgress, Alert, Snackbar, Grid, LinearProgress, Divider,
+  CircularProgress, Alert, Snackbar, Grid, LinearProgress, Divider, GlobalStyles,
 } from "@mui/material";
 import {
   CheckCircle, Cancel, WifiOff, EmojiEvents, HelpOutline,
@@ -73,6 +73,14 @@ export default function ParticipantQuizPage() {
   const [finalResults,       setFinalResults]      = useState(null);
   const [waitingForTiebreak, setWaitingForTiebreak] = useState(false);
 
+  const [saving, setSaving] = useState(false);
+
+  const [obscured, setObscured] = useState(false);
+  const lastWarnRef = useRef(0);
+
+  const pendingPickRef = useRef(null); // { roundQuestionId, option } — latest unsent pick
+  const savingRef      = useRef(false);
+
   const socketRef        = useRef(null);
   const timerIntervalRef = useRef(null);
   const answeringSentRef = useRef(false); // avoid spamming quiz:answering on every keystroke-equivalent click
@@ -100,6 +108,86 @@ export default function ParticipantQuizPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [urlCode]);
+
+
+
+useEffect(() => {
+  if (!participant) return;
+
+  const warn = (msg) => {
+    const now = Date.now();
+    if (now - lastWarnRef.current < 3000) return; // don't spam toasts
+    lastWarnRef.current = now;
+    setToast({ msg, severity: "warning" });
+  };
+
+  const block = (e) => { e.preventDefault(); warn("Copying and right-click are disabled during the quiz."); };
+
+  const onKeyDown = (e) => {
+    const k = e.key.toLowerCase();
+    const mod = e.ctrlKey || e.metaKey;
+    if (
+      (mod && ["c", "x", "v", "a", "p", "s", "u"].includes(k)) ||
+      (mod && e.shiftKey && ["i", "j", "c", "s"].includes(k)) ||
+      e.key === "F12"
+    ) {
+      e.preventDefault();
+      warn("That shortcut is disabled during the quiz.");
+    }
+  };
+
+  const onKeyUp = (e) => {
+    if (e.key === "PrintScreen") {
+      navigator.clipboard?.writeText("").catch(() => {}); // wipe whatever was captured
+      warn("Screenshots are not allowed during the quiz.");
+    }
+  };
+
+  const hide = () => setObscured(true);
+  const show = () => { if (document.visibilityState === "visible") setObscured(false); };
+
+  const onVisibility = () => (document.hidden ? hide() : show());
+
+  document.addEventListener("contextmenu", block);
+  document.addEventListener("copy", block);
+  document.addEventListener("cut", block);
+  document.addEventListener("paste", block);
+  document.addEventListener("dragstart", block);
+  document.addEventListener("selectstart", block);
+  document.addEventListener("keydown", onKeyDown);
+  document.addEventListener("keyup", onKeyUp);
+  window.addEventListener("blur", hide);
+  window.addEventListener("focus", show);
+  document.addEventListener("visibilitychange", onVisibility);;
+
+  return () => {
+    document.removeEventListener("contextmenu", block);
+    document.removeEventListener("copy", block);
+    document.removeEventListener("cut", block);
+    document.removeEventListener("paste", block);
+    document.removeEventListener("dragstart", block);
+    document.removeEventListener("selectstart", block);
+    document.removeEventListener("keydown", onKeyDown);
+    document.removeEventListener("keyup", onKeyUp);
+    window.removeEventListener("blur", hide);
+    window.removeEventListener("focus", show);
+    document.removeEventListener("visibilitychange", onVisibility);
+  };
+}, [participant?.id]);
+
+// Faint repeating watermark tying the screen to this participant
+const watermarkUrl = participant
+  ? (() => {
+      const label = `${participant.name} · ${participant.participantCode}`
+        .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      const svg =
+        `<svg xmlns="http://www.w3.org/2000/svg" width="260" height="140">` +
+        `<text x="20" y="80" font-size="14" font-family="sans-serif" fill="rgba(0,0,0,0.07)" ` +
+        `transform="rotate(-25 130 70)">${label}</text></svg>`;
+      return `url("data:image/svg+xml;utf8,${encodeURIComponent(svg)}")`;
+    })()
+  : null;
+
 
   // ── Join flow ────────────────────────────────────────────
   const attemptJoin = async (code, silent = false) => {
@@ -324,7 +412,9 @@ export default function ParticipantQuizPage() {
       // answer object from the previous question stick around, which
       // both showed the old option as still selected and hid the
       // Submit button (since hasSubmitted stayed true).
-      setMyAnswer(res.myAnswer || null);
+      // setMyAnswer(res.myAnswer || null);
+      if (!savingRef.current) setMyAnswer(res.myAnswer || null);
+
       if (res.myScore) setMyScore(res.myScore);
     } catch {
       /* transient — next poll or a socket event will recover state */
@@ -348,32 +438,81 @@ export default function ParticipantQuizPage() {
   }, [participant, event]);
 
   // ── Answer submission ────────────────────────────────────
-  const pickOption = (opt) => {
-    if (currentQuestion?.status !== "open") return;
-    setSelected(opt);
-    if (!answeringSentRef.current && socketRef.current) {
-      socketRef.current.emit("quiz:answering", { eventId: event.id, participantId: participant.id });
-      answeringSentRef.current = true;
-    }
-  };
+  // const pickOption = (opt) => {
+  //   if (currentQuestion?.status !== "open") return;
+  //   setSelected(opt);
+  //   if (!answeringSentRef.current && socketRef.current) {
+  //     socketRef.current.emit("quiz:answering", { eventId: event.id, participantId: participant.id });
+  //     answeringSentRef.current = true;
+  //   }
+  // };
 
-  const confirmAnswer = async () => {
-    if (!selected || !currentQuestion || currentQuestion.status !== "open") return;
-    try {
-      setSubmitting(true);
-      await submitAnswer(event.id, {
-        participantId: participant.id,
-        roundQuestionId: currentQuestion.roundQuestionId,
-        selectedOption: selected,
-      });
-      setMyAnswer({ selectedOption: selected, submittedAt: new Date().toISOString() });
-      setToast({ msg: "Answer submitted", severity: "success" });
-    } catch (err) {
-      setToast({ msg: err?.response?.data?.message || "Couldn't submit — try again", severity: "error" });
-    } finally {
-      setSubmitting(false);
+  // const confirmAnswer = async () => {
+  //   if (!selected || !currentQuestion || currentQuestion.status !== "open") return;
+  //   try {
+  //     setSubmitting(true);
+  //     await submitAnswer(event.id, {
+  //       participantId: participant.id,
+  //       roundQuestionId: currentQuestion.roundQuestionId,
+  //       selectedOption: selected,
+  //     });
+  //     setMyAnswer({ selectedOption: selected, submittedAt: new Date().toISOString() });
+  //     setToast({ msg: "Answer submitted", severity: "success" });
+  //   } catch (err) {
+  //     setToast({ msg: err?.response?.data?.message || "Couldn't submit — try again", severity: "error" });
+  //   } finally {
+  //     setSubmitting(false);
+  //   }
+  // };
+
+  const flushPick = async () => {
+  if (savingRef.current) return; // a loop is already draining the queue
+  savingRef.current = true;
+  setSaving(true);
+  try {
+    while (pendingPickRef.current) {
+      const pick = pendingPickRef.current;
+      pendingPickRef.current = null;
+      try {
+        await submitAnswer(event.id, {
+          participantId: participant.id,
+          roundQuestionId: pick.roundQuestionId,
+          selectedOption: pick.option,
+        });
+        if (currentQuestionRef.current?.roundQuestionId === pick.roundQuestionId) {
+          setMyAnswer({ selectedOption: pick.option, submittedAt: new Date().toISOString() });
+        }
+      } catch (err) {
+        // Only react if the participant hasn't already picked something newer
+        if (!pendingPickRef.current) {
+          setSelected(null); // fall back to the last answer the server accepted
+          setToast({
+            msg: err?.response?.status === 409
+              ? "Time's up — your last saved answer counts."
+              : "Couldn't save your answer — tap it again.",
+            severity: "error",
+          });
+        }
+      }
     }
-  };
+  } finally {
+    savingRef.current = false;
+    setSaving(false);
+  }
+};
+
+const pickOption = (opt) => {
+  const cq = currentQuestionRef.current;
+  if (!cq || cq.status !== "open") return;
+  setSelected(opt);
+  pendingPickRef.current = { roundQuestionId: cq.roundQuestionId, option: opt };
+  flushPick();
+
+  if (!answeringSentRef.current && socketRef.current) {
+    socketRef.current.emit("quiz:answering", { eventId: event.id, participantId: participant.id });
+    answeringSentRef.current = true;
+  }
+};
 
   // ── Fetch full results once event/round is done ─────────
   const [resultsDetail, setResultsDetail] = useState(null);
@@ -410,7 +549,30 @@ export default function ParticipantQuizPage() {
   }
 
   return (
-    <Box sx={{ minHeight: "100vh", bgcolor: BG, display: "flex", flexDirection: "column" }}>
+     <Box sx={{
+    minHeight: "100vh", bgcolor: BG, display: "flex", flexDirection: "column",
+    userSelect: "none", WebkitUserSelect: "none", WebkitTouchCallout: "none",
+  }}>
+    <GlobalStyles styles={{ "@media print": { body: { display: "none !important" } } }} />
+
+    {/* Watermark */}
+    <Box sx={{
+      position: "fixed", inset: 0, zIndex: 1200, pointerEvents: "none",
+      backgroundImage: watermarkUrl,
+    }} />
+
+    {/* Privacy cover when the window loses focus */}
+    {obscured && (
+      <Box sx={{
+        position: "fixed", inset: 0, zIndex: 1500, bgcolor: NAVY, color: "#fff",
+        display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", p: 3,
+      }}>
+        <Typography sx={{ fontWeight: 800, fontSize: 20, mb: 1 }}>Quiz hidden</Typography>
+        <Typography sx={{ fontSize: 14, opacity: 0.8 }}>
+          Return to this window to continue. Switching away during the quiz is not allowed.
+        </Typography>
+      </Box>
+    )}
       {/* Top bar */}
       <Box sx={{ bgcolor: NAVY, color: "#fff", px: 3, py: 1.5,
                  display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -450,9 +612,8 @@ export default function ParticipantQuizPage() {
             selected={selected}
             myAnswer={myAnswer}
             secondsLeft={secondsLeft}
-            submitting={submitting}
+            saving={saving}
             onPick={pickOption}
-            onConfirm={confirmAnswer}
             myScore={myScore}
           />
         ) : (
@@ -615,7 +776,7 @@ function CompletedScreen({ participant, finalResults, resultsDetail }) {
 }
 
 // ─── Question card ──────────────────────────────────────────
-function QuestionCard({ currentQuestion, selected, myAnswer, secondsLeft, submitting, onPick, onConfirm, myScore }) {
+function QuestionCard({ currentQuestion, selected, myAnswer, secondsLeft, saving, onPick, myScore }) {
   const q = currentQuestion.question;
   const isOpen     = currentQuestion.status === "open";
   const isLocked   = currentQuestion.status === "locked";
@@ -623,7 +784,7 @@ function QuestionCard({ currentQuestion, selected, myAnswer, secondsLeft, submit
   const hasSubmitted = !!myAnswer?.selectedOption;
   const urgentTimer = secondsLeft !== null && secondsLeft <= 10;
 
-  const mySelection = myAnswer?.selectedOption ?? selected;
+  const mySelection = selected ?? myAnswer?.selectedOption;
   const isCorrectOption = (opt) => opt === q.correctAnswer;
   const isMySelection   = (opt) => opt === mySelection;
 
@@ -698,7 +859,7 @@ function QuestionCard({ currentQuestion, selected, myAnswer, secondsLeft, submit
           <Button
             key={opt}
             fullWidth
-            disabled={!isOpen || submitting}
+            disabled={!isOpen}
             onClick={() => onPick(opt)}
             sx={{
               justifyContent: "flex-start", textTransform: "none", textAlign: "left",
@@ -720,21 +881,17 @@ function QuestionCard({ currentQuestion, selected, myAnswer, secondsLeft, submit
         ))}
       </Stack>
 
-      {isOpen && !hasSubmitted && (
-        <Button
-          fullWidth
-          variant="contained"
-          disabled={!selected || submitting}
-          onClick={onConfirm}
-          sx={{ mt: 3, textTransform: "none", bgcolor: GREEN, fontWeight: 700, borderRadius: 2.5, py: 1.4,
-                "&:hover": { bgcolor: "#166d3e" } }}
+      {isOpen && (
+        <Alert
+          severity={mySelection ? "success" : "info"}
+          icon={saving ? <CircularProgress size={16} /> : mySelection ? <CheckCircle /> : <HelpOutline />}
+          sx={{ mt: 3, borderRadius: 2 }}
         >
-          {submitting ? <CircularProgress size={20} color="inherit" /> : "Submit Answer"}
-        </Button>
-      )}
-      {isOpen && hasSubmitted && (
-        <Alert severity="success" icon={<CheckCircle />} sx={{ mt: 3, borderRadius: 2 }}>
-          Answer submitted — you can change it by picking a different option until the timer ends.
+          {saving
+            ? "Saving your answer…"
+            : mySelection
+              ? "Answer saved — tap a different option to change it until time is up."
+              : "Tap an option to answer."}
         </Alert>
       )}
       {isLocked && (
