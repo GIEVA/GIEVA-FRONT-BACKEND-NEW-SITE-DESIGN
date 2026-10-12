@@ -202,6 +202,7 @@ export const getApplicationById = async (req, res) => {
   try {
     const application = await HealsApplication.findOne({
       where: { id: req.params.id, userId: req.user.id },
+      attributes: { exclude: ["internalNotes"] },
     });
     if (!application) return res.status(404).json({ message: "Application not found" });
     res.status(200).json({ application });
