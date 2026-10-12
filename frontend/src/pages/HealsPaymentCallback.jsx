@@ -65,7 +65,7 @@ export default function HealsPaymentCallback() {
               If you were charged, don't pay again. Your application will be submitted automatically
               once the payment is confirmed.
             </Typography>
-            <Button variant="outlined" onClick={() => navigate("/heals/applications")}>
+            <Button variant="outlined" onClick={() => navigate("/heals/my-applications")}>
               My Applications
             </Button>
           </>

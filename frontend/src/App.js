@@ -153,6 +153,7 @@ import HealsPaymentCallback from "./pages/HealsPaymentCallback";
 
 import "katex/dist/katex.min.css";
 
+import RootRedirect from "./components/RootRedirect";
 
 
 // (Optional later)
@@ -172,7 +173,7 @@ function App() {
           <Route element={<PublicLayout />}>
 
           {/* Public routes */}
-          <Route path="/" element={<HomePage />} />
+          <Route path="/" element={<RootRedirect />} />
           <Route path="/register" element={<Register />} />
           <Route path="/login" element={<Login />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />

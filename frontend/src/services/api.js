@@ -1,6 +1,7 @@
 // services/api.js
 
 import axios from "axios";
+import { isTokenExpired } from "../utils/authRedirect";
 
 const API = axios.create({
   baseURL: "https://gieva-front-backend-new-site-design-production.up.railway.app/",
@@ -14,10 +15,15 @@ const API = axios.create({
 API.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");
 
+  if (token && isTokenExpired(token)) {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    return config; // continue without credentials
+  }
+
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
-
   return config;
 });
 
@@ -30,10 +36,12 @@ const isOnLoginPage = () =>
   window.location.pathname === LOGIN_PATH;
 
 const handleSessionExpired = (message) => {
-  if (loggingOut || isOnLoginPage()) return;
+   if (loggingOut || isOnLoginPage()) return;
   loggingOut = true;
 
   localStorage.removeItem("token");
+  localStorage.removeItem("user");
+  sessionStorage.removeItem("gieva_landed");
   // Remove any other auth-related cached data here if you store it,
   // e.g. localStorage.removeItem("user"); localStorage.removeItem("role");
 
