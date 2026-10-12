@@ -338,7 +338,7 @@ export default function HealsApplicationDetails() {
         )}
       </Stack>
 
-      <Button sx={{ mt: 4 }} variant="outlined" onClick={() => navigate("/heals/applications")}>
+      <Button sx={{ mt: 4 }} variant="outlined" onClick={() => navigate("/heals/my-applications")}>
         Back to My Applications
       </Button>
     </Box>
