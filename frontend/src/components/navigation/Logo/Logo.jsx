@@ -3,7 +3,7 @@ import PropTypes from "prop-types";
 import { Box, Typography } from "@mui/material";
 import { Link as RouterLink } from "react-router-dom";
 
-import logoImage from "../../../../assets/logo/GIEVALogo.png";
+import logoImage from "../../../assets/logo/GIEVALogo.png";
 
 export default function Logo({
   size = "medium",
