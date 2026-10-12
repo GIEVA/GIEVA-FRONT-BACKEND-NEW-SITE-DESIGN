@@ -1,7 +1,10 @@
 import {
-  Box, Typography, Grid, TextField, Button, Card, CardContent, MenuItem, Stack, Divider,
+  Box, Typography, TextField, Button, Card, CardContent, MenuItem, Stack, Divider,
   Alert, CircularProgress, IconButton, Checkbox, FormControlLabel, FormGroup, Chip, ListSubheader,
 } from "@mui/material";
+
+import Grid from "@mui/material/GridLegacy";
+
 import { CloudUpload, Save, Payment, InsertDriveFile, Delete, CheckCircle } from "@mui/icons-material";
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
@@ -15,9 +18,11 @@ import {
   categoryFromProgram, getMissingFields,
 } from "../config/healsRequirements";
 
+import { startHealsCheckout, getHealsFee } from "../services/healsPaymentService";
+
 const BRAND = "#0B1F3A";
 const MAX_FILE_SIZE = 2 * 1024 * 1024;
-const FEE = Number(process.env.REACT_APP_HEALS_FEE) || null; // display only; the server decides the real amount
+// const FEE = Number(process.env.REACT_APP_HEALS_FEE) || null; // display only; the server decides the real amount
 const YEARS = Array.from({ length: 50 }, (_, i) => String(new Date().getFullYear() + 5 - i));
 
 const ARRAY_KEYS = ["desiredCountries", "studyAreas", "intakePeriods", "mediumOfInstruction", "incomeDocuments"];
@@ -86,6 +91,14 @@ export default function HealsApplicationForm() {
   const [paying, setPaying] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+
+  const [fee, setFee] = useState(null);
+
+  useEffect(() => { getHealsFee().then(setFee).catch(() => {}); }, []);
+
+const feeLabel = fee?.amount
+  ? new Intl.NumberFormat("en-NG", { style: "currency", currency: fee.currency, maximumFractionDigits: 0 }).format(fee.amount)
+  : "";
 
   const category = categoryFromProgram(form.degreeProgram);
   const docs = HEALS_REQUIREMENTS[category]?.documents || [];
@@ -223,7 +236,7 @@ export default function HealsApplicationForm() {
         </Grid>
         <Typography variant="body2" mt={2}>
           <strong>How it works:</strong> complete the form, upload your documents and pay the HEALS enrolment
-          fee{FEE ? ` (₦${FEE.toLocaleString()})` : ""}. Your application is submitted automatically once payment
+          fee{feeLabel ? ` (${feeLabel})` : ""}. Your application is submitted automatically once payment
           is confirmed. You can save a draft at any time and finish later.
         </Typography>
       </Alert>

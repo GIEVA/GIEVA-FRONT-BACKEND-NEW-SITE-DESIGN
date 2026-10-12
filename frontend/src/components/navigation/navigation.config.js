@@ -167,8 +167,8 @@ export const userMenu = {
       path: "/courses",
     },
     {
-      label: "Certificates",
-      path: "/certificates",
+      label: "Heals Application",
+      path: "/heals/my-applications",
     },
     {
       label: "Bookings",

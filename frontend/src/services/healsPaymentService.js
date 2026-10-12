@@ -13,3 +13,6 @@ export const getMyHealsPayments = () =>
 
 export const getHealsPaymentById = (id) =>
   API.get(`/api/heals-payments/${id}`).then((r) => r.data);
+
+export const getHealsFee = () =>
+  API.get("/api/heals-payments/fee").then((r) => r.data);

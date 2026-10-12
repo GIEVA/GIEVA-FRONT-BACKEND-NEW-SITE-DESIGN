@@ -142,6 +142,7 @@ export default (sequelize) => {
       defaultValue: "application",
     },
 
+    documentReviews: DataTypes.JSON,   // { passport: "verified", waecResult: "rejected", ... }
     submittedAt: DataTypes.DATE,
     reviewStartedAt: DataTypes.DATE,
     approvedAt: DataTypes.DATE,

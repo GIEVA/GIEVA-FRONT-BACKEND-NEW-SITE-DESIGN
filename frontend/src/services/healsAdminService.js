@@ -124,6 +124,13 @@ export const completeHealsApplication =
   };
 
 
+  export const getHealsFeeSetting = () =>
+  API.get("/api/admin/heals/settings/fee").then((r) => r.data);
+
+export const updateHealsFeeSetting = (payload) =>
+  API.put("/api/admin/heals/settings/fee", payload).then((r) => r.data);
+
+
 
 // ======================================================
 // GET PAYMENTS

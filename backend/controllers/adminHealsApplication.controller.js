@@ -8,6 +8,9 @@ import {
   infoRequestTemplate,
   paymentRequestTemplate,
 } from "../utils/emailTemplates.js";
+
+import { HEALS_REQUIREMENTS, ALL_DOC_FIELDS } from "../config/healsRequirements.js";
+
 import { Op } from "sequelize";
 
 const { HealsApplication, HealsPayment, ActivityLog, Notification, User } = models;
@@ -119,27 +122,35 @@ export const verifyApplicationDocuments = async (req, res) => {
   try {
     const adminId = req.user.id;
     const { id } = req.params;
-    const { passportVerified, transcriptVerified, bankStatementVerified } = req.body;
+    const { reviews, internalNotes } = req.body;
 
     const application = await HealsApplication.findByPk(id);
-
     if (!application) {
       await transaction.rollback();
-      return res.status(404).json({
-        message: "Application not found",
-      });
+      return res.status(404).json({ message: "Application not found" });
     }
 
     const updates = {};
-    if (typeof passportVerified === "boolean") updates.passportVerified = passportVerified;
-    if (typeof transcriptVerified === "boolean") updates.transcriptVerified = transcriptVerified;
-    if (typeof bankStatementVerified === "boolean") updates.bankStatementVerified = bankStatementVerified;
+
+    if (reviews && typeof reviews === "object") {
+      const merged = { ...(application.documentReviews || {}) };
+      for (const [field, state] of Object.entries(reviews)) {
+        if (ALL_DOC_FIELDS.includes(field) && ["pending", "verified", "rejected"].includes(state)) {
+          merged[field] = state;
+        }
+      }
+      updates.documentReviews = merged;
+      // keep the legacy flags in sync
+      updates.passportVerified      = merged.passport === "verified";
+      updates.transcriptVerified    = merged.transcript === "verified";
+      updates.bankStatementVerified = merged.bankStatement === "verified";
+    }
+
+    if (typeof internalNotes === "string") updates.internalNotes = internalNotes;
 
     if (Object.keys(updates).length === 0) {
       await transaction.rollback();
-      return res.status(400).json({
-        message: "No document verification flags provided",
-      });
+      return res.status(400).json({ message: "Nothing to update" });
     }
 
     await application.update(updates, { transaction });
@@ -148,23 +159,17 @@ export const verifyApplicationDocuments = async (req, res) => {
       {
         userId: adminId,
         action: "DOCUMENTS_VERIFIED",
-        meta: { applicationId: application.id, updates },
+        meta: { applicationId: application.id, reviews: updates.documentReviews || null },
       },
       { transaction }
     );
 
     await transaction.commit();
-
-    res.status(200).json({
-      message: "Document verification updated",
-      application,
-    });
+    res.status(200).json({ message: "Saved", application });
   } catch (error) {
     await transaction.rollback();
     console.error("Verify Documents Error:", error);
-    res.status(500).json({
-      message: "Failed to verify documents",
-    });
+    res.status(500).json({ message: "Failed to save verification" });
   }
 };
 
@@ -191,7 +196,7 @@ export const updateApplicationStatus = async (req, res) => {
   try {
     const adminId = req.user.id;
     const { id } = req.params;
-    const { status, currentStage, internalNotes } = req.body;
+    const { status, currentStage, internalNotes, note } = req.body;
 
     if (!status || !VALID_STATUSES.includes(status)) {
       await transaction.rollback();
@@ -234,7 +239,7 @@ export const updateApplicationStatus = async (req, res) => {
       {
         userId: adminId,
         action: "APPLICATION_STATUS_UPDATED",
-        meta: { applicationId: application.id, status },
+        meta: { applicationId: application.id, status, note: note || null },
       },
       { transaction }
     );
@@ -287,111 +292,111 @@ export const updateApplicationStatus = async (req, res) => {
 // ======================================================
 // Body: { amount, title?, description? }
 
-export const sendPaymentRequest = async (req, res) => {
-  const transaction = await HealsApplication.sequelize.transaction();
+// export const sendPaymentRequest = async (req, res) => {
+//   const transaction = await HealsApplication.sequelize.transaction();
 
-  try {
-    const agentId = req.user.id;
-    const { id } = req.params;
-    const { amount, title, description } = req.body;
+//   try {
+//     const agentId = req.user.id;
+//     const { id } = req.params;
+//     const { amount, title, description } = req.body;
 
-    if (!amount) {
-      await transaction.rollback();
-      return res.status(400).json({
-        message: "Amount is required",
-      });
-    }
+//     if (!amount) {
+//       await transaction.rollback();
+//       return res.status(400).json({
+//         message: "Amount is required",
+//       });
+//     }
 
-    const application = await HealsApplication.findByPk(id);
+//     const application = await HealsApplication.findByPk(id);
 
-    if (!application) {
-      await transaction.rollback();
-      return res.status(404).json({
-        message: "Application not found",
-      });
-    }
+//     if (!application) {
+//       await transaction.rollback();
+//       return res.status(404).json({
+//         message: "Application not found",
+//       });
+//     }
 
-    if (!application.passportVerified || !application.transcriptVerified) {
-      await transaction.rollback();
-      return res.status(400).json({
-        message: "Documents not fully verified",
-      });
-    }
+//     if (!application.passportVerified || !application.transcriptVerified) {
+//       await transaction.rollback();
+//       return res.status(400).json({
+//         message: "Documents not fully verified",
+//       });
+//     }
 
-    application.status = "approved_for_payment";
-    application.assignedAgentId = agentId;
-    application.applicationFeeAmount = amount;
-    application.reviewStartedAt = application.reviewStartedAt || new Date();
-    application.approvedAt = new Date();
+//     application.status = "approved_for_payment";
+//     application.assignedAgentId = agentId;
+//     application.applicationFeeAmount = amount;
+//     application.reviewStartedAt = application.reviewStartedAt || new Date();
+//     application.approvedAt = new Date();
 
-    await application.save({ transaction });
+//     await application.save({ transaction });
 
-    const payment = await HealsPayment.create(
-      {
-        userId: application.userId,
-        applicationId: application.id,
-        assignedAgentId: agentId,
-        type: "application_fee",
-        title: title || "HEALS Application Processing Fee",
-        description: description || "Payment for HEALS programme processing",
-        amount,
-        totalAmount: amount,
-        status: "pending",
-      },
-      { transaction }
-    );
+//     const payment = await HealsPayment.create(
+//       {
+//         userId: application.userId,
+//         applicationId: application.id,
+//         assignedAgentId: agentId,
+//         type: "application_fee",
+//         title: title || "HEALS Application Processing Fee",
+//         description: description || "Payment for HEALS programme processing",
+//         amount,
+//         totalAmount: amount,
+//         status: "pending",
+//       },
+//       { transaction }
+//     );
 
-    const paymentLink = `${process.env.FRONTEND_URL}/heals/payment/${payment.id}`;
+//     const paymentLink = `${process.env.FRONTEND_URL}/heals/payment/${payment.id}`;
 
-    await ActivityLog.create(
-      {
-        userId: agentId,
-        action: "PAYMENT_REQUEST_SENT",
-        meta: { applicationId: application.id, paymentId: payment.id, amount },
-      },
-      { transaction }
-    );
+//     await ActivityLog.create(
+//       {
+//         userId: agentId,
+//         action: "PAYMENT_REQUEST_SENT",
+//         meta: { applicationId: application.id, paymentId: payment.id, amount },
+//       },
+//       { transaction }
+//     );
 
-    await Notification.create(
-      {
-        title: "Payment Request Sent",
-        message: `Payment request sent to ${application.fullName}`,
-        type: "heals_payment",
-        entityId: payment.id,
-        entityType: "heals_payment",
-      },
-      { transaction }
-    );
+//     await Notification.create(
+//       {
+//         title: "Payment Request Sent",
+//         message: `Payment request sent to ${application.fullName}`,
+//         type: "heals_payment",
+//         entityId: payment.id,
+//         entityType: "heals_payment",
+//       },
+//       { transaction }
+//     );
 
-    await transaction.commit();
+//     await transaction.commit();
 
-    try {
-      await sendEmail(
-        application.email,
-        "HEALS Payment Request",
-        paymentRequestTemplate({
-          fullName: application.fullName,
-          amount,
-          paymentLink,
-        })
-      );
-    } catch (mailErr) {
-      console.error("Payment request email failed:", mailErr);
-    }
+//     try {
+//       await sendEmail(
+//         application.email,
+//         "HEALS Payment Request",
+//         paymentRequestTemplate({
+//           fullName: application.fullName,
+//           amount,
+//           paymentLink,
+//         })
+//       );
+//     } catch (mailErr) {
+//       console.error("Payment request email failed:", mailErr);
+//     }
 
-    res.status(200).json({
-      message: "Payment request sent successfully",
-      paymentLink,
-      payment,
-    });
-  } catch (error) {
-    await transaction.rollback();
-    console.error("Send Payment Request Error:", error);
-    res.status(500).json({
-      message: "Failed to send payment request",
-    });
-  }
-};
+//     res.status(200).json({
+//       message: "Payment request sent successfully",
+//       paymentLink,
+//       payment,
+//     });
+//   } catch (error) {
+//     await transaction.rollback();
+//     console.error("Send Payment Request Error:", error);
+//     res.status(500).json({
+//       message: "Failed to send payment request",
+//     });
+//   }
+// };
 
 // ======================================================
 // START PROCESSING
@@ -413,12 +418,25 @@ export const startProcessing = async (req, res) => {
       });
     }
 
-    if (application.status !== "paid") {
-      await transaction.rollback();
-      return res.status(400).json({
-        message: "Application must be paid before processing can start",
-      });
-    }
+    if (!application.applicationFeePaid) {
+  await transaction.rollback();
+  return res.status(400).json({ message: "The application fee has not been paid" });
+}
+if (!["submitted", "under_review", "paid"].includes(application.status)) {
+  await transaction.rollback();
+  return res.status(400).json({ message: `Cannot start processing from status "${application.status}"` });
+}
+
+// All required documents must be verified first
+const cfg = HEALS_REQUIREMENTS[application.applicantCategory];
+const reviews = application.documentReviews || {};
+const unverified = (cfg?.documents || [])
+  .filter((d) => d.required && reviews[d.field] !== "verified")
+  .map((d) => d.label);
+if (unverified.length) {
+  await transaction.rollback();
+  return res.status(400).json({ message: `Verify these documents first: ${unverified.join(", ")}` });
+}
 
     await application.update(
       {

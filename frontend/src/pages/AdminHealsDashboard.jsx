@@ -24,6 +24,8 @@ import {
   getAllHealsApplications,
 } from "../services/healsAdminService";
 
+import HealsFeeCard from "../components/HealsFeeCard";
+
 const NAVY = "#0B1F3A";
 const GREEN = "#1E7F4F";
 const GOLD = "#D4A017";
@@ -195,6 +197,8 @@ export default function AdminHealsDashboard() {
         ))}
 
       </Grid>
+
+      <HealsFeeCard />
 
     </Box>
   );

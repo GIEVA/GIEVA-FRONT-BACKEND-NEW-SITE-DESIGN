@@ -54,7 +54,7 @@ import QuizScoreModel from './QuizScore.js'
 import QuizPanelistModel from './QuizSupportModels.js'
 import QuizAuditEventModel    from './QuizAuditEvent.js';
 import TechnicalIncidentModel from './TechnicalIncident.js';
-
+import HealsSettingModdel from './HealsSetting.js';
 
 
 
@@ -115,6 +115,7 @@ const QuizScore         = QuizScoreModel(sequelize);
 const QuizPanelist      = QuizPanelistModel(sequelize);
 const QuizAuditEvent    = QuizAuditEventModel(sequelize);
 const TechnicalIncident = TechnicalIncidentModel(sequelize);
+const HealsSetting = HealsSettingModdel(sequelize)
 
 // Collect models
 export const models = {
@@ -173,6 +174,8 @@ export const models = {
   QuizPanelist,
   QuizAuditEvent,
   TechnicalIncident,
+
+  HealsSetting,
 
 };
 

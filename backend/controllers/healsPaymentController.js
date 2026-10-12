@@ -9,6 +9,8 @@ import {
   HEALS_REQUIREMENTS, getMissingDocuments, getMissingFields,
 } from "../config/healsRequirements.js";
 
+import { getHealsFee } from "../service/healsSettings.js";
+
 const { HealsPayment, HealsApplication, ActivityLog, Notification } = models;
 
 // ======================================================
@@ -35,9 +37,9 @@ export const initializeApplicationPayment = async (req, res) => {
       return res.status(400).json({ message: "Application is incomplete", errors: problems });
 
     // The server decides the amount, never the client
-    const amount = Number(process.env.HEALS_APPLICATION_FEE);
-    if (!amount) return res.status(500).json({ message: "Application fee is not configured" });
-    const currency = process.env.HEALS_FEE_CURRENCY || "NGN";
+    const { amount, currency } = await getHealsFee();
+    if (!amount)
+      return res.status(500).json({ message: "Application fee is not set. Please contact support." });
 
     // Paystack rejects reused references, so retire earlier abandoned attempts
     await HealsPayment.update(
