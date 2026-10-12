@@ -11,7 +11,7 @@ import { useSearchParams } from "react-router-dom";
 import {
   createHealsApplication, saveHealsProgress, getHealsApplicationById,
 } from "../services/healsApplicationService";
-import { startHealsCheckout } from "../services/healsPaymentService";
+
 import {
   HEALS_REQUIREMENTS, ALL_DOC_FIELDS, DEGREE_PROGRAMS, COUNTRIES, STUDY_AREAS, INTAKES,
   LANGUAGES, BUDGETS, INCOME_DOCS, FINANCIAL_NEEDS, QUALIFICATIONS, GRADE_SCALES, TEST_TYPES,
