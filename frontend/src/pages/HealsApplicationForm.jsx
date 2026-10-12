@@ -467,7 +467,7 @@ const feeLabel = fee?.amount
               startIcon={paying ? <CircularProgress size={18} color="inherit" /> : <Payment />}
               onClick={handlePayAndSubmit} disabled={paying || savingDraft}
               sx={{ bgcolor: BRAND, px: 4, "&:hover": { bgcolor: "#0B1F3A" } }}>
-              {paying ? "Redirecting to payment..." : `Pay${FEE ? ` ₦${FEE.toLocaleString()}` : ""} & Submit Application`}
+              {paying ? "Redirecting to payment..." : `Pay${feeLabel ? ` ${feeLabel}` : ""} & Submit Application`}
             </Button>
           </Stack>
         </CardContent>
