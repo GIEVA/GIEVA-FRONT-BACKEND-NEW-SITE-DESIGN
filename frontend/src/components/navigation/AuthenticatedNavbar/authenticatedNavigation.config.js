@@ -12,6 +12,10 @@ export const authenticatedNavigation = {
       label: "Live Classes",
       path: "/student/live-classes",
     },
+     {
+      label: "Heals Membership",
+      path: "/heals/my-applications",
+    },
     {
       label: "Articles",
       path: "/articles",
