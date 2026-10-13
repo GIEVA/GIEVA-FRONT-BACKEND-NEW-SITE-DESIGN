@@ -300,7 +300,7 @@ export const portalNavigation = [
       },
 
       {
-        label: "My Applications",
+        label: "Heals Membership",
         routeKey: "applications",
         roles: ["student"],
       },
