@@ -49,7 +49,7 @@ export default function AuthenticatedNavbar() {
     >
       <Toolbar>
 
-        <Logo />
+        <Logo showText={false}/>
 
         <Box sx={{ flexGrow: 1 }} />
 
