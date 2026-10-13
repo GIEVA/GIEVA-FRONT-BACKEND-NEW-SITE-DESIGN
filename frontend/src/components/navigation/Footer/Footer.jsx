@@ -79,7 +79,8 @@ export default function Footer() {
           ===================================== */}
 
           <Grid item xs={12} md={4}>
-            <Logo color="light" />
+            {/* <Logo  /> */}
+            <Logo color="light" showText={false} />
 
             <Typography
               mt={3}
