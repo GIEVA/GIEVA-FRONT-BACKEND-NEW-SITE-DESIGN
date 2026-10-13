@@ -20,6 +20,8 @@ export default function Logo({
 
   const imageSrc = src || logoImage;
 
+  const baseHeight = showText ? dimensions[size] : dimensions[size] + 14;
+
   const logo = (
     <Box sx={{ display: "flex", alignItems: "center", gap: 1.25, userSelect: "none" }}>
       {!imgFailed ? (
@@ -29,7 +31,7 @@ export default function Logo({
           alt="GIEVA"
           onError={() => setImgFailed(true)}
           sx={{
-            height: showText ? dimensions[size] : dimensions[size] + 14,
+            height: { xs: baseHeight * 0.7, lg: baseHeight },
             width: "auto",
             maxWidth: 240,
             objectFit: "contain",
