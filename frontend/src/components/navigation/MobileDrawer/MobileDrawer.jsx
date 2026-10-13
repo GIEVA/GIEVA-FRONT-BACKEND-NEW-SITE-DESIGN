@@ -116,7 +116,7 @@ const resolvedNavigation = navigation.map((section) => ({
         <Box
           p={3}
         >
-          <Logo />
+          <Logo showText={false}/>
 
           {user && (
             <Stack
