@@ -25,8 +25,8 @@ export default function Hero({
                 background: background || "linear-gradient(135deg, #f8fafc 0%, #f0f9ff 100%)",
                 display: "flex",
                 alignItems: "center",
-                minHeight: { xs: "auto", lg: minHeight },
-                py: { xs: 10, lg: 0 },
+                minHeight: { xs: "85vh", lg: minHeight },
+                py: { xs: 8, lg: 0 },
                 overflow: "hidden",
                 position: "relative",
                 ...sx,
@@ -34,7 +34,11 @@ export default function Hero({
         >
             <Container maxWidth={maxWidth}>
                 <Grid container spacing={{ xs: 6, lg: 6 }} alignItems="center">
-                    <Grid size={{ xs: 12, lg: contentWidth }}>
+                    {/* Text content — sits above the globe on mobile */}
+                    <Grid
+                        size={{ xs: 12, lg: contentWidth }}
+                        sx={{ position: "relative", zIndex: 1 }}
+                    >
                         <HeroContent
                             eyebrow={subtitle}
                             title={title}
@@ -45,7 +49,21 @@ export default function Hero({
                         />
                     </Grid>
 
-                    <Grid size={{ xs: 12, lg: imageWidth }}>
+                    {/* Globe — faded backdrop on mobile/tablet, normal column on desktop */}
+                    <Grid
+                        size={{ xs: 12, lg: imageWidth }}
+                        sx={{
+                            position: { xs: "absolute", lg: "static" },
+                            top: { xs: "50%", lg: "auto" },
+                            right: { xs: "-30%", lg: "auto" },
+                            width: { xs: "100%", sm: "80%", lg: "auto" },
+                            maxWidth: { xs: "100%", lg: "none" },
+                            transform: { xs: "translateY(-50%)", lg: "none" },
+                            opacity: { xs: 0.22, lg: 1 },
+                            zIndex: 0,
+                            pointerEvents: { xs: "none", lg: "auto" },
+                        }}
+                    >
                         <HeroImage image={image} />
                     </Grid>
                 </Grid>
@@ -72,65 +90,3 @@ Hero.propTypes = {
     imageWidth: PropTypes.number,
     sx: PropTypes.object,
 };
-
-// import PropTypes from "prop-types";
-// import { Box, Container, Grid } from "@mui/material";
-// import HeroContent from "./HeroContent";
-// import HeroImage from "./HeroImage";
-
-// export default function Hero({
-//     title,
-//     subtitle,
-//     description,
-//     actions,
-//     stats,
-//     image,
-//     align = "left",
-//     maxWidth = "xl",
-//     minHeight = "90vh",
-//     background = "background.default",
-//     contentWidth = 5,   // NEW
-//     imageWidth = 7,     // NEW
-//     sx = {},
-// }) {
-//     return (
-//         <Box
-//             component="section"
-//             sx={{
-//                 bgcolor: "linear-gradient(135deg, #f8fafc 0%, #f0f9ff 100%)",
-//                 display: "flex",
-//                 alignItems: "center",
-//                 minHeight,
-//                 overflow: "hidden",
-//                 position: "relative",
-//                 ...sx,
-//             }}
-//         >
-//             <Container maxWidth={maxWidth}>
-//                 <Grid
-//                     container
-//                     spacing={{ xs: 4, lg: 6 }} // Tighter spacing
-//                     alignItems="center"
-//                 >
-//                     {/* Left Content - Slightly wider */}
-//                     <Grid size={{ xs: 12, lg: contentWidth }}>
-//                         <HeroContent
-//                             eyebrow={subtitle} // Using subtitle prop as eyebrow for GIEVA feel
-//                             title={title}
-//                             description={description}
-//                             actions={actions}
-//                             stats={stats}
-//                             align={align}
-//                         />
-//                     </Grid>
-
-//                     {/* Right Illustration - Larger & More Impactful */}
-//                     <Grid size={{ xs: 12, lg: imageWidth }}>
-//                         <HeroImage image={image} />
-//                     </Grid>
-//                 </Grid>
-//             </Container>
-//         </Box>
-//     );
-// }
-
