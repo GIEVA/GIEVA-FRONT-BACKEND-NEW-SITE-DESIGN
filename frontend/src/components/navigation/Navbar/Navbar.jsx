@@ -80,7 +80,9 @@ export default function Navbar() {
                 LOGO
             ============================================ */}
 
-            <Logo />
+            {/* <Logo /> */}
+
+            <Logo showText={false} />
 
             {/* ============================================
                 DESKTOP

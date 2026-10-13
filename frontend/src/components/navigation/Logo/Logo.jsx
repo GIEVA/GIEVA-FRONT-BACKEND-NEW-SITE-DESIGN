@@ -29,8 +29,9 @@ export default function Logo({
           alt="GIEVA"
           onError={() => setImgFailed(true)}
           sx={{
-            width: dimensions[size],
-            height: dimensions[size],
+            height: showText ? dimensions[size] : dimensions[size] + 14,
+            width: "auto",
+            maxWidth: 240,
             objectFit: "contain",
           }}
         />
