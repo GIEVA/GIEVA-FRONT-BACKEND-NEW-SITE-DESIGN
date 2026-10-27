@@ -255,8 +255,8 @@ function App() {
 
           </Route>
 
-           {/* Live room: full screen, no navbar or footer (like Zoom). Guests can join, so no ProtectedRoute. */}
-          <Route path="/live/:roomName/:sessionId" element={<LiveClassroom />} />
+          {/* Live room: full screen, no navbar or footer (like Zoom). Guests can join, so no ProtectedRoute. */}
+          <Route path="/live/:roomName/:sessionId" element={<LiveClassroom />} /> 
 
         <Route
     element={
