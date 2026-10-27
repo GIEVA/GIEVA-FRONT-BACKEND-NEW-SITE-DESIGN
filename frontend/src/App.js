@@ -244,16 +244,19 @@ function App() {
           element={<ExamCatalog />}
         />
 
-          <Route
+          {/* <Route
           path="/live/:roomName/:sessionId"
           element={
             
           <LiveClassroom />
             
           }
-        />
+        /> */}
 
           </Route>
+
+           {/* Live room: full screen, no navbar or footer (like Zoom). Guests can join, so no ProtectedRoute. */}
+          <Route path="/live/:roomName/:sessionId" element={<LiveClassroom />} />
 
         <Route
     element={
