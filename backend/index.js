@@ -110,6 +110,8 @@ import healsPaymentRoutes from "./routes/healsPaymentRoutes.js";
 import { healsPaystackWebhook } from "./controllers/healsPaymentController.js";
 
 
+import sessionToolsRoutes from './routes/sessionTools.routes.js'
+
 
 
 
@@ -170,6 +172,7 @@ app.use(
 
 app.use("/api/live/quiz", liveQuizeRoutes);
 
+app.use("/api/session-tools", sessionToolsRoutes);
 
 app.use('/api/users', registerUserRoute);
 app.use('/api', studentProfileRoutes);

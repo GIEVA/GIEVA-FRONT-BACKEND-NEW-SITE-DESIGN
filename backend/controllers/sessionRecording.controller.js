@@ -1,13 +1,13 @@
 // controllers/sessionRecording.controller.js
 
 import models from "../models/index.js";
-import { loadSession, canManageSession, isAttendee } from "../services/sessionAccess.js";
+import { loadSession, canManageSession, isAttendee } from "../service/sessionAccess.js";
 import {
   getActiveRecording,
   startSessionRecording,
   stopSessionRecording,
-} from "../services/recording.service.js";
-import { regenerateNotes } from "../services/aiNotes.service.js";
+} from "../service/recording.service.js";
+import { regenerateNotes } from "../service/aiNotes.service.js";
 import { getPlaybackUrl } from "../config/storage.js";
 
 const { SessionRecording, ActivityLog } = models;

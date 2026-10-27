@@ -50,8 +50,17 @@ export default (sequelize) => {
         defaultValue: false,
       },
 
-      verificationToken: DataTypes.STRING,
-      verificationTokenExpiry: DataTypes.DATE,
+      verificationToken: {
+          type: DataTypes.STRING,
+          allowNull: true,
+          defaultValue: null,
+        },
+
+      verificationTokenExpiry: {
+        type: DataTypes.DATE,
+        allowNull: true,
+        defaultValue: null,
+      },
 
       resetToken: DataTypes.STRING,
       resetTokenExpiry: DataTypes.DATE,

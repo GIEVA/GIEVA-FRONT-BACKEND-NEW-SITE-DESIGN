@@ -8,7 +8,7 @@ import {
   TableCell, TableContainer, TableHead, TableRow, Tooltip,
   CircularProgress, Divider, Dialog, DialogTitle,
   DialogContent, DialogActions, Snackbar, Alert, Badge,
-  LinearProgress, Tabs, Tab, ToggleButtonGroup, ToggleButton,
+  LinearProgress, Tabs, Tab, ToggleButtonGroup, ToggleButton, 
 } from "@mui/material";
 
 import {
@@ -16,7 +16,7 @@ import {
   PlayCircle, StopCircle, Cancel, Delete,
   Edit, Download, Visibility, Add, Refresh, FiberManualRecord,
   CheckCircle, CalendarMonth, BarChart, PersonAdd,
-  LinkOutlined, Close, Send, HourglassTop,
+  LinkOutlined, Close, Send, HourglassTop, AutoAwesome,
 } from "@mui/icons-material";
 
 import { Public, ContentCopy, OpenInNew } from "@mui/icons-material";
@@ -41,6 +41,11 @@ import {
   adminScheduleSession,
   scheduleAdminPublicMeeting,
 } from "../services/adminSessionService";
+
+import SessionInsightsPanel from "../components/admin/SessionInsightsPanel";
+
+
+
 // ─────────────────────────────────────────────────────────────
 // DESIGN TOKENS
 // ─────────────────────────────────────────────────────────────
@@ -362,6 +367,7 @@ const SessionsTab = ({ navigate, setToast }) => {
   const [actionDialog,  setActionDialog]  = useState(null); // { type, session }
   const [actionReason,  setActionReason]  = useState("");
   const [actionLoading, setActionLoading] = useState(false);
+  const [insightsFor, setInsightsFor] = useState(null);
 
   const load = useCallback(async () => {
     try {
@@ -483,6 +489,15 @@ const SessionsTab = ({ navigate, setToast }) => {
                           <Visibility fontSize="small" />
                         </IconButton>
                       </Tooltip>
+                      <Tooltip title="Recording, AI notes & polls">
+                        <IconButton
+                          size="small"
+                          onClick={() => setInsightsFor(s)}
+                          sx={{ color: GREEN }}
+                        >
+                          <AutoAwesome fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
                       <Tooltip title="Export attendance CSV">
                         <IconButton size="small" onClick={() => handleExportCSV(s.id, s.title)} sx={{ color: MUTED }}>
                           <Download fontSize="small" />
@@ -557,6 +572,23 @@ const SessionsTab = ({ navigate, setToast }) => {
             </DialogActions>
           </>
         )}
+      </Dialog>
+      <Dialog
+        open={!!insightsFor}
+        onClose={() => setInsightsFor(null)}
+        maxWidth="md"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: 4 } }}
+      >
+        <DialogTitle sx={{ fontWeight: 800 }}>
+          {insightsFor?.title || "Session Insights"}
+        </DialogTitle>
+
+        <DialogContent>
+          {insightsFor && (
+            <SessionInsightsPanel sessionId={insightsFor.id} />
+          )}
+        </DialogContent>
       </Dialog>
     </Box>
   );

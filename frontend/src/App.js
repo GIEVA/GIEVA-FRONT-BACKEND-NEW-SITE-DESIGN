@@ -150,6 +150,10 @@ import AudienceQuizPage from "./pages/AudienceQuizPage";
 import PanelistQuizPage from "./pages/PanelistQuizPage";
 import HealsPaymentCallback from "./pages/HealsPaymentCallback";
 
+import SessionSurvey from "./pages/SessionSurvey";   // adjust the path to where you put the file
+
+
+
 
 import "katex/dist/katex.min.css";
 
@@ -259,6 +263,9 @@ function App() {
     }
 >
 
+          <Route path="/session-survey/:pollId" element={<SessionSurvey />} />
+
+          
           <Route
             path="/student/profile"
             element={

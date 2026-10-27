@@ -7,8 +7,8 @@
 import { fn, col } from "sequelize";
 import models from "../models/index.js";
 import sendEmail from "../utils/sendMail.js";
-import { broadcast } from "../services/liveRoomSignals.js";
-import { loadSession, canManageSession, isAttendee } from "../services/sessionAccess.js";
+import { broadcast } from "../service/liveRoomSignals.js";
+import { loadSession, canManageSession, isAttendee } from "../service/sessionAccess.js";
 
 const { SessionPoll, SessionPollResponse, SessionAttendance, User, Notification, ActivityLog } = models;
 

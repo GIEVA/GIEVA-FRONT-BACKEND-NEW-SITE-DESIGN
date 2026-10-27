@@ -10,11 +10,13 @@ import models from '../models/index.js';
 import dotenv from "dotenv";
 //import { Op } from "sequelize";
 
-const { ActivityLog, User, TutorProfile, StudentProfile, Notification } = models;
+const { ActivityLog, User, TutorProfile, StudentProfile, Notification, PendingRegistration } = models;
 
 dotenv.config();
 
-const FRONTEND_URL= "https://gieva-front-backend-new-site-design.vercel.app"
+const FRONTEND_URL= "https://gieva.ng"
+
+
 
 // ---------------- CREATE USER ----------------
 
@@ -22,283 +24,388 @@ export const createUser = async (req, res) => {
   try {
     let { fullName, email, password, role } = req.body;
 
-    // ---------------- SANITIZE INPUT ----------------
+    // 1. Normalize input
     fullName = fullName?.trim();
     email = email?.trim().toLowerCase();
-    password = password?.trim();
+    role = role || "student";
 
-    // ---------------- BASIC CHECK ----------------
-    if (!fullName || !email || !password) {
+    // Do not silently trim the password; validate what the user submitted.
+    if (
+      typeof fullName !== "string" ||
+      typeof email !== "string" ||
+      typeof password !== "string" ||
+      !fullName ||
+      !email ||
+      !password
+    ) {
       return res.status(400).json({
-        message: "Full name, email and password are required",
+        message: "Full name, email and password are required.",
       });
     }
 
-    // ---------------- FULL NAME VALIDATION ----------------
+    // 2. Validate full name
     if (fullName.length < 3) {
       return res.status(400).json({
-        message: "Full name must be at least 3 characters long",
+        message: "Full name must be at least 3 characters long.",
       });
     }
 
-    // ---------------- EMAIL VALIDATION ----------------
+    // 3. Validate email
     if (!validator.isEmail(email)) {
       return res.status(400).json({
-        message: "Invalid email format",
+        message: "Invalid email format.",
       });
     }
 
-    // Optional: Block disposable emails (basic check)
-    const blockedDomains = ["mailinator.com", "tempmail.com", "10minutemail.com"];
-    const emailDomain = email.split("@")[1];
+    const blockedDomains = [
+      "mailinator.com",
+      "tempmail.com",
+      "10minutemail.com",
+    ];
+
+    const emailDomain = email.split("@")[1]?.toLowerCase();
 
     if (blockedDomains.includes(emailDomain)) {
       return res.status(400).json({
-        message: "Disposable email addresses are not allowed",
+        message: "Disposable email addresses are not allowed.",
       });
     }
 
-    // ---------------- PASSWORD VALIDATION ----------------
+    // 4. Validate role against roles permitted for public registration.
+    const allowedRoles = ["student", "tutor", "applicant"];
+
+    if (!allowedRoles.includes(role)) {
+      return res.status(400).json({
+        message: "Invalid registration role.",
+      });
+    }
+
+    // 5. Validate password BEFORE touching the database.
     const passwordRegex =
       /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#^()_\-+=])[A-Za-z\d@$!%*?&#^()_\-+=]{8,}$/;
 
     if (!passwordRegex.test(password)) {
       return res.status(400).json({
         message:
-          "Password must be at least 8 characters long and include uppercase, lowercase, number, and special character",
+          "Password must be at least 8 characters long and include uppercase, lowercase, number, and special character.",
       });
     }
 
-    // Extra: prevent weak/common passwords
-    if (validator.isStrongPassword(password) === false) {
+    if (!validator.isStrongPassword(password)) {
       return res.status(400).json({
         message: "Password is too weak. Try a stronger combination.",
       });
     }
 
-// ---------------- CHECK EXISTING USER ----------------
-    const existingUser = await User.findOne({ where: { email } });
+    // 6. Check whether a fully registered account already exists.
+    const existingUser = await User.findOne({
+      where: { email },
+    });
 
-    if (existingUser) {
-      if (existingUser.isVerified) {
-        return res.status(400).json({
-          message: "User already exists",
+    if (existingUser?.isVerified) {
+      return res.status(409).json({
+        message:
+          "An account with this email already exists. Please sign in instead.",
+      });
+    }
+
+    /*
+     * IMPORTANT:
+     * An unverified User row from your OLD registration system must be
+     * migrated/cleaned up before deploying this new flow. See the migration
+     * instructions below. Do not silently delete it here because other tables
+     * may reference that user's ID.
+     */
+    if (existingUser && !existingUser.isVerified) {
+      return res.status(409).json({
+        message:
+          "This email has an old, unverified registration. Please contact support while we restore the registration for this email.",
+      });
+    }
+
+    // 7. Look up a pending registration.
+    let pending = await PendingRegistration.findOne({
+      where: { email },
+    });
+
+    const now = new Date();
+
+    // 8. Enforce the cooldown if the email has already used five sends.
+    if (pending?.cooldownUntil) {
+      const cooldownEnd = new Date(pending.cooldownUntil);
+
+      if (cooldownEnd > now) {
+        const remainingMs = cooldownEnd.getTime() - now.getTime();
+        const remainingMinutes = Math.ceil(remainingMs / 60000);
+        const remainingHours = Math.floor(remainingMinutes / 60);
+        const minutes = remainingMinutes % 60;
+
+        const remainingText =
+          remainingHours > 0
+            ? `${remainingHours} hour(s) and ${minutes} minute(s)`
+            : `${remainingMinutes} minute(s)`;
+
+        return res.status(429).json({
+          code: "REGISTRATION_COOLDOWN",
+          message:
+            `Too many registration attempts. This email is under a ` +
+            `cooldown period. Please try again in ${remainingText}.`,
+          retryAfterSeconds: Math.ceil(remainingMs / 1000),
         });
       }
 
-      // ---------------- UNVERIFIED USER: RE-ISSUE VERIFICATION ----------------
-      // Don't create a duplicate row — update the existing one with a fresh
-      // token/password and resend the email instead.
-      const passwordHash = await bcrypt.hash(password, 12);
-      const verificationToken = crypto.randomBytes(32).toString("hex");
-      const verificationTokenExpiry = new Date(Date.now() + 1000 * 60 * 60); // 1 hour
-
-      existingUser.fullName = fullName;
-      existingUser.passwordHash = passwordHash;
-      existingUser.role = role || existingUser.role;
-      existingUser.verificationToken = verificationToken;
-      existingUser.verificationTokenExpiry = verificationTokenExpiry;
-      await existingUser.save();
-
-        // ---------------- GUARD: ENSURE STUDENT PROFILE EXISTS ----------------
-        // Covers the case where the original registration's StudentProfile.create()
-        // never happened (e.g. it errored silently, or role changed to "student"
-        // on this re-register).
-        if (existingUser.role === "student") {
-          const hasProfile = await StudentProfile.findOne({ where: { userId: existingUser.id } });
-          if (!hasProfile) {
-            await StudentProfile.create({
-              userId: existingUser.id,
-              fullName: existingUser.fullName,
-              email: existingUser.email,
-            });
-          }
-        }
-
-      await ActivityLog.create({
-        userId: existingUser.id,
-        action: "USER_REREGISTERED_UNVERIFIED",
-        meta: { email: existingUser.email, role: existingUser.role },
-      });
-
-      // ---------------- SEND VERIFICATION EMAIL ----------------
-      const verifyLink = `${process.env.FRONTEND_URL}/verify/${verificationToken}`;
-
-      await sendEmail(
-        existingUser.email,
-        "Verify Your Account",
-        verificationTemplate(existingUser.fullName, verifyLink)
-      );
-
-      const safeUser = existingUser.toJSON();
-      delete safeUser.passwordHash;
-      delete safeUser.verificationToken;
-      delete safeUser.resetToken;
-      delete safeUser.resetTokenExpiry;
-
-      return res.status(200).json({
-        message:
-          "This email is already registered but not verified. We've sent a new verification link — please check your email.",
-        user: safeUser,
-      });
+      // Cooldown expired: allow a fresh five-send window.
+      pending.registrationAttempts = 0;
+      pending.cooldownUntil = null;
     }
 
-
-
-    // ---------------- HASH PASSWORD ----------------
-    const passwordHash = await bcrypt.hash(password, 12); // stronger salt
-
-    // ---------------- GENERATE TOKEN ----------------
+    // 9. Generate a fresh token and hash the password.
+    const passwordHash = await bcrypt.hash(password, 12);
     const verificationToken = crypto.randomBytes(32).toString("hex");
-const verificationTokenExpiry = new Date(Date.now() + 1000 * 60 * 60); // 1 hour
+    const verificationTokenExpiry = new Date(
+      now.getTime() + 60 * 60 * 1000
+    ); // Link expires after 1 hour.
 
-    // ---------------- CREATE USER ----------------
-   const user = await User.create({
-              fullName,
-              email,
-              passwordHash,
-              role: role || "student",
-              verificationToken,
-              verificationTokenExpiry,
-              isVerified: false,
-            });
+    const nextAttempt = (pending?.registrationAttempts || 0) + 1;
 
-    // ---------------- AUTO CREATE PROFILE ----------------
-    if (user.role === "student") {
-     await StudentProfile.create({
-      userId: user.id,
-      fullName: user.fullName,
-      email: user.email,
-    });
+    // After the fifth verification email is sent, cooldown begins.
+    const cooldownUntil =
+      nextAttempt >= 5
+        ? new Date(now.getTime() + 2 * 60 * 60 * 1000)
+        : null;
+
+    // 10. Create or update the pending record; DO NOT create a User yet.
+    if (pending) {
+      pending.fullName = fullName;
+      pending.passwordHash = passwordHash;
+      pending.role = role;
+      pending.verificationToken = verificationToken;
+      pending.verificationTokenExpiry = verificationTokenExpiry;
+      pending.registrationAttempts = nextAttempt;
+      pending.cooldownUntil = cooldownUntil;
+      pending.verifiedAt = null;
+
+      await pending.save();
+    } else {
+      pending = await PendingRegistration.create({
+        fullName,
+        email,
+        passwordHash,
+        role,
+        verificationToken,
+        verificationTokenExpiry,
+        registrationAttempts: 1,
+        cooldownUntil: null,
+      });
     }
 
-    // if (user.role === "tutor") {
-    //   await TutorProfile.create({
-    //   userId: user.id,
-    //   fullName: user.fullName,
-    //   email: user.email,
-    // });
-    // }
+    // 11. Send a fresh verification link.
+    const frontendUrl =
+      process.env.FRONTEND_URL || FRONTEND_URL;
 
-    // ---------------- ACTIVITY LOG ----------------
-    await ActivityLog.create({
-      userId: user.id,
-      action: "USER_CREATED",
-      meta: {
-        email: user.email,
-        role: user.role,
-      },
-    });
-
-    // ---------------- SEND VERIFICATION EMAIL ----------------
-    const verifyLink = `${FRONTEND_URL}/verify/${verificationToken}`;
+    const verifyLink =
+      `${frontendUrl.replace(/\/$/, "")}/verify/${verificationToken}`;
 
     await sendEmail(
-      user.email,
-      "Verify Your Account",
-      verificationTemplate(user.fullName, verifyLink)
+      email,
+      "Verify Your GIEVA Account",
+      verificationTemplate(fullName, verifyLink)
     );
 
-    
-
-    // ---------------- REMOVE SENSITIVE DATA ----------------
-    const safeUser = user.toJSON();
-    delete safeUser.passwordHash;
-    delete safeUser.verificationToken;
-    delete safeUser.resetToken;
-    delete safeUser.resetTokenExpiry;
-
-    return res.status(201).json({
-      message:
-        "User created successfully. Please check your email to verify your account.",
-      user: safeUser,
+    // 12. Do not return the password hash or token to the browser.
+    return res.status(200).json({
+      message: cooldownUntil
+        ? "Verification email sent. You have reached the verification-email limit; further requests for this email are paused for 2 hours. Please check your inbox."
+        : "Verification email sent. Please check your inbox to verify your account.",
+      verificationRequired: true,
     });
   } catch (error) {
     console.error("Create User Error:", error);
+
+    // Avoid leaking database errors or internal implementation details.
+    if (error.name === "SequelizeUniqueConstraintError") {
+      return res.status(409).json({
+        message:
+          "A registration request is already being processed for this email. Please try again shortly.",
+      });
+    }
+
     return res.status(500).json({
-      message: "Server error",
+      message:
+        "We could not process your registration right now. Please try again later.",
     });
   }
 };
 
  
 
+// ---------------- VERIFY ACCOUNT ----------------
+
 export const verifyAccount = async (req, res) => {
-  // ── Prevent ANY caching of this response. ──
-  // Verification tokens are one-time-use; this endpoint must always
-  // hit the server fresh. Without these headers, a browser can (and
-  // did, per the network log showing a 304) serve a stale cached
-  // response for the exact same URL on a later visit — meaning the
-  // controller never even runs, the frontend just gets whatever the
-  // browser cached the first time. Setting these explicitly closes
-  // that off regardless of any default caching behavior from Express,
-  // a CDN, or the browser itself.
-  res.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+  res.set(
+    "Cache-Control",
+    "no-store, no-cache, must-revalidate, proxy-revalidate"
+  );
   res.set("Pragma", "no-cache");
   res.set("Expires", "0");
   res.set("Surrogate-Control", "no-store");
- 
+
   try {
-    const { token } = req.params;
-    const cleanToken = decodeURIComponent(token).trim();
- 
-    if (!cleanToken) {
-      return res.status(400).json({ message: "Verification token is required" });
-    }
- 
-    const userByToken = await User.findOne({
-      where: { verificationToken: cleanToken },
-    });
- 
-    if (!userByToken) {
-      // No user currently has this token. This used to always mean
-      // "invalid/expired" — but it can ALSO mean "a duplicate request
-      // for an already-verified account already cleared this token."
-      // We can't look the user up by token anymore in that case, so
-      // there's nothing more to check here — this really is an
-      // unrecognized token.
+    const token = decodeURIComponent(req.params.token || "").trim();
+
+    if (!token) {
       return res.status(400).json({
-        message: "Invalid or expired verification token",
+        message: "Verification token is required.",
       });
     }
- 
-    // ── Already verified? Always return success, regardless of
-    //    whether the token has technically expired by now. This is
-    //    the line that makes the endpoint idempotent — a duplicate
-    //    request (StrictMode double-fire, double-click, multiple
-    //    tabs with the same link, etc.) for an account that's
-    //    already verified should never show an error. ──
-    if (userByToken.isVerified) {
-      return res.json({ message: "Account already verified. You can log in." });
-    }
- 
-    // ── Not yet verified — NOW check expiry ──
-    if (new Date() > new Date(userByToken.verificationTokenExpiry)) {
-      return res.status(400).json({
-        message: "Verification link has expired. Please request a new one.",
+
+    // Use a transaction so account creation and pending verification
+    // are committed together.
+    const result = await User.sequelize.transaction(async (transaction) => {
+      const pending = await PendingRegistration.findOne({
+        where: { verificationToken: token },
+        transaction,
+        lock: transaction.LOCK.UPDATE,
       });
-    }
- 
-    // ── Mark as verified. Token is intentionally LEFT IN PLACE
-    //    (not nulled) so that any duplicate in-flight request for
-    //    this same token still resolves via the isVerified branch
-    //    above instead of hitting "user not found". ──
-    userByToken.isVerified = true;
-    await userByToken.save();
- 
-    await ActivityLog.create({ userId: userByToken.id, action: "USER_VERIFIED" });
- 
-    await Notification.create({
-      title: "New User Signup",
-      message: `${userByToken.fullName} just joined`,
-      type: "user_registration",
-      userId: userByToken.id,
+
+      if (!pending) {
+        return {
+          status: 400,
+          body: {
+            message: "Invalid or expired verification token.",
+          },
+        };
+      }
+
+      // A duplicate click on a link that already succeeded is harmless.
+      if (pending.verifiedAt) {
+        return {
+          status: 200,
+          body: {
+            message: "Account already verified. You can log in.",
+          },
+        };
+      }
+
+      if (
+        !pending.verificationTokenExpiry ||
+        new Date() > new Date(pending.verificationTokenExpiry)
+      ) {
+        return {
+          status: 400,
+          body: {
+            message:
+              "Verification link has expired. Please register again to request a new link.",
+          },
+        };
+      }
+
+      if (!pending.passwordHash) {
+        return {
+          status: 400,
+          body: {
+            message:
+              "This registration cannot be completed. Please register again.",
+          },
+        };
+      }
+
+      // Defensive check in case an account was created through another path.
+      const existingUser = await User.findOne({
+        where: { email: pending.email },
+        transaction,
+        lock: transaction.LOCK.UPDATE,
+      });
+
+      if (existingUser) {
+        if (existingUser.isVerified) {
+          pending.verifiedAt = new Date();
+          pending.passwordHash = null;
+          await pending.save({ transaction });
+
+          return {
+            status: 200,
+            body: {
+              message: "Account already verified. You can log in.",
+            },
+          };
+        }
+
+        // An old unverified User row must be resolved through migration.
+        throw new Error(
+          `Legacy unverified User row exists for ${pending.email}`
+        );
+      }
+
+      // The real User record is created ONLY after verification.
+      const user = await User.create(
+        {
+          fullName: pending.fullName,
+          email: pending.email,
+          passwordHash: pending.passwordHash,
+          role: pending.role,
+          isActive: true,
+          isVerified: true,
+          verificationToken: null,
+          verificationTokenExpiry: null,
+        },
+        { transaction }
+      );
+
+      // Create the student profile only after the account is verified.
+      if (user.role === "student") {
+        await StudentProfile.create(
+          {
+            userId: user.id,
+            fullName: user.fullName,
+            email: user.email,
+          },
+          { transaction }
+        );
+      }
+
+      await ActivityLog.create(
+        {
+          userId: user.id,
+          action: "USER_VERIFIED",
+        },
+        { transaction }
+      );
+
+      await Notification.create(
+        {
+          title: "New User Signup",
+          message: `${user.fullName} just joined`,
+          type: "user_registration",
+          userId: user.id,
+        },
+        { transaction }
+      );
+
+      // Retain the token record for duplicate-link handling,
+      // but clear the temporary password hash.
+      pending.verifiedAt = new Date();
+      pending.passwordHash = null;
+      pending.cooldownUntil = null;
+
+      await pending.save({ transaction });
+
+      return {
+        status: 200,
+        body: {
+          message: "Account verified successfully. You can now log in.",
+        },
+      };
     });
- 
-    return res.json({ message: "Account verified successfully" });
+
+    return res.status(result.status).json(result.body);
   } catch (error) {
     console.error("Verify Account Error:", error);
-    return res.status(500).json({ message: "Server error" });
+
+    return res.status(500).json({
+      message:
+        "We could not complete email verification. Please try again later.",
+    });
   }
 };
 

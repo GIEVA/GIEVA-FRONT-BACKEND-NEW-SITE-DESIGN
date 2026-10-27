@@ -146,12 +146,12 @@ const Register = () => {
 
 
 
-      if (
-        form.password.length < 6
-      ) {
+      const passwordRegex =
+        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#^()_\-+=])[A-Za-z\d@$!%*?&#^()_\-+=]{8,}$/;
 
+      if (!passwordRegex.test(form.password)) {
         return setError(
-          "Password must be at least 6 characters"
+          "Password must be at least 8 characters and include uppercase, lowercase, number, and special character."
         );
       }
 
@@ -199,35 +199,34 @@ const Register = () => {
 
 
 
-        setMessage(
-
+       setMessage(
           res.message ||
-
-          "Account created successfully"
+            "Registration successful! Please check your email and click the verification link before logging in."
         );
 
-
-
         setTimeout(() => {
-
           navigate("/login");
-
         }, 2000);
 
       } catch (err) {
 
-        setError(
+        const status = err.response?.status;
+        const serverMessage = err.response?.data?.message;
 
-          err.response?.data?.message ||
-
-          "Something went wrong"
-        );
-
-      } finally {
-
-        setLoading(false);
-      }
-    };
+        if (status === 429) {
+              setError(
+                serverMessage ||
+                  "Too many registration attempts. Please try again in 2 hours."
+              );
+              } else {
+                setError(
+                  serverMessage || "Something went wrong. Please try again."
+                );
+              }
+            } finally {
+              setLoading(false);
+            }
+          };
 
 
 

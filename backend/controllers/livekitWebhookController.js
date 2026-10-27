@@ -5,6 +5,9 @@ import models from "../models/index.js";
 import sendEmail
 from "../utils/sendMail.js";
 
+import { handleEgressEnded, onHostJoined, onSessionEnded } from "../service/sessionLifecycle.js";
+
+
 const {
   SessionAttendance,
   SessionEventLog,
@@ -160,6 +163,11 @@ export const livekitWebhook =
 
       const event =
         req.body;
+
+      if (event.event === "egress_ended") {
+        await handleEgressEnded(event);
+        return res.sendStatus(200);
+      }
 
       const roomName =
         event.room?.name;
@@ -360,6 +368,7 @@ export const livekitWebhook =
                 session.id,
             },
           });
+          onHostJoined(session).catch(console.error); 
         }
       }
 
@@ -480,6 +489,7 @@ export const livekitWebhook =
             await generateAttendanceReport(
               session
             );
+            onSessionEnded(session).catch(console.error);
           }
         }
 
@@ -508,52 +518,52 @@ export const livekitWebhook =
       // RECORDING READY WEBHOOK
       // ==================================================
 
-      if (
-        event.event ===
-        "egress_ended"
-      ) {
+      // if (
+      //   event.event ===
+      //   "egress_ended"
+      // ) {
 
-        if (
-          event.egressInfo
-            ?.fileResults?.[0]
-            ?.location
-        ) {
+      //   if (
+      //     event.egressInfo
+      //       ?.fileResults?.[0]
+      //       ?.location
+      //   ) {
 
-          session.recordingUrl =
-            event.egressInfo
-              .fileResults[0]
-              .location;
+      //     session.recordingUrl =
+      //       event.egressInfo
+      //         .fileResults[0]
+      //         .location;
 
-          session.recordingDuration =
-            Math.round(
-              (
-                session.endTime -
-                session.startTime
-              ) / 60000
-            );
+      //     session.recordingDuration =
+      //       Math.round(
+      //         (
+      //           session.endTime -
+      //           session.startTime
+      //         ) / 60000
+      //       );
 
-          session.recordingStatus =
-            "ready";
+      //     session.recordingStatus =
+      //       "ready";
 
-          await session.save();
+      //     await session.save();
 
 
 
-          await ActivityLog.create({
+      //     await ActivityLog.create({
 
-            userId:
-              session.scheduledBy,
+      //       userId:
+      //         session.scheduledBy,
 
-            action:
-              "SESSION_RECORDING_READY",
+      //       action:
+      //         "SESSION_RECORDING_READY",
 
-            meta: {
-              sessionId:
-                session.id,
-            },
-          });
-        }
-      }
+      //       meta: {
+      //         sessionId:
+      //           session.id,
+      //       },
+      //     });
+      //   }
+      // }
 
 
 

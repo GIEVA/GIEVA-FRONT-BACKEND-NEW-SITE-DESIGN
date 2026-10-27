@@ -570,8 +570,13 @@ export const adminGetSessionAnalytics = async (req, res) => {
     });
 
    // Monthly breakdown (last 6 months)
+
 const sixMonthsAgo = new Date();
 sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+
+const monthExpression = literal(
+  `TO_CHAR("scheduledAt", 'YYYY-MM')`
+);
 
 const monthly = await ClassSession.findAll({
   where: {
@@ -584,32 +589,13 @@ const monthly = await ClassSession.findAll({
   },
 
   attributes: [
-    [
-      literal("DATE_FORMAT(scheduledAt, '%Y-%m')"),
-      "month",
-    ],
-
-    [
-      fn("COUNT", col("id")),
-      "sessions",
-    ],
-
-    [
-      fn("SUM", col("durationMinutes")),
-      "minutes",
-    ],
+    [monthExpression, "month"],
+    [fn("COUNT", col("id")), "sessions"],
+    [fn("SUM", col("durationMinutes")), "minutes"],
   ],
 
-  group: [
-    literal("DATE_FORMAT(scheduledAt, '%Y-%m')"),
-  ],
-
-  order: [
-    [
-      literal("DATE_FORMAT(scheduledAt, '%Y-%m')"),
-      "ASC",
-    ],
-  ],
+  group: [monthExpression],
+  order: [[monthExpression, "ASC"]],
 
   raw: true,
 });

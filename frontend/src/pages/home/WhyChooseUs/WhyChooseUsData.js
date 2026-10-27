@@ -3,6 +3,8 @@ import PublicRoundedIcon from "@mui/icons-material/PublicRounded";
 import WorkspacePremiumRoundedIcon from "@mui/icons-material/WorkspacePremiumRounded";
 import SchoolRoundedIcon from "@mui/icons-material/SchoolRounded";
 
+import internationalStudentImage from "../../../assets/images/International-Student-Consultation.png";
+
 const whyChooseUsData = {
     eyebrow: "WHY CHOOSE US",
     title: "Helping You Succeed at Every Step of Your Educational Journey",
@@ -10,8 +12,8 @@ const whyChooseUsData = {
         "At GIEVA, we combine expert guidance, global partnerships, and personalized support to help students and professionals achieve their international education and career goals with confidence.",
 
     image: {
-        src: "/images/why-choose-us.jpg", // ← put a real image here
-        alt: "Education consultant guiding students",
+    src: internationalStudentImage,
+    alt: "GIEVA education consultant guiding students through international study and scholarship opportunities",
     },
 
     features: [

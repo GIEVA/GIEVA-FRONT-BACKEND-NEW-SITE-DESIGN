@@ -55,13 +55,16 @@ import QuizPanelistModel from './QuizSupportModels.js'
 import QuizAuditEventModel    from './QuizAuditEvent.js';
 import TechnicalIncidentModel from './TechnicalIncident.js';
 import HealsSettingModdel from './HealsSetting.js';
-
-
+import SessionPollModel from './SessionPoll.js'
+import SessionPollResponseModel from './SessionPollResponse.js'
+import SessionRecordingModel from './SessionRecording.js'
+import PendingRegistrationModel from './PendingRegistration.js'
 
 
 
 // Init models
 const User = UserModel(sequelize, DataTypes);
+const PendingRegistration = PendingRegistrationModel(sequelize)
 const TutorProfile = TutorProfileModel(sequelize, DataTypes);
 const Course = CourseModel(sequelize, DataTypes);
 const ClassSession = ClassSessionModel(sequelize, DataTypes);
@@ -116,6 +119,9 @@ const QuizPanelist      = QuizPanelistModel(sequelize);
 const QuizAuditEvent    = QuizAuditEventModel(sequelize);
 const TechnicalIncident = TechnicalIncidentModel(sequelize);
 const HealsSetting = HealsSettingModdel(sequelize)
+const SessionPoll = SessionPollModel(sequelize, DataTypes);
+const SessionPollResponse = SessionPollResponseModel(sequelize, DataTypes);
+const SessionRecording = SessionRecordingModel(sequelize, DataTypes);
 
 // Collect models
 export const models = {
@@ -176,6 +182,12 @@ export const models = {
   TechnicalIncident,
 
   HealsSetting,
+
+  SessionPoll,
+  SessionPollResponse,
+  SessionRecording,
+
+  PendingRegistration,
 
 };
 

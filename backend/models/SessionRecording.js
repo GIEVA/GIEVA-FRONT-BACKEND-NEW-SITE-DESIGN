@@ -34,9 +34,9 @@ export default (sequelize, DataTypes) => {
         validate: { isIn: [["none", "pending", "processing", "ready", "failed"]] },
       },
       transcript: { type: DataTypes.TEXT("long"), allowNull: true },
-      transcriptSegments: { type: DataTypes.JSONB, allowNull: true },
+      transcriptSegments: { type: DataTypes.JSON, allowNull: true },
       // { summary, keyPoints[], decisions[], actionItems[{task, owner}], openQuestions[] }
-      notes: { type: DataTypes.JSONB, allowNull: true },
+      notes: { type: DataTypes.JSON, allowNull: true },
       errorMessage: { type: DataTypes.TEXT, allowNull: true },
 
       startedAt: { type: DataTypes.DATE, allowNull: true },
