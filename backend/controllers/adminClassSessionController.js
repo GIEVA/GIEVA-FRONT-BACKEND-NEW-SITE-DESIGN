@@ -206,7 +206,11 @@ export const adminGetAllSessions = async (req, res) => {
     if (status) where.status = status;
     if (courseId) where.courseId = courseId;
     if (tutorProfileId) where.tutorProfileId = tutorProfileId;
-    if (search) where.title = { [Op.iLike]: `%${search}%` };
+    if (search) {
+      where.title = {
+        [Op.like]: `%${search}%`,
+      };
+    }
     if (from || to) {
       where.scheduledAt = {};
       if (from) where.scheduledAt[Op.gte] = new Date(from);
@@ -553,7 +557,7 @@ export const adminGetSessionAnalytics = async (req, res) => {
       attributes: ["tutorProfileId", [fn("COUNT", col("ClassSession.id")), "sessionCount"]],
       include: [{ model: TutorProfile, attributes: ["fullName", "profilePicUrl"] }],
       group: ["tutorProfileId", "TutorProfile.id"],
-      order: [[literal('"sessionCount"'), "DESC"]],
+      order: [[literal("sessionCount"), "DESC"]],
       limit: 5,
       raw: false,
     });
@@ -574,8 +578,10 @@ export const adminGetSessionAnalytics = async (req, res) => {
 const sixMonthsAgo = new Date();
 sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
 
-const monthExpression = literal(
-  `TO_CHAR("scheduledAt", 'YYYY-MM')`
+const monthExpression = fn(
+  "DATE_FORMAT",
+  col("scheduledAt"),
+  "%Y-%m"
 );
 
 const monthly = await ClassSession.findAll({
