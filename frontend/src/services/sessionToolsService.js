@@ -3,7 +3,10 @@
 // header and base URL, as used by adminSessionService / adminClassSessionService).
 import api from "./api";
 
-const base = "/session-tools";
+// Your other services call "/api/...", so the prefix is part of the path here.
+// If your axios baseURL already ends in /api, change API to "".
+const API = "/api";
+const base = `${API}/session-tools`;
 const data = (res) => res.data;
 
 // ── Polls & surveys ──
@@ -47,7 +50,7 @@ export const regenerateNotes = (recordingId) =>
 
 // ── Room moderation (host only) ──
 export const muteAllParticipants = async (sessionId) =>
-  (await api.post(`/session-tools/sessions/${sessionId}/room/mute-all`)).data;
+  (await api.post(`${base}/sessions/${sessionId}/room/mute-all`)).data;
 
 export const askParticipantToUnmute = async (sessionId, identity) =>
-  (await api.post(`/session-tools/sessions/${sessionId}/room/ask-unmute/${encodeURIComponent(identity)}`)).data;
+  (await api.post(`${base}/sessions/${sessionId}/room/ask-unmute/${encodeURIComponent(identity)}`)).data;
