@@ -67,6 +67,28 @@ export default (sequelize) => {
             defaultValue: "course",
         },
 
+                // ==================================================
+        // WEBINAR SETTINGS
+        // ==================================================
+
+        isWebinar: {
+          type: DataTypes.BOOLEAN,
+          allowNull: false,
+          defaultValue: false,
+        },
+
+        webinarCapacity: {
+          type: DataTypes.INTEGER,
+          allowNull: false,
+          defaultValue: 500,
+        },
+
+        qaEnabled: {
+          type: DataTypes.BOOLEAN,
+          allowNull: false,
+          defaultValue: true,
+        },
+
 
 
         // ==================================================
