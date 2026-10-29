@@ -19,7 +19,7 @@ import {
   LinkOutlined, Close, Send, HourglassTop, AutoAwesome,
 } from "@mui/icons-material";
 
-import { Public, ContentCopy, OpenInNew } from "@mui/icons-material";
+import { Public, ContentCopy, OpenInNew, LiveTv } from "@mui/icons-material";
 
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid,
@@ -43,6 +43,8 @@ import {
 } from "../services/adminSessionService";
 
 import SessionInsightsPanel from "../components/admin/SessionInsightsPanel";
+import { WebinarScheduleForm } from "../components/live/WebinarScheduleForm";
+import AdminWebinars from "./AdminWebinars";
 
 
 
@@ -988,10 +990,60 @@ const PublicMeetingForm = ({ setToast }) => {
 };
 
 // ─────────────────────────────────────────────────────────────
+// WEBINAR SESSION FORM  (third session type)
+// ─────────────────────────────────────────────────────────────
+const WebinarSessionForm = ({ setToast }) => {
+  const [created, setCreated] = useState(null); // { webinar, link }
+  const [round, setRound] = useState(0);
+
+  if (created) {
+    return (
+      <Box>
+        <Alert severity="success" sx={{ borderRadius: 2, mb: 3 }}>
+          "{created.webinar.title}" is scheduled. The hosting team has been emailed. Attendees open the link below and
+          join view-only once a host starts the webinar.
+        </Alert>
+        <Paper variant="outlined" sx={{ borderRadius: 3, borderColor: BORDER, p: 3, mb: 3 }}>
+          <Typography sx={{ fontSize: 11.5, fontWeight: 700, color: MUTED, mb: 1, textTransform: "uppercase", letterSpacing: 0.8 }}>
+            Shareable Webinar Link
+          </Typography>
+          <Typography sx={{ fontSize: 13.5, color: TEXT, fontFamily: "monospace", wordBreak: "break-all", mb: 1.5 }}>
+            {created.link}
+          </Typography>
+          <Stack direction="row" spacing={1}>
+            <CopyButton text={created.link} label="Copy Link" />
+            <Button size="small" variant="outlined" href={created.link} target="_blank"
+              startIcon={<OpenInNew sx={{ fontSize: 14 }} />}
+              sx={{ textTransform: "none", fontWeight: 700, fontSize: 12, borderColor: BORDER, color: NAVY, borderRadius: 2 }}>
+              Open
+            </Button>
+          </Stack>
+        </Paper>
+        <Button onClick={() => { setCreated(null); setRound((r) => r + 1); }} variant="outlined"
+          sx={{ textTransform: "none", fontWeight: 700, borderColor: BORDER, color: NAVY, borderRadius: 2.5 }}>
+          Schedule Another Webinar
+        </Button>
+      </Box>
+    );
+  }
+
+  return (
+    <Box>
+      <Typography sx={{ fontSize: 13.5, color: MUTED, mb: 2 }}>
+        Broadcast-style event: you pick the host, co-hosts and panelists; everyone else joins view-only and takes part through
+        Q&amp;A, polls, chat and raise hand. No course needed.
+      </Typography>
+      <WebinarScheduleForm resetKey={round}
+        onCreated={(r) => { setCreated(r); setToast({ msg: "Webinar scheduled!", severity: "success" }); }} />
+    </Box>
+  );
+};
+
+// ─────────────────────────────────────────────────────────────
 // SCHEDULE TAB  (replaces your existing ScheduleTab)
 // ─────────────────────────────────────────────────────────────
 export const ScheduleTab = ({ setToast }) => {
-  const [mode, setMode] = useState("course"); // "course" | "public"
+  const [mode, setMode] = useState("course"); // "course" | "public" | "webinar"
 
   return (
     <Box>
@@ -1024,13 +1076,16 @@ export const ScheduleTab = ({ setToast }) => {
             <ToggleButton value="public">
               <Public sx={{ fontSize: 16, mr: 0.75 }} /> Public Meeting
             </ToggleButton>
+            <ToggleButton value="webinar">
+              <LiveTv sx={{ fontSize: 16, mr: 0.75 }} /> Webinar
+            </ToggleButton>
           </ToggleButtonGroup>
         </Box>
 
         <Box sx={{ mt: 2.5 }}>
-          {mode === "course"
-            ? <CourseSessionForm setToast={setToast} />
-            : <PublicMeetingForm setToast={setToast} />}
+          {mode === "course" && <CourseSessionForm setToast={setToast} />}
+          {mode === "public" && <PublicMeetingForm setToast={setToast} />}
+          {mode === "webinar" && <WebinarSessionForm setToast={setToast} />}
         </Box>
       </Paper>
     </Box>
@@ -1092,6 +1147,7 @@ export default function AdminLiveSessions() {
             <Tab label="All Sessions" icon={<Videocam    sx={{ fontSize: 17 }} />} iconPosition="start" />
             <Tab label="Tutor Hours"  icon={<AccessTime  sx={{ fontSize: 17 }} />} iconPosition="start" />
             <Tab label="Schedule"     icon={<Add         sx={{ fontSize: 17 }} />} iconPosition="start" />
+            <Tab label="Webinars"     icon={<LiveTv      sx={{ fontSize: 17 }} />} iconPosition="start" />
           </Tabs>
         </Box>
 
@@ -1099,6 +1155,7 @@ export default function AdminLiveSessions() {
         {tab === 1 && <SessionsTab navigate={navigate} setToast={setToast} />}
         {tab === 2 && <TutorHoursTab />}
         {tab === 3 && <ScheduleTab setToast={setToast} />}
+        {tab === 4 && <AdminWebinars embedded />}
       </Box>
 
       <Snackbar open={!!toast} autoHideDuration={4500} onClose={() => setToast(null)}

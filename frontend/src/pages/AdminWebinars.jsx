@@ -71,7 +71,7 @@ function TeamDialog({ webinar, onClose, onToast }) {
   );
 }
 
-export default function AdminWebinars() {
+export default function AdminWebinars({ embedded = false }) {
   const navigate = useNavigate();
   const [rows, setRows] = useState(null);
   const [open, setOpen] = useState(false);
@@ -90,12 +90,16 @@ export default function AdminWebinars() {
   };
 
   return (
-    <Box sx={{ p: { xs: 2, md: 4 } }}>
+    <Box sx={embedded ? {} : { p: { xs: 2, md: 4 } }}>
       <Box sx={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", flexWrap: "wrap", gap: 2, mb: 3 }}>
-        <Box>
-          <Typography sx={{ color: GOLD, fontWeight: 800, letterSpacing: 1.4, fontSize: 12 }}>ADMIN</Typography>
-          <Typography sx={{ fontWeight: 900, fontSize: { xs: 24, md: 30 }, color: NAVY }}>Webinars</Typography>
-        </Box>
+        {embedded ? (
+          <Typography sx={{ fontSize: 13.5, color: "text.secondary" }}>Webinars, their hosting teams and join links.</Typography>
+        ) : (
+          <Box>
+            <Typography sx={{ color: GOLD, fontWeight: 800, letterSpacing: 1.4, fontSize: 12 }}>ADMIN</Typography>
+            <Typography sx={{ fontWeight: 900, fontSize: { xs: 24, md: 30 }, color: NAVY }}>Webinars</Typography>
+          </Box>
+        )}
         <Button startIcon={<Add />} variant="contained" disableElevation onClick={() => setOpen(true)} sx={{ textTransform: "none", fontWeight: 800, borderRadius: 3, bgcolor: NAVY }}>Schedule webinar</Button>
       </Box>
 
