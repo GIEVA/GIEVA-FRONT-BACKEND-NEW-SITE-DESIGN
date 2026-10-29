@@ -16,6 +16,7 @@ const GREEN = "#1E7F4F";
 function PersonPicker({ label, multiple, value, onChange, helper }) {
   const [opts, setOpts] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [searchError, setSearchError] = useState("");
   const t = useRef();
   const search = (q) => {
   clearTimeout(t.current);
