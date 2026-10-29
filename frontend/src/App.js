@@ -160,6 +160,9 @@ import MyVisaApplications from "./pages/MyVisaApplications";
 import VisaApplicationDetail from "./pages/VisaApplicationDetail";
 import AdminVisaApplications from "./pages/AdminVisaApplications";
 
+import WebinarJoin from "./pages/WebinarJoin";
+import AdminWebinars from "./pages/AdminWebinars";
+
 
 import "katex/dist/katex.min.css";
 
@@ -374,6 +377,16 @@ function App() {
           }
         />
 
+        
+        <Route
+          path="/webinar/:id"
+          element={
+            <ProtectedRoute>
+              <WebinarJoin />
+            </ProtectedRoute>
+          }
+        />
+
          <Route
           path="/exam-register/:examType"
           element={
@@ -551,7 +564,17 @@ function App() {
   }
 />
 
-<Route path="visa" element={<AdminLayout><AdminVisaApplications /></AdminLayout>} />
+<Route
+  path="/admin/visa"
+  element={
+    <AdminLayout>
+      <AdminVisaApplications />
+    </AdminLayout>
+  }
+/>
+
+
+
 
 <Route
   path="/admin/heals/applications"
@@ -768,6 +791,16 @@ function App() {
             </AdminLayout>
           }
         />
+
+        <Route
+        path="/admin/webinars"
+        element={
+          <AdminLayout>
+            <AdminWebinars />
+          </AdminLayout>
+        }
+      />
+
         <Route  
         path="/admin/contact-message"
           element={

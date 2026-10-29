@@ -53,6 +53,7 @@ import {
   AccountTree,
   ChevronLeft,
   EmojiEvents,
+  FlightTakeoff,
 } from "@mui/icons-material";
 
 import { useState } from "react";
@@ -115,6 +116,7 @@ export default function AdminSidebar({
     { label: "Tutor Assignments",  icon: <AssignmentInd />, path: "/admin/tutor-assignments"  },
     { label: "HEALS Dashboard",    icon: <Dashboard />,     path: "/admin/heals/dashboard"    },
     { label: "HEALS Applications", icon: <School />,        path: "/admin/heals/applications" },
+    { label: "Visa Applications",  icon: <FlightTakeoff />, path: "/admin/visa"               },
     { label: "CMS Articles",       icon: <Article />,       path: "/admin/cms/articles"       },
     { label: "Contact Messages",   icon: <ContactMail />,   path: "/admin/contact-message"    },
   ];
