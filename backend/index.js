@@ -326,7 +326,7 @@ app.use("/api/projects/all", projectRoutes);
 app.use("/api/visa", visaRoutes);
 
     // Sync models AFTER models are loaded
-    await sequelize.sync({alter:true});
+    await sequelize.sync();
     console.log("🚀 Sequelize models synced");
 
   const httpServer = createServer(app);
