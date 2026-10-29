@@ -43,12 +43,13 @@ export const permissionFor = (role) => ({
 });
 
 // Video grant fields for AccessToken.addGrant({ room, roomJoin: true, ...webinarGrantFor(role) })
+
 export const webinarGrantFor = (role) => ({
   canSubscribe: true,
   canPublish: canSpeak(role),
   canPublishData: true,
-  canPublishSources: canSpeak(role) ? ["microphone", "camera", "screen_share", "screen_share_audio"] : [],
 });
+
 
 export const roleForIdentity = async (session, identity) => {
   const userId = userIdFromIdentity(identity);
