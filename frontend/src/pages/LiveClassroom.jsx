@@ -43,7 +43,7 @@ import StreamDialog from "../components/live/StreamDialog";
 import { RoomEvent } from "livekit-client";
 import { QuestionAnswer, LiveTv, Stars } from "@mui/icons-material";
 import {
-  joinWebinar, endWebinar, promoteToPanelist, demoteToAttendee,
+  joinWebinar, endWebinar, promoteToPanelist, demoteToAttendee, getWebinarGuestStatus
 } from "../services/webinarService";
 import { muteAllParticipants, askParticipantToUnmute } from "../services/sessionToolsService";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
@@ -1359,7 +1359,7 @@ const darkTheme = createTheme({
 // ─── RoomInner ───────────────────────────────────────────────
 const RoomInner = ({
   role, sessionId, navigate, currentUser, phase,
-  onRequestTokenSwap, guestId, webinar,
+  onRequestTokenSwap, guestId, webinar,isWebinarGuest = false,
 }) => {
   const participants         = useParticipants();
   const { localParticipant } = useLocalParticipant();
@@ -1428,23 +1428,37 @@ const RoomInner = ({
     return () => clearInterval(id);
   }, [role, sessionId]);
 
-  useEffect(() => {
-    if (phase !== "lobby" || role === "host") return;
-    const poll = async () => {
-      if (upgrading) return;
-      try {
-        const res = guestId
-          ? await guestGetParticipantToken(sessionId, guestId)
-          : await getParticipantToken(sessionId);
-        if (res?.token) {
-          setUpgrading(true);
-          onRequestTokenSwap(res.token, res.serverUrl);
-        }
-      } catch { /* 403 = still waiting */ }
-    };
-    const id = setInterval(poll, 3000);
-    return () => clearInterval(id);
-  }, [phase, role, sessionId, upgrading, onRequestTokenSwap, guestId]);
+useEffect(() => {
+  if (phase !== "lobby" || role === "host" || isWebinarGuest) return;
+
+  const poll = async () => {
+    if (upgrading) return;
+
+    try {
+      const res = guestId
+        ? await guestGetParticipantToken(sessionId, guestId)
+        : await getParticipantToken(sessionId);
+
+      if (res?.token) {
+        setUpgrading(true);
+        onRequestTokenSwap(res.token, res.serverUrl);
+      }
+    } catch {
+      // A 403 can mean the participant is still waiting.
+    }
+  };
+
+  const id = setInterval(poll, 3000);
+  return () => clearInterval(id);
+}, [
+  phase,
+  role,
+  sessionId,
+  upgrading,
+  onRequestTokenSwap,
+  guestId,
+  isWebinarGuest,
+]);
 
   const broadcast = useCallback(async (msg, reliable = true) => {
     try {
@@ -1842,72 +1856,227 @@ const RoomInner = ({
 };
 
 // ─── Main Export ─────────────────────────────────────────────
+
 export default function LiveClassroom() {
   const { roomName, sessionId } = useParams();
-  const location      = useLocation();
-  const navigate      = useNavigate();
-  const role          = location.state?.role || "student";
+  const location = useLocation();
+  const navigate = useNavigate();
+  const role = location.state?.role || "student";
 
-  const [token,       setToken]       = useState("");
-  const [serverUrl,   setServerUrl]   = useState("");
-  const [phase,       setPhase]       = useState("lobby");
-  const [loading,     setLoading]     = useState(true);
-  const [error,       setError]       = useState("");
+  const [token, setToken] = useState("");
+  const [serverUrl, setServerUrl] = useState("");
+  const [phase, setPhase] = useState("lobby");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [currentUser, setCurrentUser] = useState(null);
+  const [webinarInfo, setWebinarInfo] = useState(null);
 
   const isPublicRoom = roomName?.startsWith("public-");
   const isWebinarRoom = roomName?.startsWith("webinar-");
-  const [webinarInfo, setWebinarInfo] = useState(null); // { role, canHost, qaEnabled }
-  const hasAuthToken = !!localStorage.getItem("token");
-
-  const [guestId,          setGuestId]          = useState(() => sessionStorage.getItem(`guestId:${sessionId}`));
-  const [needsGuestGate,   setNeedsGuestGate]   = useState(false);
-  const [guestGateLoading, setGuestGateLoading] = useState(false);
-  const [guestGateError,   setGuestGateError]   = useState("");
-
+  const hasAuthToken = Boolean(localStorage.getItem("token"));
   const isHostRole = role === "tutor" || role === "host";
 
+  const [guestId, setGuestId] = useState(
+    () => sessionStorage.getItem(`guestId:${sessionId}`)
+  );
+  const [needsGuestGate, setNeedsGuestGate] = useState(false);
+  const [guestGateLoading, setGuestGateLoading] = useState(false);
+  const [guestGateError, setGuestGateError] = useState("");
+
+  // Never store the LiveKit token as the guest's persistent credential.
+  const [webinarGuest, setWebinarGuest] = useState(
+    () => location.state?.webinarGuest || null
+  );
+
+  const isWebinarGuest = isWebinarRoom && Boolean(
+    webinarGuest?.registrationId &&
+    webinarGuest?.token &&
+    webinarGuest?.serverUrl
+  );
+
   useEffect(() => {
-    if (!hasAuthToken) {
-      if (isPublicRoom) { setNeedsGuestGate(true); setLoading(false); return; }
-      navigate("/login", { replace: true });
-      return;
-    }
-    loadClass();
-    return () => { leaveAttendance(sessionId).catch(() => {}); };
-  }, [sessionId]);
+    let cancelled = false;
 
-  const loadClass = async () => {
-    try {
-      setLoading(true);
-      let response;
-      if (isWebinarRoom) {
-        response = await joinWebinar(sessionId);
-        const r = response.webinarRole;
-        setWebinarInfo({
-          id: sessionId, role: r, qaEnabled: response.qaEnabled !== false,
-          canHost: r === "host" || r === "alt_host",
-          runsIt: r === "host" || r === "alt_host" || r === "cohost",
+    const applyAdmittedGuest = (data) => {
+      if (!data?.token || !data?.serverUrl) {
+        throw new Error("The server did not return a valid webinar connection.");
+      }
+
+      const guest = {
+        registrationId: data.guest?.id || data.registrationId,
+        fullName: data.guest?.fullName || data.fullName || "Webinar Guest",
+        token: data.token,
+        serverUrl: data.serverUrl,
+      };
+
+      if (!guest.registrationId) {
+        throw new Error("The guest registration ID is missing.");
+      }
+
+      if (cancelled) return;
+
+      setWebinarGuest(guest);
+      setToken(guest.token);
+      setServerUrl(guest.serverUrl);
+      setPhase("live");
+      setCurrentUser({
+        id: guest.registrationId,
+        fullName: guest.fullName,
+        profilePicUrl: null,
+      });
+      setWebinarInfo({
+        id: sessionId,
+        role: "attendee",
+        qaEnabled: data.webinar?.qaEnabled !== false,
+        canHost: false,
+        runsIt: false,
+      });
+      setError("");
+    };
+
+    const restoreWebinarGuest = async () => {
+      const accessKey = sessionStorage.getItem(
+        `webinarAccessKey:${sessionId}`
+      );
+
+      if (!accessKey) {
+        if (!cancelled) {
+          setError("Guest registration not found in this tab. Please reopen the webinar registration link.");
+        }
+        return;
+      }
+
+      const status = await getWebinarGuestStatus(sessionId, accessKey);
+
+      if (cancelled) return;
+
+      if (status.status === "admitted") {
+        applyAdmittedGuest(status);
+      } else if (status.status === "waiting" || status.status === "pending") {
+        setCurrentUser({
+          fullName: status.guest?.fullName || "Webinar Guest",
         });
-      } else if (isHostRole && isPublicRoom)  response = await joinPublicMeetingAsHost(sessionId);
-      else if (isHostRole)             response = await joinTutorSession(sessionId);
-      else                             response = await joinClassSession(sessionId);
+        setError("Your registration is still waiting for the host to admit you. Return to the webinar page to check your status.");
+      } else if (status.status === "rejected" || status.status === "denied") {
+        setError("The host declined your request to join this webinar.");
+      } else {
+        setError("Your webinar registration could not be verified. Please register again.");
+      }
+    };
 
-      setToken(response.token);
-      setServerUrl(response.serverUrl);
-      setPhase(response.phase || (isHostRole ? "live" : "lobby"));
-      setCurrentUser(response.currentUser || null);
-    } catch (err) {
-      console.error(err);
-      setError(err?.response?.data?.message || "Failed to join class");
-    } finally { setLoading(false); }
-  };
+    const loadClass = async () => {
+      try {
+        setLoading(true);
+        setError("");
+
+        // Guest webinars use the access key, not the account login.
+        if (isWebinarRoom && !hasAuthToken) {
+          await restoreWebinarGuest();
+          return;
+        }
+
+        // A valid state can be used for the immediate post-admission navigation.
+        if (isWebinarRoom && location.state?.webinarGuest?.token) {
+          applyAdmittedGuest({
+            token: location.state.webinarGuest.token,
+            serverUrl: location.state.webinarGuest.serverUrl,
+            registrationId: location.state.webinarGuest.registrationId,
+            guest: {
+              id: location.state.webinarGuest.registrationId,
+              fullName: location.state.webinarGuest.fullName,
+            },
+            webinar: { id: sessionId },
+          });
+          return;
+        }
+
+        // Keep existing public-meeting guest behaviour.
+        if (!hasAuthToken) {
+          if (isPublicRoom) {
+            setNeedsGuestGate(true);
+            return;
+          }
+
+          navigate("/login", {
+            replace: true,
+            state: { from: `/live/${roomName}/${sessionId}` },
+          });
+          return;
+        }
+
+        let response;
+
+        if (isWebinarRoom) {
+          response = await joinWebinar(sessionId);
+          const webinarRole = response.webinarRole;
+
+          setWebinarInfo({
+            id: sessionId,
+            role: webinarRole,
+            qaEnabled: response.qaEnabled !== false,
+            canHost: webinarRole === "host" || webinarRole === "alt_host",
+            runsIt: ["host", "alt_host", "cohost"].includes(webinarRole),
+          });
+        } else if (isHostRole && isPublicRoom) {
+          response = await joinPublicMeetingAsHost(sessionId);
+        } else if (isHostRole) {
+          response = await joinTutorSession(sessionId);
+        } else {
+          response = await joinClassSession(sessionId);
+        }
+
+        if (cancelled) return;
+
+        if (!response?.token || !response?.serverUrl) {
+          throw new Error("The server did not return a valid classroom connection.");
+        }
+
+        setToken(response.token);
+        setServerUrl(response.serverUrl);
+        setPhase(response.phase || (isHostRole ? "live" : "lobby"));
+        setCurrentUser(response.currentUser || null);
+      } catch (err) {
+        if (!cancelled) {
+          console.error("Unable to load classroom:", err);
+          setError(
+            err?.response?.data?.message ||
+            err?.message ||
+            "Failed to join the classroom."
+          );
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    loadClass();
+
+    return () => {
+      cancelled = true;
+
+      // Do not call authenticated attendance APIs for public webinar guests.
+      if (!isWebinarRoom || hasAuthToken) {
+        leaveAttendance(sessionId).catch(() => {});
+      }
+    };
+  }, [
+    sessionId,
+    roomName,
+    isWebinarRoom,
+    isPublicRoom,
+    hasAuthToken,
+    isHostRole,
+    navigate,
+    location.state,
+  ]);
 
   const handleGuestSubmit = async (displayName) => {
     try {
       setGuestGateLoading(true);
       setGuestGateError("");
+
       const response = await guestJoinPublicMeeting(sessionId, displayName);
+
       sessionStorage.setItem(`guestId:${sessionId}`, response.guestId);
       setGuestId(response.guestId);
       setToken(response.token);
@@ -1916,48 +2085,83 @@ export default function LiveClassroom() {
       setCurrentUser(response.currentUser || null);
       setNeedsGuestGate(false);
     } catch (err) {
-      console.error(err);
-      setGuestGateError(err?.response?.data?.message || "Failed to join — please try again");
-    } finally { setGuestGateLoading(false); }
+      setGuestGateError(
+        err?.response?.data?.message || "Failed to join. Please try again."
+      );
+    } finally {
+      setGuestGateLoading(false);
+    }
   };
 
   const handleTokenSwap = useCallback((newToken, newServerUrl) => {
+    if (!newToken) return;
     setToken(newToken);
     if (newServerUrl) setServerUrl(newServerUrl);
     setPhase("live");
   }, []);
 
-  if (needsGuestGate) return <GuestGate onSubmit={handleGuestSubmit} loading={guestGateLoading} error={guestGateError} />;
+  if (needsGuestGate) {
+    return (
+      <GuestGate
+        onSubmit={handleGuestSubmit}
+        loading={guestGateLoading}
+        error={guestGateError}
+      />
+    );
+  }
 
   if (loading) {
     return (
-      <Box sx={{ height: "100vh", display: "flex", justifyContent: "center",
-                 alignItems: "center", flexDirection: "column", bgcolor: DARK, gap: 2 }}>
-        <Box sx={{ width: 64, height: 64, borderRadius: "50%", bgcolor: `${GREEN}22`,
-                   display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <Videocam sx={{ fontSize: 32, color: GREEN }} />
-        </Box>
-        <Typography sx={{ color: TEXT, fontWeight: 700, fontSize: 18 }}>Joining classroom…</Typography>
-        <Typography sx={{ color: MUTED_D, fontSize: 14 }}>Setting up your session</Typography>
+      <Box sx={{
+        height: "100vh",
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        flexDirection: "column",
+        bgcolor: DARK,
+        gap: 2,
+      }}>
+        <CircularProgress sx={{ color: GREEN }} />
+        <Typography sx={{ color: TEXT, fontWeight: 700 }}>
+          Joining classroom…
+        </Typography>
       </Box>
     );
   }
 
-  if (error) {
+  if (error || !token || !serverUrl) {
     return (
-      <Box sx={{ height: "100vh", display: "flex", justifyContent: "center",
-                 alignItems: "center", flexDirection: "column", bgcolor: DARK, gap: 2, p: 3 }}>
-        <Typography sx={{ color: "#ef4444", fontWeight: 700, fontSize: 18, textAlign: "center" }}>
-          {error}
+      <Box sx={{
+        minHeight: "100vh",
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        flexDirection: "column",
+        bgcolor: DARK,
+        gap: 2,
+        p: 3,
+      }}>
+        <Typography sx={{
+          color: error ? "#ef4444" : TEXT,
+          fontWeight: 700,
+          textAlign: "center",
+        }}>
+          {error || "No valid classroom connection was returned."}
         </Typography>
-        <Button variant="outlined"
-          onClick={() => navigate(role === "tutor" ? "/tutor/live-classes" : "/student/live-classes")}
-          sx={{ borderColor: MUTED_D, color: MUTED_D, textTransform: "none", borderRadius: 2 }}>
-          Go back
+        <Button
+          variant="outlined"
+          onClick={() => navigate(isWebinarRoom ? `/webinar/${sessionId}` : "/")}
+          sx={{ borderColor: MUTED_D, color: MUTED_D, textTransform: "none" }}
+        >
+          Return
         </Button>
       </Box>
     );
   }
+
+  const effectiveGuestId = isWebinarGuest
+    ? webinarGuest.registrationId
+    : guestId;
 
   return (
     <LiveKitRoom
@@ -1965,30 +2169,48 @@ export default function LiveClassroom() {
       token={token}
       serverUrl={serverUrl}
       connect
-      // students and guests join muted; they unmute themselves
-      audio={phase === "live" && (isWebinarRoom ? !!webinarInfo?.runsIt : isHostRole)}
-      video={phase === "live" && (isWebinarRoom ? !!webinarInfo && webinarInfo.role !== "attendee" : true)}
+      audio={phase === "live" && (
+        isWebinarRoom ? Boolean(webinarInfo?.runsIt) : isHostRole
+      )}
+      video={phase === "live" && (
+        isWebinarRoom
+          ? Boolean(webinarInfo && webinarInfo.role !== "attendee")
+          : true
+      )}
       options={{
         publishDefaults: {
           screenShareEncoding: {
-            maxBitrate:   1_500_000,
+            maxBitrate: 1500000,
             maxFramerate: 15,
           },
         },
       }}
-      onDisconnected={() => navigate(leaveDestination(role === "tutor" ? "host" : role))}
+      onDisconnected={() => {
+        if (isWebinarGuest) {
+          // Guest can re-enter through their access key.
+          navigate(`/webinar/${sessionId}`, { replace: true });
+        } else {
+          navigate(leaveDestination(role === "tutor" ? "host" : role));
+        }
+      }}
     >
       <RoomInner
-        webinar={isWebinarRoom && webinarInfo ? { active: true, ...webinarInfo } : null}
-        role={isWebinarRoom ? (webinarInfo?.runsIt ? "host" : "student") : (role === "tutor" ? "host" : role)}
+        webinar={isWebinarRoom && webinarInfo
+          ? { active: true, ...webinarInfo }
+          : null}
+        role={isWebinarRoom
+          ? (webinarInfo?.runsIt ? "host" : "student")
+          : (role === "tutor" ? "host" : role)}
         sessionId={sessionId}
         navigate={navigate}
         currentUser={currentUser}
         phase={phase}
         onRequestTokenSwap={handleTokenSwap}
-        guestId={guestId}
+        guestId={effectiveGuestId}
+        isWebinarGuest={isWebinarGuest}
       />
     </LiveKitRoom>
   );
 }
+
 

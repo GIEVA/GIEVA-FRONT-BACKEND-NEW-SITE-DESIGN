@@ -66,6 +66,7 @@ import VisaNoteModel from './VisaNote.js'
 import VisaPaymentModel from './VisaPayment.js'
 import VisaSettingModel from './VisaSetting.js'
 import VisaStatusEventModel from './VisaStatusEvent.js'
+import WebinarRegistrationModel from "./WebinarRegistration.js";
 
 
 
@@ -133,7 +134,7 @@ const SessionPollResponse = SessionPollResponseModel(sequelize, DataTypes);
 const SessionRecording = SessionRecordingModel(sequelize, DataTypes);
 const SessionQuestion = SessionQuestionModel(sequelize, DataTypes);
 const SessionRole = SessionRoleModel(sequelize, DataTypes);
-
+const WebinarRegistration = WebinarRegistrationModel(sequelize);
 const VisaApplication = VisaApplicationModel(sequelize, DataTypes);
 const VisaNote = VisaNoteModel(sequelize, DataTypes);
 const VisaPayment = VisaPaymentModel(sequelize, DataTypes);
@@ -210,6 +211,7 @@ export const models = {
 
   SessionQuestion,
   SessionRole,
+  WebinarRegistration,
 
   VisaApplication,
   VisaNote,

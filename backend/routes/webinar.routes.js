@@ -12,16 +12,33 @@ import {
   deleteQuestion, exportQuestionsCsv, startLiveStream, stopLiveStream, liveStreamStatus, getPublicWebinarInfo,
 } from "../controllers/webinar.controller.js";
 
+import {
+  registerWebinarGuest,
+  getWebinarGuestStatus,
+  listWebinarGuests,
+  moderateWebinarGuest,
+  exportWebinarGuestsCsv,
+} from "../controllers/webinarGuests.controller.js";
+
 const router = express.Router();
 
 router.get("/info/:sessionId", getPublicWebinarInfo); // no login: the room needs it to pick its layout
+// Public guest routes — no GIEVA login required.
+router.post("/:id/guest-register", registerWebinarGuest);
+router.post("/:id/guest-status", getWebinarGuestStatus);
+
 
 router.use(authenticate);
+
+// Host/admin guest management.
+router.get("/:id/guests", listWebinarGuests);
+router.patch("/:id/guests/:guestId", moderateWebinarGuest);
+router.get("/:id/guests/export.csv", exportWebinarGuestsCsv);
 
 // Schedule / manage (admin)
 router.post("/", createWebinar);
 router.get("/", listWebinars);                  // ?scope=all (admin) | mine | upcoming (default)
-router.get("/users/search", authenticate, searchUsers);       // admin people picker
+router.get("/users/search",  searchUsers);       // admin people picker
 router.get("/:id", getWebinar);
 router.put("/:id", updateWebinar);
 router.delete("/:id", cancelWebinar);

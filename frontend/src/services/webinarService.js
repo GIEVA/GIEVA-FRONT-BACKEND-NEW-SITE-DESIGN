@@ -42,3 +42,40 @@ export const exportQuestionsCsv = (sessionId) => api.get(`${base}/sessions/${ses
 export const getStreamStatus = (sessionId) => api.get(`${base}/sessions/${sessionId}/stream`).then(d);
 export const startLiveStream = (sessionId, urls) => api.post(`${base}/sessions/${sessionId}/stream/start`, { urls }).then(d);
 export const stopLiveStream = (sessionId) => api.post(`${base}/sessions/${sessionId}/stream/stop`).then(d);
+
+
+
+/* Guest registration and waiting room — public routes */
+
+// Public webinar information
+// export const getPublicWebinarInfo = (id) =>
+//   api.get(`${base}/info/${id}`).then(d);
+
+// Register a guest
+export const registerWebinarGuest = (id, guestData) =>
+  api.post(`${base}/${id}/guest-register`, guestData).then(d);
+
+// Check guest admission status
+export const getWebinarGuestStatus = (id, accessKey) =>
+  api.post(`${base}/${id}/guest-status`, { accessKey }).then(d);
+
+/* Host/admin guest management — protected routes */
+
+// List guest registrations
+export const getWebinarGuests = (id) =>
+  api.get(`${base}/${id}/guests`).then(d);
+
+// Admit or reject a guest
+export const moderateWebinarGuest = (id, guestId, action) =>
+  api.patch(`${base}/${id}/guests/${guestId}`, { action }).then(d);
+
+// Export guest registrations
+export const exportWebinarGuests = (id) =>
+  api
+    .get(`${base}/${id}/guests/export.csv`, {
+      responseType: "blob",
+    })
+    .then(d);
+
+
+    
