@@ -423,9 +423,9 @@ function App() {
           />
 
           <Route path="/visa/apply" element={<ProtectedRoute><VisaApply /></ProtectedRoute>} />
-<Route path="/visa/applications" element={<ProtectedRoute><MyVisaApplications /></ProtectedRoute>} />
-<Route path="/visa/applications/:id" element={<ProtectedRoute><VisaApplicationDetail /></ProtectedRoute>} />
-<Route path="/visa/payment/callback" element={<ProtectedRoute><VisaPaymentCallback /></ProtectedRoute>} />
+          <Route path="/visa/applications" element={<ProtectedRoute><MyVisaApplications /></ProtectedRoute>} />
+          <Route path="/visa/applications/:id" element={<ProtectedRoute><VisaApplicationDetail /></ProtectedRoute>} />
+          <Route path="/visa/payment/callback" element={<ProtectedRoute><VisaPaymentCallback /></ProtectedRoute>} />
 
 
           </Route>
