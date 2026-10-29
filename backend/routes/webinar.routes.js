@@ -21,7 +21,7 @@ router.use(authenticate);
 // Schedule / manage (admin)
 router.post("/", createWebinar);
 router.get("/", listWebinars);                  // ?scope=all (admin) | mine | upcoming (default)
-router.get("/users/search", searchUsers);       // admin people picker
+router.get("/users/search", authenticate, searchUsers);       // admin people picker
 router.get("/:id", getWebinar);
 router.put("/:id", updateWebinar);
 router.delete("/:id", cancelWebinar);

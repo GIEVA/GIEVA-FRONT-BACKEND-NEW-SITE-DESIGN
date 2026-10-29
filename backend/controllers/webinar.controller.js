@@ -103,19 +103,49 @@ export const listTeam = async (req, res) => {
 
 export const searchUsers = async (req, res) => {
   try {
-    if (!isAdmin(req.user)) return res.status(403).json({ message: "Admins only" });
+    // Only admins can search people for webinar assignments.
+    if (!req.user || !ADMIN_ROLES.includes(req.user.role)) {
+      return res.status(403).json({
+        message: "Only admins can search webinar team members",
+      });
+    }
+
     const q = String(req.query.q || "").trim().slice(0, 60);
-    if (q.length < 2) return res.json({ users: [] });
-    const like = `%${q.replace(/[%_\\]/g, "\\$&")}%`;
-    const cols = ["email", ...NAME_COLS];
+
+    if (q.length < 2) {
+      return res.json({ users: [] });
+    }
+
+    const like = `%${q}%`;
+
     const users = await User.findAll({
-      where: { [Op.or]: cols.map((c) => ({ [c]: { [Op.like]: like } })) },
-      attributes: USER_ATTRS, limit: 10,
+      where: {
+        [Op.or]: [
+          { fullName: { [Op.like]: like } },
+          { email: { [Op.like]: like } },
+        ],
+        // Exclude inactive accounts from team assignment.
+        isActive: true,
+      },
+      attributes: ["id", "fullName", "email", "role"],
+      order: [["fullName", "ASC"]],
+      limit: 20,
     });
-    res.json({ users: users.map((u) => ({ id: u.id, name: displayName(u), email: u.email, role: u.role })) });
+
+    return res.json({
+      users: users.map((user) => ({
+        id: user.id,
+        name: user.fullName || user.email?.split("@")[0] || `User ${user.id}`,
+        email: user.email,
+        role: user.role,
+      })),
+    });
   } catch (err) {
-    console.error("[webinar] search", err);
-    res.status(500).json({ message: "Search failed" });
+    console.error("[webinar] searchUsers error:", err);
+
+    return res.status(500).json({
+      message: "Failed to search webinar team members",
+    });
   }
 };
 

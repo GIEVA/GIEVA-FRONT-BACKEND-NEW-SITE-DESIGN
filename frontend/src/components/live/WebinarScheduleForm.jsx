@@ -18,25 +18,79 @@ function PersonPicker({ label, multiple, value, onChange, helper }) {
   const [loading, setLoading] = useState(false);
   const t = useRef();
   const search = (q) => {
-    clearTimeout(t.current);
-    if (q.trim().length < 2) return setOpts([]);
-    t.current = setTimeout(async () => {
-      try { setLoading(true); setOpts((await searchWebinarUsers(q)).users); } catch { setOpts([]); } finally { setLoading(false); }
-    }, 300);
-  };
+  clearTimeout(t.current);
+
+  const query = q.trim();
+
+  if (query.length < 2) {
+    setOpts([]);
+    setSearchError("");
+    return;
+  }
+
+  t.current = setTimeout(async () => {
+    try {
+      setLoading(true);
+      setSearchError("");
+
+      const result = await searchWebinarUsers(query);
+      setOpts(Array.isArray(result?.users) ? result.users : []);
+    } catch (err) {
+      console.error("Webinar user search failed:", {
+        status: err?.response?.status,
+        data: err?.response?.data,
+        message: err?.message,
+      });
+
+      setOpts([]);
+      setSearchError(
+        err?.response?.data?.message ||
+        "Could not search users. Check your connection and permissions."
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, 300);
+};
   return (
-    <Autocomplete
-      multiple={multiple} options={opts} value={value} loading={loading}
-      filterOptions={(x) => x}
-      getOptionLabel={(o) => `${o.name}${o.email ? ` (${o.email})` : ""}`}
-      isOptionEqualToValue={(a, b) => a.id === b.id}
-      onInputChange={(_, v) => search(v)}
-      onChange={(_, v) => onChange(v)}
-      noOptionsText="Type at least 2 letters of a name or email"
-      renderTags={(v, getProps) => v.map((o, i) => <Chip size="small" label={o.name} {...getProps({ index: i })} key={o.id} />)}
-      renderInput={(p) => <TextField {...p} label={label} helperText={helper} />}
-    />
-  );
+  <Autocomplete
+    multiple={multiple}
+    options={opts}
+    value={value}
+    loading={loading}
+    filterOptions={(x) => x}
+    getOptionLabel={(o) =>
+      `${o.name}${o.email ? ` (${o.email})` : ""}`
+    }
+    isOptionEqualToValue={(a, b) => a.id === b.id}
+    onInputChange={(_, v) => search(v)}
+    onChange={(_, v) => onChange(v)}
+    noOptionsText={
+      searchError ||
+      (loading
+        ? "Searching users..."
+        : "No matching users found")
+    }
+    renderTags={(v, getProps) =>
+      v.map((o, i) => (
+        <Chip
+          size="small"
+          label={o.name}
+          {...getProps({ index: i })}
+          key={o.id}
+        />
+      ))
+    }
+    renderInput={(p) => (
+      <TextField
+        {...p}
+        label={label}
+        helperText={searchError || helper}
+        error={Boolean(searchError)}
+      />
+    )}
+  />
+);
 }
 
 export function WebinarScheduleForm({ onCreated, onCancel, resetKey }) {
