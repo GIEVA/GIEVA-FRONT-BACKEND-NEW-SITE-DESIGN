@@ -11,11 +11,11 @@ import { sendPostSessionSurvey } from "../controllers/sessionPoll.controller.js"
 
 export { handleEgressEnded };
 
-// Host connected → auto-start recording if the meeting was scheduled with "Recording: Enabled".
-// (`recordingEnabled` is the field your Public Meeting form already sends. If your course-session
-//  flow doesn't store it, hosts can still start recording manually from the room.)
+// Host connected → auto-start recording. DEFAULT IS ON: it only stays off when the session was
+// scheduled with recordingEnabled === false (the tutor switched "Record this class" off).
+// Sessions created before the column existed have no value, so they record too.
 export const onHostJoined = async (session) => {
-  if (session.recordingEnabled !== true) return;
+  if (session.recordingEnabled === false) return;
   if (await getActiveRecording(session.id)) return;
 
   const aiNotes = process.env.RECORDING_AI_NOTES_DEFAULT !== "false";

@@ -9,7 +9,7 @@ import crypto from "crypto";
 import { Op } from "sequelize";
 import { AccessToken, RoomServiceClient } from "livekit-server-sdk";
 import models from "../models/index.js";
-import { loadSession, sessionRoleOf, canHostSession, ADMIN_ROLES } from "../services/sessionAccess.js";
+import { loadSession, sessionRoleOf, canHostSession, ADMIN_ROLES } from "../service/sessionAccess.js";
 import { webinarGrantFor, identityOf } from "../service/webinarPermissions.js";
 import { onHostJoined, onSessionEnded } from "../service/sessionLifecycle.js";
 import { broadcast } from "../service/liveRoomSignals.js";
