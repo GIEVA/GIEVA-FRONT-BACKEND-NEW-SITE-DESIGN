@@ -115,6 +115,7 @@ import sessionToolsRoutes from './routes/sessionTools.routes.js'
 import visaRoutes from "./routes/visa.routes.js";
 import { visaPaymentWebhook } from "./controllers/visaPayment.controller.js";
 
+import webinarRoutes from "./routes/webinar.routes.js"
 
 
 
@@ -324,6 +325,8 @@ app.use("/api/admin/projects/all", adminProjectRoutes);
 app.use("/api/projects/all", projectRoutes);
 
 app.use("/api/visa", visaRoutes);
+
+app.use("/api/webinars", webinarRoutes);
 
     // Sync models AFTER models are loaded
     await sequelize.sync();
