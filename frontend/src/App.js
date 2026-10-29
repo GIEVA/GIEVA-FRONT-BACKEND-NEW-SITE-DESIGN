@@ -154,6 +154,12 @@ import SessionSurvey from "./pages/SessionSurvey";   // adjust the path to where
 
 
 
+import VisaApply from "./pages/VisaApply";
+import VisaPaymentCallback from "./pages/VisaPaymentCallback";
+import MyVisaApplications from "./pages/MyVisaApplications";
+import VisaApplicationDetail from "./pages/VisaApplicationDetail";
+import AdminVisaApplications from "./pages/AdminVisaApplications";
+
 
 import "katex/dist/katex.min.css";
 
@@ -403,6 +409,11 @@ function App() {
             }
           />
 
+          <Route path="/visa/apply" element={<ProtectedRoute><VisaApply /></ProtectedRoute>} />
+<Route path="/visa/applications" element={<ProtectedRoute><MyVisaApplications /></ProtectedRoute>} />
+<Route path="/visa/applications/:id" element={<ProtectedRoute><VisaApplicationDetail /></ProtectedRoute>} />
+<Route path="/visa/payment/callback" element={<ProtectedRoute><VisaPaymentCallback /></ProtectedRoute>} />
+
 
           </Route>
 
@@ -539,6 +550,8 @@ function App() {
     </AdminLayout>
   }
 />
+
+<Route path="visa" element={<AdminLayout><AdminVisaApplications /></AdminLayout>} />
 
 <Route
   path="/admin/heals/applications"

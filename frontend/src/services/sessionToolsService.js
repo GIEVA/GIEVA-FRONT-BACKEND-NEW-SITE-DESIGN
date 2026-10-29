@@ -54,3 +54,12 @@ export const muteAllParticipants = async (sessionId) =>
 
 export const askParticipantToUnmute = async (sessionId, identity) =>
   (await api.post(`${base}/sessions/${sessionId}/room/ask-unmute/${encodeURIComponent(identity)}`)).data;
+
+// Word document with the AI notes + full transcript (fetched as a blob so the auth header is sent)
+export const downloadRecordingDocx = async (recordingId, filename = "meeting-transcript.docx") => {
+  const res = await api.get(`${base}/recordings/${recordingId}/export.docx`, { responseType: "blob" });
+  const url = URL.createObjectURL(res.data);
+  const a = document.createElement("a");
+  a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+};

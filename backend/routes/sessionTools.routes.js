@@ -24,6 +24,7 @@ import {
   getRecording,
   getRecordingStatus,
   regenerateRecordingNotes,
+  exportRecordingDocx,
 } from "../controllers/sessionRecording.controller.js";
 
 import { muteAllParticipants, askToUnmute } from "../controllers/roomControls.controller.js";
@@ -48,6 +49,7 @@ router.post("/sessions/:sessionId/recording/stop", stopRecording);
 router.get("/sessions/:sessionId/recording/status", getRecordingStatus);
 router.get("/sessions/:sessionId/recording", getRecording);
 router.post("/recordings/:recordingId/notes/regenerate", regenerateRecordingNotes);
+router.get("/recordings/:recordingId/export.docx", exportRecordingDocx);
 
 // ── Room moderation ──
 router.post("/sessions/:sessionId/room/mute-all", muteAllParticipants);

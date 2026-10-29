@@ -11,10 +11,10 @@ import {
   Box, Typography, Tabs, Tab, Button, Chip, Stack, Paper, Alert, CircularProgress,
   LinearProgress, Divider, IconButton, Tooltip, Snackbar,
 } from "@mui/material";
-import { ContentCopy, Download, Refresh, AutoAwesome } from "@mui/icons-material";
+import { ContentCopy, Download, Refresh, AutoAwesome, Description } from "@mui/icons-material";
 
 import {
-  getRecording, regenerateNotes, listPolls, exportPollCSV,
+  getRecording, regenerateNotes, listPolls, exportPollCSV, downloadRecordingDocx,
 } from "../../services/sessionToolsService";
 import { PollResults } from "../live/PollForm";
 
@@ -90,6 +90,18 @@ export default function SessionInsightsPanel({ sessionId }) {
   const [error, setError] = useState("");
   const [regenerating, setRegenerating] = useState(false);
   const [toast, setToast] = useState(null);
+  const [docxBusy, setDocxBusy] = useState(false);
+
+  const handleDocx = async () => {
+    try {
+      setDocxBusy(true);
+      await downloadRecordingDocx(recording.id, `meeting-transcript-${sessionId}.docx`);
+    } catch (err) {
+      setToast({ msg: err?.response?.status === 409 ? "The transcript is not ready yet" : "Could not create the Word document", severity: "error" });
+    } finally {
+      setDocxBusy(false);
+    }
+  };
 
   const load = useCallback(async () => {
     try {
@@ -203,6 +215,10 @@ export default function SessionInsightsPanel({ sessionId }) {
                   onClick={() => navigator.clipboard.writeText(notesToMarkdown(notes)).then(() => setToast({ msg: "Copied", severity: "success" }))}>
                   Copy
                 </Button>
+                <Button size="small" disabled={docxBusy} startIcon={docxBusy ? <CircularProgress size={14} /> : <Description />} sx={{ textTransform: "none", fontWeight: 700 }}
+                  onClick={handleDocx}>
+                  Download Word
+                </Button>
                 <Button size="small" startIcon={<Download />} sx={{ textTransform: "none", fontWeight: 700 }}
                   onClick={() => saveFile(notesToMarkdown(notes), `meeting-notes-${sessionId}.md`, "text/markdown")}>
                   Download .md
@@ -306,7 +322,11 @@ export default function SessionInsightsPanel({ sessionId }) {
 
           {recording?.transcript && (
             <>
-              <Stack direction="row" justifyContent="flex-end" mb={2}>
+              <Stack direction="row" justifyContent="flex-end" spacing={1} mb={2}>
+                <Button size="small" disabled={docxBusy} startIcon={docxBusy ? <CircularProgress size={14} /> : <Description />} sx={{ textTransform: "none", fontWeight: 700 }}
+                  onClick={handleDocx}>
+                  Download Word
+                </Button>
                 <Button size="small" startIcon={<Download />} sx={{ textTransform: "none", fontWeight: 700 }}
                   onClick={() => saveFile(recording.transcript, `transcript-${sessionId}.txt`, "text/plain")}>
                   Download .txt

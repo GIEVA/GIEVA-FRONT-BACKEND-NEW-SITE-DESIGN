@@ -112,6 +112,9 @@ import { healsPaystackWebhook } from "./controllers/healsPaymentController.js";
 
 import sessionToolsRoutes from './routes/sessionTools.routes.js'
 
+import visaRoutes from "./routes/visa.routes.js";
+import { visaPaymentWebhook } from "./controllers/visaPayment.controller.js";
+
 
 
 
@@ -142,6 +145,12 @@ app.post(
   "/api/heals-payments/webhook",
   express.raw({ type: "application/json" }),
   healsPaystackWebhook
+);
+
+app.post(
+  "/api/visa/payments/webhook",
+  express.raw({ type: "application/json" }),
+  visaPaymentWebhook
 );
 
 
@@ -314,8 +323,10 @@ app.use("/api/faqs/all", faqRoutes);
 app.use("/api/admin/projects/all", adminProjectRoutes);
 app.use("/api/projects/all", projectRoutes);
 
+app.use("/api/visa", visaRoutes);
+
     // Sync models AFTER models are loaded
-    await sequelize.sync();
+    await sequelize.sync({alter:true});
     console.log("🚀 Sequelize models synced");
 
   const httpServer = createServer(app);

@@ -9,6 +9,7 @@ import {
 } from "../service/recording.service.js";
 import { regenerateNotes } from "../service/aiNotes.service.js";
 import { getPlaybackUrl } from "../config/storage.js";
+import { buildRecordingDocx } from "../service/recordingDocx.service.js";
 
 const { SessionRecording, ActivityLog } = models;
 
@@ -137,5 +138,29 @@ export const regenerateRecordingNotes = async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(400).json({ message: err.message || "Failed to regenerate notes" });
+  }
+};
+
+// ── GET /recordings/:recordingId/export.docx   (host/admin: notes + transcript as a Word file)
+export const exportRecordingDocx = async (req, res) => {
+  try {
+    const rec = await SessionRecording.findByPk(req.params.recordingId);
+    if (!rec) return res.status(404).json({ message: "Recording not found" });
+
+    const session = await loadSession(rec.classSessionId);
+    if (!session || !canManageSession(req.user, session)) return hostOnly(res);
+    if (!rec.transcript) return res.status(409).json({ message: "The transcript is not ready yet" });
+
+    const buffer = await buildRecordingDocx({ session, recording: rec });
+    const safe = String(session.title || "session").replace(/[^\w\- ]+/g, "").trim().replace(/\s+/g, "-").slice(0, 60) || "session";
+    res.set({
+      "Content-Type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "Content-Disposition": `attachment; filename="${safe}-transcript.docx"`,
+      "Cache-Control": "no-store",
+    });
+    res.send(buffer);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Could not create the Word document" });
   }
 };

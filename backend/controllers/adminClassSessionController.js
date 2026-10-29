@@ -9,6 +9,7 @@ import { createLiveKitToken } from "../config/livekit.js";
 import { Op, fn, col, literal } from "sequelize";
 import { v4 as uuid } from "uuid";
 import sendEmail from "../utils/sendMail.js";
+import { deleteSessionCascade } from "../service/sessionDeletion.js";
 
 const {
   ClassSession,
@@ -988,7 +989,7 @@ export const adminDeleteSession = async (req, res) => {
       where: { classSessionId: session.id },
     }).catch(() => {}); // non-fatal if table doesn't exist
 
-    await session.destroy();
+    await deleteSessionCascade(session.id);
 
     await ActivityLog.create({
       userId: req.user.id,

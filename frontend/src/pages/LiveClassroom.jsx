@@ -38,6 +38,13 @@ import { useTracks } from "@livekit/components-react";
 
 import PollPanel from "../components/live/PollPanel";
 import RecordingControls from "../components/live/RecordingControls";
+import QaPanel from "../components/live/QaPanel";
+import StreamDialog from "../components/live/StreamDialog";
+import { RoomEvent } from "livekit-client";
+import { QuestionAnswer, LiveTv, Stars } from "@mui/icons-material";
+import {
+  joinWebinar, endWebinar, promoteToPanelist, demoteToAttendee,
+} from "../services/webinarService";
 import { muteAllParticipants, askParticipantToUnmute } from "../services/sessionToolsService";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 
@@ -270,7 +277,7 @@ const ScreenShareView = ({ trackRef, presenterName }) => (
 );
 
 // ─── ParticipantGrid ─────────────────────────────────────────
-const ParticipantGrid = ({ raisedHands, reactions }) => {
+const ParticipantGrid = ({ raisedHands, reactions, webinar }) => {
   const participants         = useParticipants();
   const { localParticipant } = useLocalParticipant();
 
@@ -279,7 +286,9 @@ const ParticipantGrid = ({ raisedHands, reactions }) => {
   const all = [
     localParticipant,
     ...participants.filter((p) => p.identity !== localParticipant?.identity),
-  ].filter(Boolean).filter(isAdmitted);
+  ].filter(Boolean).filter(isAdmitted)
+    // Webinar: the stage shows the hosting team and panelists. An attendee only appears while their hand is up.
+    .filter((p) => !webinar?.active || p.permissions?.canPublish || raisedHands[p.identity]);
 
   const screenTracks = useTracks([{
     source: Track.Source.ScreenShare,
@@ -642,7 +651,7 @@ const ChatDrawer = ({ open, onClose, messages, onSend, currentUser }) => {
 //           and renders a mute/unmute button per participant
 //           (visible only when role === "host")
 // ─────────────────────────────────────────────────────────────
-const ParticipantsDrawer = ({ open, onClose, role, sessionId, onToast }) => {
+const ParticipantsDrawer = ({ open, onClose, role, sessionId, onToast, webinar }) => {
   const participants         = useParticipants();
   const { localParticipant } = useLocalParticipant();
 
@@ -664,10 +673,26 @@ const ParticipantsDrawer = ({ open, onClose, role, sessionId, onToast }) => {
     }
   };
 
+  // Webinar attendees do not see each other (like Zoom): the audience sees the hosting team and themselves.
+  const audienceView = !!webinar?.active && !webinar.canManage;
   const all = [
     localParticipant,
     ...participants.filter((p) => p.identity !== localParticipant?.identity),
-  ].filter(Boolean);
+  ].filter(Boolean).filter((p) => !audienceView || p === localParticipant || p.permissions?.canPublish);
+  const hiddenCount = audienceView ? Math.max(0, participants.length + 1 - all.length) : 0;
+
+  const [roleBusy, setRoleBusy] = useState(null);
+  const changeRole = async (p, makePanelist) => {
+    const m = /^user-(\d+)$/.exec(p.identity);
+    if (!m) { onToast?.({ msg: "Guests cannot be promoted", severity: "error" }); return; }
+    setRoleBusy(p.identity);
+    try {
+      const r = await (makePanelist ? promoteToPanelist(sessionId, m[1]) : demoteToAttendee(sessionId, m[1]));
+      onToast?.({ msg: r.message, severity: "success" });
+    } catch (err) {
+      onToast?.({ msg: err?.response?.data?.message || "Could not change the role", severity: "error" });
+    } finally { setRoleBusy(null); }
+  };
 
   const handleToggleMute = async (participant) => {
     const identity  = participant.identity;
@@ -716,7 +741,7 @@ const ParticipantsDrawer = ({ open, onClose, role, sessionId, onToast }) => {
       PaperProps={{ sx: { width: 300, bgcolor: DARK2 } }}>
       <Box sx={{ p: 2, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <Typography sx={{ color: TEXT, fontWeight: 800, fontSize: 16 }}>
-          Participants ({all.length})
+          Participants ({audienceView ? all.length + hiddenCount : all.length})
         </Typography>
         <IconButton onClick={onClose} sx={{ color: MUTED_D }}><Close /></IconButton>
       </Box>
@@ -734,9 +759,16 @@ const ParticipantsDrawer = ({ open, onClose, role, sessionId, onToast }) => {
         </Box>
       )}
 
+      {audienceView && (
+        <Typography sx={{ color: MUTED_D, fontSize: 12, px: 2, pb: 1 }}>
+          You are in the audience. {hiddenCount} other attendee{hiddenCount === 1 ? "" : "s"} not shown.
+        </Typography>
+      )}
       <List>
         {all.map((p) => {
           const meta    = getMetadata(p);
+          const wRole   = meta.webinarRole;
+          const canPub  = !!p.permissions?.canPublish;
           const name    = meta.fullName || p.identity;
           const pic     = meta.profilePicUrl;
           const isHst   = meta.role === "host";
@@ -749,7 +781,7 @@ const ParticipantsDrawer = ({ open, onClose, role, sessionId, onToast }) => {
 
           // Show mute button if: viewer is host AND participant is not
           // the local (you can't mute yourself here) AND not in lobby
-          const showMuteBtn = isHost && !isLocal && !isLobby;
+          const showMuteBtn = isHost && !isLocal && !isLobby && (!webinar?.active || canPub);
 
           return (
             <ListItem
@@ -769,8 +801,12 @@ const ParticipantsDrawer = ({ open, onClose, role, sessionId, onToast }) => {
                   <Typography sx={{ color: TEXT, fontSize: 14, fontWeight: 600 }}>
                     {isLocal ? `${name} (You)` : name}
                     {isHst && (
-                      <Chip label="Host" size="small"
+                      <Chip label={wRole === "cohost" ? "Co-host" : wRole === "alt_host" ? "Alt host" : "Host"} size="small"
                         sx={{ ml: 1, bgcolor: GOLD, color: NAVY, height: 18, fontSize: 10 }} />
+                    )}
+                    {webinar?.active && !isHst && canPub && (
+                      <Chip label="Panelist" size="small"
+                        sx={{ ml: 1, bgcolor: "#7C3AED", color: "#fff", height: 18, fontSize: 10 }} />
                     )}
                     {isLobby && (
                       <Chip label="Waiting" size="small"
@@ -795,6 +831,20 @@ const ParticipantsDrawer = ({ open, onClose, role, sessionId, onToast }) => {
                   </Box>
                 }
               />
+
+              {/* ── WEBINAR: promote / demote (host and alt host only) ── */}
+              {webinar?.active && webinar.canHost && !isLocal && !isHst && (
+                <Tooltip title={canPub ? "Move back to attendees" : "Promote to panelist"}>
+                  <span>
+                    <IconButton size="small" disabled={roleBusy === p.identity} onClick={() => changeRole(p, !canPub)}
+                      sx={{ width: 34, height: 34, borderRadius: 2, mr: 0.5,
+                            bgcolor: canPub ? "rgba(124,58,237,0.2)" : "rgba(255,255,255,0.06)",
+                            color: canPub ? "#c4b5fd" : MUTED_D }}>
+                      {roleBusy === p.identity ? <CircularProgress size={14} sx={{ color: MUTED_D }} /> : <Stars sx={{ fontSize: 17 }} />}
+                    </IconButton>
+                  </span>
+                </Tooltip>
+              )}
 
               {/* ── HOST-ONLY MUTE BUTTON ────────────────── */}
               {showMuteBtn && (
@@ -962,6 +1012,7 @@ const ControlBar = ({
   onWhiteboard, onParticipants, onAdmitPanel, onChat, onReact,
   participantCount, waitingCount, chatUnread,
   handRaised, onToggleHand,
+  webinar, canPublish = true, onQa, qaUnread = 0, onStream, onEnd,
 }) => {
   const { localParticipant } = useLocalParticipant();
   const room                 = useRoomContext();
@@ -1051,18 +1102,24 @@ const ControlBar = ({
         </Box>
       )}
 
-      <Box sx={{ display: "flex", gap: 1 }}>
-        <CtrlBtn title={micOn ? "Mute" : "Unmute"} onClick={toggleMic} active={micOn}>
-          {micOn ? <Mic /> : <MicOff />}
-        </CtrlBtn>
-        <CtrlBtn title={camOn ? "Camera off" : "Camera on"} onClick={toggleCam} active={camOn}>
-          {camOn ? <Videocam /> : <VideocamOff />}
-        </CtrlBtn>
-        <CtrlBtn title={isCurrentlySharing ? "Stop sharing" : "Share screen"}
-          onClick={toggleScreen} active={isCurrentlySharing} activeColor={GOLD}>
-          {isCurrentlySharing ? <StopScreenShare /> : <ScreenShare />}
-        </CtrlBtn>
-      </Box>
+      {canPublish ? (
+        <Box sx={{ display: "flex", gap: 1 }}>
+          <CtrlBtn title={micOn ? "Mute" : "Unmute"} onClick={toggleMic} active={micOn}>
+            {micOn ? <Mic /> : <MicOff />}
+          </CtrlBtn>
+          <CtrlBtn title={camOn ? "Camera off" : "Camera on"} onClick={toggleCam} active={camOn}>
+            {camOn ? <Videocam /> : <VideocamOff />}
+          </CtrlBtn>
+          <CtrlBtn title={isCurrentlySharing ? "Stop sharing" : "Share screen"}
+            onClick={toggleScreen} active={isCurrentlySharing} activeColor={GOLD}>
+            {isCurrentlySharing ? <StopScreenShare /> : <ScreenShare />}
+          </CtrlBtn>
+        </Box>
+      ) : (
+        <Typography sx={{ color: MUTED_D, fontSize: 13, px: 1.5, maxWidth: 190, lineHeight: 1.3 }}>
+          You are watching as an attendee. Raise your hand to ask to speak.
+        </Typography>
+      )}
 
       <Box sx={{ width: 1, height: 36, bgcolor: "rgba(255,255,255,0.08)", mx: 0.5 }} />
 
@@ -1097,6 +1154,29 @@ const ControlBar = ({
           <EmojiEmotions />
         </CtrlBtn>
 
+        {webinar?.active && webinar.qaEnabled && (
+          <Tooltip title="Q&A">
+            <Badge badgeContent={qaUnread} color="error" max={99}>
+              <IconButton onClick={onQa}
+                sx={{ width: 48, height: 48, borderRadius: 2.5, bgcolor: "rgba(255,255,255,0.06)", color: MUTED_D,
+                      "&:hover": { bgcolor: "rgba(255,255,255,0.12)" } }}>
+                <QuestionAnswer />
+              </IconButton>
+            </Badge>
+          </Tooltip>
+        )}
+
+        {webinar?.active && webinar.canHost && (
+          <Tooltip title="Live stream">
+            <IconButton onClick={onStream}
+              sx={{ width: 48, height: 48, borderRadius: 2.5, bgcolor: "rgba(255,255,255,0.06)", color: MUTED_D,
+                    "&:hover": { bgcolor: "rgba(255,255,255,0.12)" } }}>
+              <LiveTv />
+            </IconButton>
+          </Tooltip>
+        )}
+
+        {(!webinar?.active || canPublish) && (
         <Tooltip title="Whiteboard">
           <IconButton onClick={onWhiteboard}
             sx={{ width: 48, height: 48, borderRadius: 2.5,
@@ -1105,6 +1185,7 @@ const ControlBar = ({
             <Draw />
           </IconButton>
         </Tooltip>
+        )}
 
         <Tooltip title="Participants">
           <Badge badgeContent={participantCount} color="primary" max={99}>
@@ -1117,7 +1198,7 @@ const ControlBar = ({
           </Badge>
         </Tooltip>
 
-        {role === "host" && (
+        {role === "host" && !webinar?.active && (
           <Tooltip title="Waiting room">
             <Badge badgeContent={waitingCount} color="error" max={99}>
               <IconButton onClick={onAdmitPanel}
@@ -1143,6 +1224,12 @@ const ControlBar = ({
 
       <Box sx={{ display: "flex", gap: 1 }}>
         {/* Recording now lives in <RecordingControls /> in the top bar */}
+        {webinar?.active && webinar.canHost && (
+          <Button onClick={onEnd} variant="outlined"
+            sx={{ borderColor: "#ef4444", color: "#ef4444", borderRadius: 2.5, px: 2, fontWeight: 700, textTransform: "none" }}>
+            End for all
+          </Button>
+        )}
         <Tooltip title="Leave">
           <Button onClick={onLeave} variant="contained"
             sx={{ bgcolor: "#ef4444", color: "#fff", borderRadius: 2.5, px: 2.5,
@@ -1272,7 +1359,7 @@ const darkTheme = createTheme({
 // ─── RoomInner ───────────────────────────────────────────────
 const RoomInner = ({
   role, sessionId, navigate, currentUser, phase,
-  onRequestTokenSwap, guestId,
+  onRequestTokenSwap, guestId, webinar,
 }) => {
   const participants         = useParticipants();
   const { localParticipant } = useLocalParticipant();
@@ -1290,6 +1377,11 @@ const RoomInner = ({
   const [upgrading,        setUpgrading]         = useState(false);
   const [pollsOpen,        setPollsOpen]         = useState(false);
   const [unmuteAsk,        setUnmuteAsk]         = useState(false);
+  const [qaOpen,           setQaOpen]            = useState(false);
+  const [qaUnread,         setQaUnread]          = useState(0);
+  const [streamOpen,       setStreamOpen]        = useState(false);
+  const [endOpen,          setEndOpen]           = useState(false);
+  const [, setPermTick]                          = useState(0);
 
   const [raisedHands,         setRaisedHands]         = useState({});
   const [reactions,           setReactions]           = useState({});
@@ -1297,6 +1389,8 @@ const RoomInner = ({
   const [whiteboardStroke,    setWhiteboardStroke]    = useState(null);
   const [whiteboardClearTick, setWhiteboardClearTick] = useState(0);
 
+  const qaOpenRef      = useRef(false);
+  useEffect(() => { qaOpenRef.current = qaOpen; if (qaOpen) setQaUnread(0); }, [qaOpen]);
   const strokeLogRef   = useRef([]);
   const reactionTimers = useRef({});
   const myIdentityRef  = useRef(localParticipant?.identity);
@@ -1305,6 +1399,16 @@ const RoomInner = ({
 
   const totalParticipants = (localParticipant ? 1 : 0) + participants.length;
   const isHost = role === "host";
+
+  // Webinar: what I may publish comes from LiveKit itself, so promote/demote updates the UI at once.
+  useEffect(() => {
+    if (!room || !webinar?.active) return undefined;
+    const bump = () => setPermTick((t) => t + 1);
+    room.on(RoomEvent.ParticipantPermissionsChanged, bump);
+    return () => { room.off(RoomEvent.ParticipantPermissionsChanged, bump); };
+  }, [room, webinar?.active]);
+  const canPublish = webinar?.active ? !!localParticipant?.permissions?.canPublish : true;
+  const webinarCtx = webinar?.active ? { ...webinar, canManage: isHost } : null;
 
   const handleLeave = async () => {
     try { await leaveAttendance(sessionId); } catch { /* ignore */ }
@@ -1429,11 +1533,20 @@ const RoomInner = ({
       // Host asked me to unmute: show a prompt, never switch the mic on automatically.
       if (topic === "control") {
         if (data.type === "ask-unmute") setUnmuteAsk(true);
+        if (data.type === "promoted") setToast({ msg: "You are now a panelist. You can turn on your mic and camera.", severity: "success" });
+        if (data.type === "demoted") setToast({ msg: "You are back in the audience.", severity: "info" });
         if (data.type === "muted-all" && !isHost) {
           setToast({ msg: "The host muted everyone", severity: "info" });
         }
         return;
       }
+      if (topic === "webinar" && data.type === "ended") {
+        setToast({ msg: "The host ended the webinar", severity: "info" });
+        setTimeout(() => navigate(leaveDestination(role)), 2500);
+        return;
+      }
+      if (topic === "webinar") return;
+      if (topic === "qa") { if (!qaOpenRef.current) setQaUnread((n) => n + 1); return; }
       // A poll was launched: open the polls drawer for logged-in attendees.
       if (topic === "poll") {
         if (data.type === "launched" && !isHost && !guestId) setPollsOpen(true);
@@ -1611,7 +1724,7 @@ const RoomInner = ({
         </ThemeProvider>
       </Box>
 
-      <ParticipantGrid raisedHands={raisedHands} reactions={reactions} />
+      <ParticipantGrid raisedHands={raisedHands} reactions={reactions} webinar={webinarCtx} />
       <RoomAudioRenderer />
 
       <ControlBar
@@ -1623,6 +1736,9 @@ const RoomInner = ({
         onReact={handleLocalReaction}
         participantCount={totalParticipants} waitingCount={waitingCount}
         handRaised={myHandRaised} onToggleHand={handleToggleHand}
+        webinar={webinarCtx} canPublish={canPublish}
+        onQa={() => setQaOpen(true)} qaUnread={qaUnread}
+        onStream={() => setStreamOpen(true)} onEnd={() => setEndOpen(true)}
       />
 
       <WhiteboardDrawer
@@ -1639,7 +1755,36 @@ const RoomInner = ({
         role={role}
         sessionId={sessionId}
         onToast={setToast}
+        webinar={webinarCtx}
       />
+
+      {webinarCtx && (
+        <>
+          <Drawer anchor="right" open={qaOpen} onClose={() => setQaOpen(false)} keepMounted
+            PaperProps={{ sx: { width: { xs: "100%", sm: 400 }, bgcolor: DARK2, p: 2, zIndex: 1400 } }} sx={{ zIndex: 1400 }}>
+            <ThemeProvider theme={darkTheme}>
+              <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
+                <IconButton onClick={() => setQaOpen(false)} sx={{ color: MUTED_D }}><Close /></IconButton>
+              </Box>
+              <QaPanel sessionId={sessionId} room={room} canManage={isHost} qaEnabled={webinar.qaEnabled} />
+            </ThemeProvider>
+          </Drawer>
+          {webinar.canHost && <StreamDialog open={streamOpen} onClose={() => setStreamOpen(false)} sessionId={webinar.id} />}
+          <Dialog open={endOpen} onClose={() => setEndOpen(false)} PaperProps={{ sx: { bgcolor: DARK2, color: TEXT, borderRadius: 3 } }}>
+            <DialogTitle sx={{ fontWeight: 800 }}>End the webinar for everyone?</DialogTitle>
+            <DialogActions sx={{ px: 3, pb: 2 }}>
+              <Button onClick={() => setEndOpen(false)} sx={{ textTransform: "none", color: MUTED_D }}>Cancel</Button>
+              <Button variant="contained" color="error" sx={{ textTransform: "none", fontWeight: 700 }}
+                onClick={async () => {
+                  setEndOpen(false);
+                  try { await endWebinar(webinar.id); } catch (err) { setToast({ msg: err?.response?.data?.message || "Could not end", severity: "error" }); }
+                }}>
+                End for all
+              </Button>
+            </DialogActions>
+          </Dialog>
+        </>
+      )}
 
       <ChatDrawer
         open={chatOpen}
@@ -1711,6 +1856,8 @@ export default function LiveClassroom() {
   const [currentUser, setCurrentUser] = useState(null);
 
   const isPublicRoom = roomName?.startsWith("public-");
+  const isWebinarRoom = roomName?.startsWith("webinar-");
+  const [webinarInfo, setWebinarInfo] = useState(null); // { role, canHost, qaEnabled }
   const hasAuthToken = !!localStorage.getItem("token");
 
   const [guestId,          setGuestId]          = useState(() => sessionStorage.getItem(`guestId:${sessionId}`));
@@ -1734,7 +1881,15 @@ export default function LiveClassroom() {
     try {
       setLoading(true);
       let response;
-      if (isHostRole && isPublicRoom)  response = await joinPublicMeetingAsHost(sessionId);
+      if (isWebinarRoom) {
+        response = await joinWebinar(sessionId);
+        const r = response.webinarRole;
+        setWebinarInfo({
+          id: sessionId, role: r, qaEnabled: response.qaEnabled !== false,
+          canHost: r === "host" || r === "alt_host",
+          runsIt: r === "host" || r === "alt_host" || r === "cohost",
+        });
+      } else if (isHostRole && isPublicRoom)  response = await joinPublicMeetingAsHost(sessionId);
       else if (isHostRole)             response = await joinTutorSession(sessionId);
       else                             response = await joinClassSession(sessionId);
 
@@ -1811,8 +1966,8 @@ export default function LiveClassroom() {
       serverUrl={serverUrl}
       connect
       // students and guests join muted; they unmute themselves
-      audio={phase === "live" && isHostRole}
-      video={phase === "live"}
+      audio={phase === "live" && (isWebinarRoom ? !!webinarInfo?.runsIt : isHostRole)}
+      video={phase === "live" && (isWebinarRoom ? !!webinarInfo && webinarInfo.role !== "attendee" : true)}
       options={{
         publishDefaults: {
           screenShareEncoding: {
@@ -1824,7 +1979,8 @@ export default function LiveClassroom() {
       onDisconnected={() => navigate(leaveDestination(role === "tutor" ? "host" : role))}
     >
       <RoomInner
-        role={role === "tutor" ? "host" : role}
+        webinar={isWebinarRoom && webinarInfo ? { active: true, ...webinarInfo } : null}
+        role={isWebinarRoom ? (webinarInfo?.runsIt ? "host" : "student") : (role === "tutor" ? "host" : role)}
         sessionId={sessionId}
         navigate={navigate}
         currentUser={currentUser}

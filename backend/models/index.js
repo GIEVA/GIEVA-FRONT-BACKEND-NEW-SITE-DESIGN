@@ -59,6 +59,15 @@ import SessionPollModel from './SessionPoll.js'
 import SessionPollResponseModel from './SessionPollResponse.js'
 import SessionRecordingModel from './SessionRecording.js'
 import PendingRegistrationModel from './PendingRegistration.js'
+import SessionQuestionModel from './SessionQuestion.js'
+import SessionRoleModel from './SessionRole.js'
+import VisaApplicationModel from './VisaApplication.js'
+import VisaNoteModel from './VisaNote.js'
+import VisaPaymentModel from './VisaPayment.js'
+import VisaSettingModel from './VisaSetting.js'
+import VisaStatusEventModel from './VisaStatusEvent.js'
+
+
 
 
 
@@ -122,6 +131,16 @@ const HealsSetting = HealsSettingModdel(sequelize)
 const SessionPoll = SessionPollModel(sequelize, DataTypes);
 const SessionPollResponse = SessionPollResponseModel(sequelize, DataTypes);
 const SessionRecording = SessionRecordingModel(sequelize, DataTypes);
+const SessionQuestion = SessionQuestionModel(sequelize, DataTypes);
+const SessionRole = SessionRoleModel(sequelize, DataTypes);
+
+const VisaApplication = VisaApplicationModel(sequelize, DataTypes);
+const VisaNote = VisaNoteModel(sequelize, DataTypes);
+const VisaPayment = VisaPaymentModel(sequelize, DataTypes);
+const VisaSetting = VisaSettingModel(sequelize, DataTypes);
+const VisaStatusEvent = VisaStatusEventModel(sequelize, DataTypes);
+
+
 
 // Collect models
 export const models = {
@@ -188,6 +207,15 @@ export const models = {
   SessionRecording,
 
   PendingRegistration,
+
+  SessionQuestion,
+  SessionRole,
+
+  VisaApplication,
+  VisaNote,
+  VisaPayment,
+  VisaSetting,
+  VisaStatusEvent,
 
 };
 

@@ -29,7 +29,7 @@ const sendEmail = async (
 
     const emailData = {
       sender: {
-        name: process.env.SMTP_FROM || "Domify",
+        name: process.env.SMTP_FROM || "GIEVA",
         email: process.env.SMTP_FROM_EMAIL,
       },
       to: [{ email: to }],

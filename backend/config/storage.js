@@ -9,7 +9,7 @@
 //   RECORDING_S3_ENDPOINT          (blank for AWS S3 | R2: https://<account>.r2.cloudflarestorage.com)
 //   RECORDING_S3_FORCE_PATH_STYLE  ("true" for MinIO / some providers)
 
-import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, GetObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 export const getStorageConfig = () => ({
@@ -52,4 +52,15 @@ export const getPlaybackUrl = (key, expiresInSeconds = 3600) => {
   return getSignedUrl(getClient(), new GetObjectCommand({ Bucket: bucket, Key: key }), {
     expiresIn: expiresInSeconds,
   });
+};
+
+// Best-effort delete (used when a session is deleted). Never throws.
+export const deleteObject = async (key) => {
+  if (!key) return;
+  try {
+    const { bucket } = getStorageConfig();
+    await getClient().send(new DeleteObjectCommand({ Bucket: bucket, Key: key }));
+  } catch (err) {
+    console.error("[storage] delete failed:", key, err.message);
+  }
 };
