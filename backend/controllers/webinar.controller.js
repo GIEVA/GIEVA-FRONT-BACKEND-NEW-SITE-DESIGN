@@ -8,7 +8,7 @@ import {
 } from "../service/sessionAccess.js";
 import { broadcast } from "../service/liveRoomSignals.js";
 import { setPublishPermission, identityOf } from "../service/webinarPermissions.js";
-import { validateRtmpUrls, startStream, stopStream, streamActive } from "../services/webinarStream.js";
+import { validateRtmpUrls, startStream, stopStream, streamActive } from "../service/webinarStream.js";
 import { SESSION_ROLES } from "../models/SessionRole.js";
 import sendEmail from "../utils/sendMail.js";
 
