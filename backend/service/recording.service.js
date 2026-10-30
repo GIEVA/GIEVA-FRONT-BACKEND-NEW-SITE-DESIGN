@@ -45,6 +45,16 @@ export const startSessionRecording = async (session, userId, { aiNotes = true } 
   } catch (err) {
     console.error("[recording] start failed:", err);
     await rec.update({ status: "failed", errorMessage: String(err.message).slice(0, 500) });
+
+    // LiveKit Cloud answers 429 "egress minutes exceeded" when the plan's recording minutes are used up.
+    // That is a plan limit, not a bug: say so plainly instead of the generic storage hint.
+    const quota = err?.status === 429 || err?.code === "resource_exhausted" || /egress minutes|too many requests/i.test(String(err?.message));
+    if (quota) {
+      return {
+        error: "Recording is unavailable: the LiveKit plan has used up its recording (egress) minutes. Upgrade the plan, wait for the monthly reset, or run your own LiveKit Egress.",
+        status: 429,
+      };
+    }
     return {
       error: "Could not start recording. Check LiveKit Egress and the storage settings.",
       status: 502,
@@ -71,107 +81,23 @@ export const stopSessionRecording = async (session) => {
 };
 
 // Called from the LiveKit webhook for event === "egress_ended".
-// export const handleEgressEnded = async (event) => {
-//   const info = event.egressInfo;
-//   if (!info?.egressId) return;
-
-//   const rec = await SessionRecording.findOne({
-//     where: { [Op.or]: [{ videoEgressId: info.egressId }, { audioEgressId: info.egressId }] },
-//   });
-//   if (!rec) return;
-
-//   const failed = !!info.error || FAILED_STATUSES.includes(info.status);
-//   const file = info.fileResults?.[0] || info.file;
-//   // Egress durations are nanoseconds (may arrive as a string in JSON).
-//   const seconds = file?.duration ? Math.round(Number(file.duration) / 1e9) : null;
-
-//   if (rec.videoEgressId === info.egressId) {
-//     if (failed) {
-//       await rec.update({ status: "failed", errorMessage: info.error || "Recording failed" });
-//     } else {
-//       await rec.update({
-//         status: "ready",
-//         durationSeconds: seconds ?? rec.durationSeconds,
-//         endedAt: rec.endedAt || new Date(),
-//       });
-//     }
-
-//     // Keep the legacy ClassSession columns in sync (the admin override endpoint reads them).
-//     await ClassSession.update(
-//       {
-//         recordingStatus: failed ? "failed" : "ready",
-//         recordingUrl: failed ? null : file?.location || null,
-//         recordingDuration: seconds ? Math.round(seconds / 60) : null,
-//       },
-//       { where: { id: rec.classSessionId } }
-//     );
-//   } else if (rec.audioEgressId === info.egressId) {
-//     if (failed) {
-//       await rec.update({ transcriptStatus: "failed", errorMessage: info.error || "Audio capture failed" });
-//     } else {
-//       // Don't block the webhook response on transcription.
-//       setImmediate(() => processRecording(rec.id).catch((e) => console.error("[aiNotes]", e)));
-//     }
-//   }
-// };
-
-// Called from the LiveKit webhook for event === "egress_ended".
 export const handleEgressEnded = async (event) => {
   const info = event.egressInfo;
-
-  console.log("[egress-ended] Event received", {
-    event: event.event,
-    egressId: info?.egressId,
-    status: info?.status,
-    error: info?.error || null,
-    hasFileResults: Boolean(info?.fileResults?.length),
-  });
-
-  if (!info?.egressId) {
-    console.error("[egress-ended] Missing egressId");
-    return;
-  }
+  if (!info?.egressId) return;
 
   const rec = await SessionRecording.findOne({
-    where: {
-      [Op.or]: [
-        { videoEgressId: info.egressId },
-        { audioEgressId: info.egressId },
-      ],
-    },
+    where: { [Op.or]: [{ videoEgressId: info.egressId }, { audioEgressId: info.egressId }] },
   });
+  if (!rec) return;
 
-  if (!rec) {
-    console.error("[egress-ended] No recording matched egressId", {
-      egressId: info.egressId,
-    });
-    return;
-  }
-
-  console.log("[egress-ended] Matched recording", {
-    recordingId: rec.id,
-    videoEgressId: rec.videoEgressId,
-    audioEgressId: rec.audioEgressId,
-    audioKeyPresent: Boolean(rec.audioKey),
-    status: rec.status,
-    transcriptStatus: rec.transcriptStatus,
-  });
-
-  const failed =
-    Boolean(info.error) || FAILED_STATUSES.includes(info.status);
-
+  const failed = !!info.error || FAILED_STATUSES.includes(info.status);
   const file = info.fileResults?.[0] || info.file;
-
-  const seconds = file?.duration
-    ? Math.round(Number(file.duration) / 1e9)
-    : null;
+  // Egress durations are nanoseconds (may arrive as a string in JSON).
+  const seconds = file?.duration ? Math.round(Number(file.duration) / 1e9) : null;
 
   if (rec.videoEgressId === info.egressId) {
     if (failed) {
-      await rec.update({
-        status: "failed",
-        errorMessage: info.error || "Recording failed",
-      });
+      await rec.update({ status: "failed", errorMessage: info.error || "Recording failed" });
     } else {
       await rec.update({
         status: "ready",
@@ -180,61 +106,21 @@ export const handleEgressEnded = async (event) => {
       });
     }
 
+    // Keep the legacy ClassSession columns in sync (the admin override endpoint reads them).
     await ClassSession.update(
       {
         recordingStatus: failed ? "failed" : "ready",
         recordingUrl: failed ? null : file?.location || null,
-        recordingDuration: seconds
-          ? Math.round(seconds / 60)
-          : null,
+        recordingDuration: seconds ? Math.round(seconds / 60) : null,
       },
       { where: { id: rec.classSessionId } }
     );
-
-    console.log("[egress-ended] Video egress handled", {
-      recordingId: rec.id,
-      failed,
-    });
-
-    return;
-  }
-
-  if (rec.audioEgressId === info.egressId) {
+  } else if (rec.audioEgressId === info.egressId) {
     if (failed) {
-      await rec.update({
-        transcriptStatus: "failed",
-        errorMessage: info.error || "Audio capture failed",
-      });
-
-      console.error("[egress-ended] Audio egress failed", {
-        recordingId: rec.id,
-        error: info.error || null,
-        status: info.status,
-      });
-
-      return;
+      await rec.update({ transcriptStatus: "failed", errorMessage: info.error || "Audio capture failed" });
+    } else {
+      // Don't block the webhook response on transcription.
+      setImmediate(() => processRecording(rec.id).catch((e) => console.error("[aiNotes]", e)));
     }
-
-    if (!rec.audioKey) {
-      console.error(
-        "[egress-ended] Audio egress succeeded, but audioKey is missing",
-        { recordingId: rec.id }
-      );
-      return;
-    }
-
-    console.log("[egress-ended] Starting AI processing", {
-      recordingId: rec.id,
-    });
-
-    setImmediate(() => {
-      processRecording(rec.id).catch((err) => {
-        console.error("[aiNotes] Processing failed", {
-          recordingId: rec.id,
-          message: err.message,
-          stack: err.stack,
-        });
-      });
-    });
   }
 };

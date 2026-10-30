@@ -43,7 +43,8 @@ import StreamDialog from "../components/live/StreamDialog";
 import { RoomEvent } from "livekit-client";
 import { QuestionAnswer, LiveTv, Stars } from "@mui/icons-material";
 import {
-  joinWebinar, endWebinar, promoteToPanelist, demoteToAttendee, getWebinarGuestStatus
+  joinWebinar, endWebinar, promoteToPanelist, demoteToAttendee, getWebinarGuestStatus,
+  getWebinarGuests, moderateWebinarGuest,
 } from "../services/webinarService";
 import { muteAllParticipants, askParticipantToUnmute } from "../services/sessionToolsService";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
@@ -144,6 +145,7 @@ const ParticipantTile = ({
   participant,
   isLocal      = false,
   isLarge      = false,
+  fill         = false,   // fill the grid cell instead of using a 16:9 ratio
   isHandRaised = false,
   reaction     = null,
   compact      = false,
@@ -164,9 +166,13 @@ const ParticipantTile = ({
   return (
     <Box sx={{
       width: "100%",
-      aspectRatio: "16/9",
-      minHeight: compact ? 80  : isLarge ? 340 : undefined,
-      height:    compact ? 90  : isLarge ? "100%" : undefined,
+      ...(fill
+        ? { height: "100%", minHeight: 0, minWidth: 0 }
+        : {
+            aspectRatio: "16/9",
+            minHeight: compact ? 80  : isLarge ? 340 : undefined,
+            height:    compact ? 90  : isLarge ? "100%" : undefined,
+          }),
       position: "relative", borderRadius: compact ? 2 : 3, overflow: "hidden",
       bgcolor: DARK2, border: `1.5px solid ${isHandRaised ? GOLD : DARK3}`,
       display: "flex", alignItems: "center", justifyContent: "center",
@@ -331,19 +337,27 @@ const ParticipantGrid = ({ raisedHands, reactions, webinar }) => {
     );
   }
 
+  // Tiles share the available space: columns grow with the head-count and the rows split the height
+  // evenly, so nothing overlaps. Beyond 16 people the grid keeps a minimum tile height and scrolls.
   const count = all.length;
-  const cols  = count === 1 ? 1 : count <= 4 ? 2 : count <= 9 ? 3 : 4;
+  const cols  = count <= 1 ? 1 : count <= 2 ? 2 : count <= 4 ? 2 : count <= 6 ? 3 : count <= 9 ? 3 : count <= 12 ? 4 : count <= 16 ? 4 : 5;
+  const rows  = Math.max(1, Math.ceil(count / cols));
+  const fits  = count <= 16;
 
   return (
     <Box sx={{
-      flex: 1, display: "grid",
-      gridTemplateColumns: `repeat(${cols}, 1fr)`,
-      gap: 1.5, p: 2, alignContent: "start", overflowY: "auto",
+      flex: 1, minHeight: 0, display: "grid",
+      gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
+      ...(fits
+        ? { gridTemplateRows: `repeat(${rows}, minmax(0, 1fr))`, overflow: "hidden" }
+        : { gridAutoRows: "minmax(170px, 1fr)", overflowY: "auto" }),
+      gap: 1.5, p: 2,
     }}>
       {all.map((p) => (
         <ParticipantTile
           key={p.identity}
           participant={p}
+          fill
           isLocal={p.identity === localParticipant?.identity}
           isLarge={count === 1}
           isHandRaised={!!raisedHands[p.identity]}
@@ -896,7 +910,7 @@ const ParticipantsDrawer = ({ open, onClose, role, sessionId, onToast, webinar }
 };
 
 // ─── AdmitPanel ──────────────────────────────────────────────
-const AdmitPanel = ({ open, onClose, sessionId, onAdmit, onDeny, triggerRefresh }) => {
+const AdmitPanel = ({ open, onClose, sessionId, onAdmit, onDeny, triggerRefresh, webinarId = null }) => {
   const [waiting, setWaiting] = useState([]);
   const [loading, setLoading] = useState(false);
   const intervalRef           = useRef(null);
@@ -904,14 +918,24 @@ const AdmitPanel = ({ open, onClose, sessionId, onAdmit, onDeny, triggerRefresh 
   const refresh = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await getWaitingRoom(sessionId);
-      setWaiting(res.waiting || []);
+      if (webinarId) {
+        // Webinar: guests who registered with the public link and are waiting to be let in
+        const res = await getWebinarGuests(webinarId);
+        setWaiting(
+          (res.guests || [])
+            .filter((g) => g.status === "waiting")
+            .map((g) => ({ isGuest: true, guestId: g.id, fullName: g.fullName, email: g.email }))
+        );
+      } else {
+        const res = await getWaitingRoom(sessionId);
+        setWaiting(res.waiting || []);
+      }
     } catch (err) {
       console.error("getWaitingRoom:", err);
     } finally {
       setLoading(false);
     }
-  }, [sessionId]);
+  }, [sessionId, webinarId]);
 
   useEffect(() => {
     if (!open) { clearInterval(intervalRef.current); return; }
@@ -977,7 +1001,7 @@ const AdmitPanel = ({ open, onClose, sessionId, onAdmit, onDeny, triggerRefresh 
                                 bgcolor: "rgba(212,160,23,0.18)", color: GOLD }} />
                       )}
                     </Stack>
-                    <Typography sx={{ color: MUTED_D, fontSize: 12 }}>Waiting to join</Typography>
+                    <Typography sx={{ color: MUTED_D, fontSize: 12 }}>{w.email || "Waiting to join"}</Typography>
                   </Box>
                 </Stack>
                 <Stack direction="row" spacing={1}>
@@ -1084,8 +1108,8 @@ const ControlBar = ({
     <Box sx={{
       position: "relative",
       bgcolor: DARK2, borderTop: "1px solid rgba(255,255,255,0.06)",
-      px: 3, py: 1.5, display: "flex", alignItems: "center",
-      justifyContent: "center", gap: 1, flexWrap: "wrap",
+      px: { xs: 1.5, sm: 3 }, py: 1.5, display: "flex", alignItems: "center",
+      justifyContent: "center", gap: 1, flexWrap: "wrap", flexShrink: 0,
     }}>
       {screenShareError && (
         <Box sx={{
@@ -1121,7 +1145,7 @@ const ControlBar = ({
         </Typography>
       )}
 
-      <Box sx={{ width: 1, height: 36, bgcolor: "rgba(255,255,255,0.08)", mx: 0.5 }} />
+      <Box sx={{ width: "1px", height: 36, bgcolor: "rgba(255,255,255,0.08)", mx: 0.5, flexShrink: 0 }} />
 
       <Box sx={{ display: "flex", gap: 1 }}>
         <CtrlBtn title={handRaised ? "Lower hand" : "Raise hand"}
@@ -1198,7 +1222,7 @@ const ControlBar = ({
           </Badge>
         </Tooltip>
 
-        {role === "host" && !webinar?.active && (
+        {role === "host" && (
           <Tooltip title="Waiting room">
             <Badge badgeContent={waitingCount} color="error" max={99}>
               <IconButton onClick={onAdmitPanel}
@@ -1220,7 +1244,7 @@ const ControlBar = ({
         )}
       </Box>
 
-      <Box sx={{ width: 1, height: 36, bgcolor: "rgba(255,255,255,0.08)", mx: 0.5 }} />
+      <Box sx={{ width: "1px", height: 36, bgcolor: "rgba(255,255,255,0.08)", mx: 0.5, flexShrink: 0 }} />
 
       <Box sx={{ display: "flex", gap: 1 }}>
         {/* Recording now lives in <RecordingControls /> in the top bar */}
@@ -1408,7 +1432,7 @@ const RoomInner = ({
     return () => { room.off(RoomEvent.ParticipantPermissionsChanged, bump); };
   }, [room, webinar?.active]);
   const canPublish = webinar?.active ? !!localParticipant?.permissions?.canPublish : true;
-  const webinarCtx = webinar?.active ? { ...webinar, canManage: isHost } : null;
+  const webinarCtx = webinar?.active ? { ...webinar, canManage: isHost, isGuest: isWebinarGuest } : null;
 
   const handleLeave = async () => {
     try { await leaveAttendance(sessionId); } catch { /* ignore */ }
@@ -1417,16 +1441,26 @@ const RoomInner = ({
 
   useEffect(() => {
     if (role !== "host") return;
+    const isWebinarRun = !!webinar?.active;
     const poll = async () => {
       try {
-        const res = await getWaitingRoom(sessionId);
-        setWaitingCount((res.waiting || []).length);
+        if (isWebinarRun) {
+          const res = await getWebinarGuests(sessionId);
+          const n = (res.guests || []).filter((g) => g.status === "waiting").length;
+          setWaitingCount((prev) => {
+            if (n > prev) setJoinRequestTick((t) => t + 1); // refresh the open panel at once
+            return n;
+          });
+        } else {
+          const res = await getWaitingRoom(sessionId);
+          setWaitingCount((res.waiting || []).length);
+        }
       } catch { /* silent */ }
     };
     poll();
     const id = setInterval(poll, 5000);
     return () => clearInterval(id);
-  }, [role, sessionId]);
+  }, [role, sessionId, webinar?.active]);
 
 useEffect(() => {
   if (phase !== "lobby" || role === "host" || isWebinarGuest) return;
@@ -1653,7 +1687,8 @@ useEffect(() => {
 
   const handleAdmit = async (id) => {
     try {
-      await admitParticipant(sessionId, id);
+      if (webinarCtx) await moderateWebinarGuest(sessionId, id, "admit");
+      else await admitParticipant(sessionId, id);
       setWaitingCount((c) => Math.max(0, c - 1));
       setToast({ msg: "Participant admitted ✓", severity: "success" });
     } catch (err) {
@@ -1662,7 +1697,11 @@ useEffect(() => {
     }
   };
   const handleDeny = async (id) => {
-    try { await denyParticipant(sessionId, id); setWaitingCount((c) => Math.max(0, c - 1)); }
+    try {
+      if (webinarCtx) await moderateWebinarGuest(sessionId, id, "reject");
+      else await denyParticipant(sessionId, id);
+      setWaitingCount((c) => Math.max(0, c - 1));
+    }
     catch (err) { console.error(err); }
   };
 
@@ -1780,7 +1819,8 @@ useEffect(() => {
               <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
                 <IconButton onClick={() => setQaOpen(false)} sx={{ color: MUTED_D }}><Close /></IconButton>
               </Box>
-              <QaPanel sessionId={sessionId} room={room} canManage={isHost} qaEnabled={webinar.qaEnabled} />
+              <QaPanel sessionId={sessionId} room={room} canManage={isHost} qaEnabled={webinar.qaEnabled}
+                guestKey={webinarCtx.isGuest ? sessionStorage.getItem(`webinarAccessKey:${sessionId}`) : null} />
             </ThemeProvider>
           </Drawer>
           {webinar.canHost && <StreamDialog open={streamOpen} onClose={() => setStreamOpen(false)} sessionId={webinar.id} />}
@@ -1842,7 +1882,7 @@ useEffect(() => {
       <AdmitPanel
         open={admitPanelOpen} onClose={() => setAdmitPanelOpen(false)}
         sessionId={sessionId} onAdmit={handleAdmit} onDeny={handleDeny}
-        triggerRefresh={joinRequestTick}
+        triggerRefresh={joinRequestTick} webinarId={webinarCtx ? sessionId : null}
       />
 
       <Snackbar open={!!toast} autoHideDuration={4000} onClose={() => setToast(null)}

@@ -20,12 +20,21 @@ import {
   exportWebinarGuestsCsv,
 } from "../controllers/webinarGuests.controller.js";
 
+import { listGuestQuestions, askGuestQuestion, voteGuestQuestion } from "../controllers/webinarGuestQa.controller.js";
+
+
+
 const router = express.Router();
 
 router.get("/info/:sessionId", getPublicWebinarInfo); // no login: the room needs it to pick its layout
 // Public guest routes — no GIEVA login required.
 router.post("/:id/guest-register", registerWebinarGuest);
 router.post("/:id/guest-status", getWebinarGuestStatus);
+
+
+router.post("/:id/guest-questions/list", listGuestQuestions);
+router.post("/:id/guest-questions", askGuestQuestion);
+router.post("/questions/:questionId/guest-vote", voteGuestQuestion);
 
 
 router.use(authenticate);

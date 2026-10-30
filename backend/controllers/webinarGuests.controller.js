@@ -9,6 +9,7 @@ import {
   ADMIN_ROLES,
 } from "../service/sessionAccess.js";
 import { webinarGrantFor } from "../service/webinarPermissions.js";
+import { loadSession, canManageSession, ADMIN_ROLES } from "../service/sessionAccess.js";
 
 const { ClassSession, WebinarRegistration } = models;
 
@@ -22,10 +23,11 @@ const escapeCsv = (value) => {
 
 const isWebinar = (s) => !!s?.isWebinar;
 
+
 const canManageGuests = async (user, session) => {
   if (!user || !session) return false;
   if (ADMIN_ROLES.includes(user.role)) return true;
-  return canHostSession(user, session);
+  return canManageSession(user, session);   // host, alt host and co-host
 };
 
 // PUBLIC: Register without a GIEVA account.

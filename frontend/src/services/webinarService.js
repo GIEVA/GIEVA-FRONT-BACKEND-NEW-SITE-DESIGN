@@ -79,3 +79,9 @@ export const exportWebinarGuests = (id) =>
 
 
     
+export const listGuestWebinarQuestions = (sessionId, accessKey) =>
+  api.post(`${base}/${sessionId}/guest-questions/list`, { accessKey }).then(d);
+export const askGuestWebinarQuestion = (sessionId, accessKey, text, anonymous) =>
+  api.post(`${base}/${sessionId}/guest-questions`, { accessKey, text, anonymous }).then(d);
+export const voteGuestWebinarQuestion = (questionId, accessKey) =>
+  api.post(`${base}/questions/${questionId}/guest-vote`, { accessKey }).then(d);

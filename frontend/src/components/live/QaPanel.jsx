@@ -10,13 +10,15 @@ import {
 import { ThumbUp, ThumbUpOutlined, Send, Download, Delete, RecordVoiceOver, Check, VisibilityOff, Replay } from "@mui/icons-material";
 import {
   listQuestions, askQuestion, voteQuestion, updateQuestion, deleteQuestion, exportQuestionsCsv,
+  listGuestWebinarQuestions, askGuestWebinarQuestion, voteGuestWebinarQuestion,
 } from "../../services/webinarService";
 
 const GREEN = "#1E7F4F";
 const GOLD = "#D4A017";
 const err = (e, d) => e?.response?.data?.message || d;
 
-export default function QaPanel({ sessionId, room, canManage, qaEnabled = true }) {
+// guestKey: set for webinar guests (no account). They use the access-key endpoints instead of the login ones.
+export default function QaPanel({ sessionId, room, canManage, qaEnabled = true, guestKey = null }) {
   const [items, setItems] = useState(null);
   const [off, setOff] = useState(!qaEnabled);
   const [text, setText] = useState("");
@@ -30,13 +32,13 @@ export default function QaPanel({ sessionId, room, canManage, qaEnabled = true }
 
   const load = useCallback(async () => {
     try {
-      const r = await listQuestions(sessionId);
+      const r = guestKey ? await listGuestWebinarQuestions(sessionId, guestKey) : await listQuestions(sessionId);
       setItems(r.questions);
       setOff(r.qaEnabled === false);
     } catch (e) {
       setMsg({ s: "error", t: err(e, "Could not load questions") });
     }
-  }, [sessionId]);
+  }, [sessionId, guestKey]);
 
   useEffect(() => {
     load();
@@ -59,7 +61,8 @@ export default function QaPanel({ sessionId, room, canManage, qaEnabled = true }
     if (text.trim().length < 3) return;
     try {
       setSending(true);
-      await askQuestion(sessionId, text.trim(), anon);
+      if (guestKey) await askGuestWebinarQuestion(sessionId, guestKey, text.trim(), anon);
+      else await askQuestion(sessionId, text.trim(), anon);
       setText("");
       setMsg({ s: "success", t: "Question sent" });
       load();
@@ -135,7 +138,7 @@ export default function QaPanel({ sessionId, room, canManage, qaEnabled = true }
               )}
 
               <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mt: 0.75, flexWrap: "wrap" }}>
-                <Button size="small" onClick={() => act(() => voteQuestion(q.id))}
+                <Button size="small" onClick={() => act(() => (guestKey ? voteGuestWebinarQuestion(q.id, guestKey) : voteQuestion(q.id)))}
                   startIcon={q.voted ? <ThumbUp sx={{ fontSize: 16 }} /> : <ThumbUpOutlined sx={{ fontSize: 16 }} />}
                   sx={{ textTransform: "none", minWidth: 0, color: q.voted ? GREEN : "inherit", fontWeight: 700 }}>
                   {q.votes}
@@ -165,7 +168,7 @@ export default function QaPanel({ sessionId, room, canManage, qaEnabled = true }
                 {canManage && q.status === "dismissed" && (
                   <Button size="small" startIcon={<Replay sx={{ fontSize: 16 }} />} onClick={() => act(() => updateQuestion(q.id, { status: "open" }))} sx={{ textTransform: "none", fontWeight: 700 }}>Restore</Button>
                 )}
-                {(canManage || q.isMine) && (
+                {(canManage || (q.isMine && !guestKey)) && (
                   <Tooltip title="Delete"><IconButton size="small" onClick={() => act(() => deleteQuestion(q.id))}><Delete fontSize="small" /></IconButton></Tooltip>
                 )}
               </Box>
