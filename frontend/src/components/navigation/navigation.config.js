@@ -91,7 +91,7 @@ export const publicNavigation = [
     {
       label: "Visa Processing",
       description: "Professional visa guidance and processing.",
-      path: "/services",
+      path: "/visa",
     },
   ],
 },
@@ -169,6 +169,10 @@ export const userMenu = {
     {
       label: "Heals Application",
       path: "/heals/my-applications",
+    },
+    {
+      label: "Visa Applications",
+      path: "/visa/applications",
     },
     {
       label: "Bookings",
@@ -341,6 +345,11 @@ export const portalNavigation = [
         path: "/consultations",
       },
 
+      {
+        label: "Visa Assistance",
+        path: "/visa",
+      },
+
     ],
 
   },
@@ -371,7 +380,7 @@ export const footerNavigation = {
 
     {
       label: "Visa Assistance",
-      path: "/services",
+      path: "/visa",
     },
   ],
 

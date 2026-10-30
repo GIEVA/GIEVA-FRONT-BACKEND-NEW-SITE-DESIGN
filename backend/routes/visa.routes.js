@@ -13,7 +13,7 @@ import { authenticate, authorizeRoles } from "../middleware/auth.js";
 import upload from "../middleware/upload.js";   // your Cloudinary upload middleware
 
 import {
-  getPublicSettings, startApplication, listMyApplications, getMyApplication, saveDraft, deleteDraft,
+  getPublicSettings, getPublicVisaInfo, startApplication, listMyApplications, getMyApplication, saveDraft, deleteDraft,
   uploadDocument, removeDocument, getMyDocumentUrl, resubmitAfterInfo, downloadMyPdf,
 } from "../controllers/visaApplication.controller.js";
 import { initializeVisaPayment, verifyVisaPayment, visaPaymentWebhook, listMyVisaPayments } from "../controllers/visaPayment.controller.js";
@@ -29,6 +29,9 @@ const uploadLimiter = rateLimit({ windowMs: 10 * 60 * 1000, max: 40, standardHea
 
 // Public: Paystack calls this (signature-verified inside)
 router.post("/payments/webhook", express.raw({ type: "*/*" }), visaPaymentWebhook);
+
+// Public: fees and whether applications are open, for the guideline page (no login)
+router.get("/public-info", rateLimit({ windowMs: 60 * 1000, max: 60, standardHeaders: true, legacyHeaders: false }), getPublicVisaInfo);
 
 // Everything below needs a logged-in user ("protected service")
 router.use(authenticate);

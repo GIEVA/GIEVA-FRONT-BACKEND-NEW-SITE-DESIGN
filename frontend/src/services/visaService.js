@@ -8,6 +8,9 @@ import api from "./api";
 const API = "/api";
 const d = (r) => r.data;
 
+// ── Public (no login) ──
+export const getPublicVisaInfo = () => api.get(`${API}/visa/public-info`).then(d);
+
 // ── Applicant ──
 export const getVisaSettings = () => api.get(`${API}/visa/settings`).then(d);
 export const startVisaApplication = () => api.post(`${API}/visa/applications`).then(d);

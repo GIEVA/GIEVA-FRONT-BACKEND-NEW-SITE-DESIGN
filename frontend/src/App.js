@@ -162,6 +162,7 @@ import AdminVisaApplications from "./pages/AdminVisaApplications";
 
 import WebinarJoin from "./pages/WebinarJoin";
 import AdminWebinars from "./pages/AdminWebinars";
+import VisaGuide from "./pages/VisaGuide";
 
 
 import "katex/dist/katex.min.css";
@@ -194,6 +195,7 @@ function App() {
           <Route path="/verify/:token" element={<VerifyEmail />} />
           <Route path="/public-meet/:roomName" element={<PublicMeetingRedirect />} />
           <Route path="/contact" element={<ContactUs />} />
+          <Route path="/visa" element={<VisaGuide />} />
 
           <Route path="/courses" element={<CourseCatalog />} />
 

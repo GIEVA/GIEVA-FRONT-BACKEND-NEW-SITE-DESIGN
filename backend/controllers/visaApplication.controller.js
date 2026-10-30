@@ -24,6 +24,21 @@ export const getPublicSettings = async (_req, res) => {
   });
 };
 
+// No login needed: powers the public guideline page (/visa). Only what is safe to show anyone.
+export const getPublicVisaInfo = async (_req, res) => {
+  try {
+    const s = await getVisaSettings();
+    res.json({
+      normalFee: s.normalFee, expeditedFee: s.expeditedFee, currency: s.currency,
+      isOpen: s.isOpen, closedMessage: s.closedMessage,
+      documents: Object.values(DOCUMENT_TYPES).map((d) => d.label),
+    });
+  } catch (err) {
+    console.error("[visa] public info", err);
+    res.status(500).json({ message: "Could not load visa information" });
+  }
+};
+
 // Start (or resume) a draft. One open draft per user keeps things tidy.
 export const startApplication = async (req, res) => {
   try {
