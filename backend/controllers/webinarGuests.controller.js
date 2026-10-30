@@ -7,9 +7,9 @@ import {
   loadSession,
   canHostSession,
   ADMIN_ROLES,
+  canManageSession
 } from "../service/sessionAccess.js";
 import { webinarGrantFor } from "../service/webinarPermissions.js";
-import { loadSession, canManageSession, ADMIN_ROLES } from "../service/sessionAccess.js";
 
 const { ClassSession, WebinarRegistration } = models;
 
