@@ -123,6 +123,7 @@ const MSG = {
   WHITEBOARD_OPEN:  "WHITEBOARD_OPEN",
   WHITEBOARD_CLOSE: "WHITEBOARD_CLOSE",
   WHITEBOARD_STROKE:"WHITEBOARD_STROKE",
+  WHITEBOARD_STROKES:"WHITEBOARD_STROKES", // batched: many segments in one message
   WHITEBOARD_CLEAR: "WHITEBOARD_CLEAR",
   WHITEBOARD_SYNC:  "WHITEBOARD_SYNC",
   CHAT_MESSAGE:     "CHAT_MESSAGE",
@@ -372,7 +373,7 @@ const ParticipantGrid = ({ raisedHands, reactions, webinar }) => {
 const WhiteboardDrawer = ({
   open, onClose, isHost,
   onLocalStroke, onLocalClear,
-  remoteStroke, remoteClear, syncStrokes,
+  strokeQueue, strokeTick, remoteClear, syncStrokes,
 }) => {
   const canvasRef  = useRef(null);
   const isDrawing  = useRef(false);
@@ -483,24 +484,20 @@ const WhiteboardDrawer = ({
     };
   }, [open, isHost, clearCanvas, syncStrokes, initCanvas]);
 
-  // useEffect(() => {
-  //   if (!remoteStroke) return;
-  //   const canvas = canvasRef.current; if (!canvas) return;
-  //   const from = fromNorm(remoteStroke.from.nx, remoteStroke.from.ny, canvas);
-  //   const to   = fromNorm(remoteStroke.to.nx,   remoteStroke.to.ny,   canvas);
-  //   strokeOnCanvas(from, to, remoteStroke.color, remoteStroke.thickness);
-  // }, [remoteStroke, strokeOnCanvas]);
-
-  // useEffect(() => { if (remoteClear) clearCanvas(); }, [remoteClear, clearCanvas]);
-
-  // Apply remote stroke (continuous)
+  // Draw EVERY queued remote segment. (Keeping only the latest one in state dropped segments whenever
+  // several arrived before React re-rendered, which is what made guests see broken, dotted lines.)
   useEffect(() => {
-    if (!remoteStroke) return;
-    const canvas = canvasRef.current; if (!canvas) return;
-    const from = fromNorm(remoteStroke.from.nx, remoteStroke.from.ny, canvas);
-    const to = fromNorm(remoteStroke.to.nx, remoteStroke.to.ny, canvas);
-    strokeOnCanvas(from, to, remoteStroke.color, remoteStroke.thickness);
-  }, [remoteStroke, strokeOnCanvas]);
+    const q = strokeQueue?.current;
+    if (!q?.length) return;
+    const canvas = canvasRef.current;
+    const batch = q.splice(0, q.length);
+    if (!canvas) return; // drawer not ready; the host re-sends the full log when it opens
+    for (const st of batch) {
+      const from = fromNorm(st.from.nx, st.from.ny, canvas);
+      const to = fromNorm(st.to.nx, st.to.ny, canvas);
+      strokeOnCanvas(from, to, st.color, st.thickness);
+    }
+  }, [strokeTick, strokeQueue, strokeOnCanvas]);
 
   useEffect(() => { if (remoteClear) clearCanvas(); }, [remoteClear, clearCanvas]);
   return (
@@ -1410,7 +1407,10 @@ const RoomInner = ({
   const [raisedHands,         setRaisedHands]         = useState({});
   const [reactions,           setReactions]           = useState({});
   const [myHandRaised,        setMyHandRaised]        = useState(false);
-  const [whiteboardStroke,    setWhiteboardStroke]    = useState(null);
+  const whiteboardQueueRef = useRef([]);                       // incoming segments waiting to be drawn
+  const [whiteboardTick, setWhiteboardTick] = useState(0);     // bumps to tell the drawer to drain the queue
+  const strokeBufRef = useRef([]);                              // host: segments waiting to be sent
+  const strokeTimerRef = useRef(null);
   const [whiteboardClearTick, setWhiteboardClearTick] = useState(0);
 
   const qaOpenRef      = useRef(false);
@@ -1556,12 +1556,25 @@ useEffect(() => {
     if (isHost) await broadcast({ type: MSG.WHITEBOARD_CLOSE });
   }, [isHost, broadcast]);
 
-  const handleLocalStroke = useCallback((stroke) => {
-    strokeLogRef.current.push(stroke);
-    broadcast({ type: MSG.WHITEBOARD_STROKE, stroke }, true);
+  // Host: gather segments for ~40ms and send them as ONE ordered message instead of one message per
+  // mouse-move, so nothing is lost or reordered on slow connections.
+  const flushStrokes = useCallback(() => {
+    clearTimeout(strokeTimerRef.current);
+    strokeTimerRef.current = null;
+    const strokes = strokeBufRef.current.splice(0);
+    if (strokes.length) broadcast({ type: MSG.WHITEBOARD_STROKES, strokes }, true);
   }, [broadcast]);
 
+  const handleLocalStroke = useCallback((stroke) => {
+    strokeLogRef.current.push(stroke);
+    strokeBufRef.current.push(stroke);
+    if (strokeBufRef.current.length >= 40) flushStrokes();
+    else if (!strokeTimerRef.current) strokeTimerRef.current = setTimeout(flushStrokes, 40);
+  }, [flushStrokes]);
+
   const handleLocalClear = useCallback(() => {
+    strokeBufRef.current = [];
+    clearTimeout(strokeTimerRef.current); strokeTimerRef.current = null;
     strokeLogRef.current = [];
     broadcast({ type: MSG.WHITEBOARD_CLEAR });
   }, [broadcast]);
@@ -1671,11 +1684,14 @@ useEffect(() => {
 
       if (data.type === MSG.WHITEBOARD_OPEN)  { setWhiteboardOpen(true);  if (!isHost) setToast({ msg: "Host opened the whiteboard", severity: "info" }); return; }
       if (data.type === MSG.WHITEBOARD_CLOSE) { setWhiteboardOpen(false); return; }
-      if (data.type === MSG.WHITEBOARD_STROKE && !isHost) { setWhiteboardStroke(data.stroke); return; }
+      if (data.type === MSG.WHITEBOARD_STROKE && !isHost) { whiteboardQueueRef.current.push(data.stroke); setWhiteboardTick((t) => t + 1); return; }
+      if (data.type === MSG.WHITEBOARD_STROKES && !isHost && Array.isArray(data.strokes)) { whiteboardQueueRef.current.push(...data.strokes); setWhiteboardTick((t) => t + 1); return; }
       if (data.type === MSG.WHITEBOARD_CLEAR  && !isHost) { setWhiteboardClearTick((t) => t + 1); return; }
       if (data.type === MSG.WHITEBOARD_SYNC   && isHost)  {
-        for (const stroke of strokeLogRef.current) {
-          await broadcast({ type: MSG.WHITEBOARD_STROKE, stroke }, true);
+        flushStrokes();
+        const log = strokeLogRef.current.slice();
+        for (let k = 0; k < log.length; k += 40) {
+          await broadcast({ type: MSG.WHITEBOARD_STROKES, strokes: log.slice(k, k + 40) }, true);
         }
         return;
       }
@@ -1683,7 +1699,7 @@ useEffect(() => {
 
     room.on("dataReceived", handleData);
     return () => { room.off("dataReceived", handleData); };
-  }, [room, role, phase, sessionId, navigate, upgrading, onRequestTokenSwap, isHost, broadcast, guestId]);
+  }, [room, role, phase, sessionId, navigate, upgrading, onRequestTokenSwap, isHost, broadcast, flushStrokes, guestId]);
 
   const handleAdmit = async (id) => {
     try {
@@ -1797,7 +1813,7 @@ useEffect(() => {
       <WhiteboardDrawer
         open={whiteboardOpen} onClose={handleCloseWhiteboard} isHost={isHost}
         onLocalStroke={handleLocalStroke} onLocalClear={handleLocalClear}
-        remoteStroke={whiteboardStroke} remoteClear={whiteboardClearTick}
+        strokeQueue={whiteboardQueueRef} strokeTick={whiteboardTick} remoteClear={whiteboardClearTick}
         syncStrokes={handleRequestSync}
       />
 

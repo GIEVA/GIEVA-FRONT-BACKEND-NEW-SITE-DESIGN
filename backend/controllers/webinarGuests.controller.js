@@ -67,18 +67,33 @@ export const registerWebinarGuest = async (req, res) => {
       return res.status(400).json({ message: "Please accept the privacy notice" });
     }
 
-    const duplicate = await WebinarRegistration.findOne({
+    const accessKey = crypto.randomBytes(32).toString("hex");
+ 
+    const existing = await WebinarRegistration.findOne({
       where: { classSessionId: session.id, email },
     });
-
-    if (duplicate) {
-      return res.status(409).json({
-        message: "This email has already registered for the webinar. Use your existing waiting-room link or contact the host.",
+ 
+    // Returning guest (same email): send them back to the waiting room instead of blocking them.
+    if (existing) {
+      await existing.update({
+        fullName,                          // keep the latest details they typed
+        age,
+        accessKeyHash: hashKey(accessKey), // fresh private key; the old one can't be recovered (only its hash is stored)
+        status: "waiting",                 // shows up in the host's waiting room again, like a new arrival
+        admittedAt: null,
+        leftAt: null,
+        consentAt: new Date(),
+      });
+ 
+      return res.status(200).json({
+        message: "Welcome back. Please wait for the host to let you in.",
+        registrationId: existing.id,
+        accessKey,
+        status: "waiting",
+        returning: true,
       });
     }
-
-    const accessKey = crypto.randomBytes(32).toString("hex");
-
+ 
     const registration = await WebinarRegistration.create({
       classSessionId: session.id,
       fullName,
@@ -88,7 +103,7 @@ export const registerWebinarGuest = async (req, res) => {
       status: "waiting",
       consentAt: new Date(),
     });
-
+ 
     return res.status(201).json({
       message: "Registration received. Please wait for the host.",
       registrationId: registration.id,
