@@ -126,8 +126,8 @@ router.post("/public-meetings/:sessionId/guest-participant-token", guestGetParti
 //   router.post("/:sessionId/deny/:userId", authenticate, denyParticipant);
 // WITH:
  
-router.post("/:sessionId/admit/:userId", authenticate, admitParticipantGuestAware);
-router.post("/:sessionId/deny/:userId", authenticate, denyParticipantGuestAware);
+router.post("/:sessionId/admit/:userId", admitParticipantGuestAware);
+router.post("/:sessionId/deny/:userId", denyParticipantGuestAware);
  
 // (admitParticipant / denyParticipant — the originals — are no longer
 // referenced by any route once this change is applied; you can leave
@@ -174,10 +174,10 @@ router.get("/:sessionId/recording", authenticate, getSessionRecording);
 router.post("/:id/attendance", authenticate, markAttendance);
 router.patch("/:id/leave", authenticate, leaveSession);
 router.get("/:id/participants", authenticate, getSessionParticipants);
-router.post("/:id/raise-hand", authenticate, raiseHand);
-router.post("/:id/reaction", authenticate, sendReaction);
-router.post("/:id/recording/start", authenticate, startRecording);
-router.post("/:id/recording/stop", authenticate, stopRecording);
+router.post("/:id/raise-hand", raiseHand);
+router.post("/:id/reaction",  sendReaction);
+router.post("/:id/recording/start", startRecording);
+router.post("/:id/recording/stop",  stopRecording);
 
  router.patch("/:sessionId/reschedule", authenticate, rescheduleSession);
 
