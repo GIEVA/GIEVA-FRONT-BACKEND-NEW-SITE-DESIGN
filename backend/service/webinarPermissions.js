@@ -43,12 +43,13 @@ export const permissionFor = (role) => ({
 });
 
 // Video grant fields for AccessToken.addGrant({ room, roomJoin: true, ...webinarGrantFor(role) })
+
 export const webinarGrantFor = (role) => ({
   canSubscribe: true,
   canPublish: canSpeak(role),
   canPublishData: true,
-  canPublishSources: canSpeak(role) ? ["microphone", "camera", "screen_share", "screen_share_audio"] : [],
 });
+
 
 export const roleForIdentity = async (session, identity) => {
   const userId = userIdFromIdentity(identity);
@@ -69,7 +70,7 @@ export const onParticipantJoined = async (session, identity) => {
   }
 };
 
-// Let a webinar GUEST (no account) speak, or send them back to the audience.
+// Let a webinar GUEST (no account, identity "guest-<registrationId>") speak, or send them back to the audience.
 // Lasts for this connection: if they leave and rejoin they are attendees again until promoted again.
 export const setGuestPublishPermission = async (session, guestId, makePanelist) => {
   const guest = await WebinarRegistration.findOne({ where: { id: guestId, classSessionId: session.id } });
