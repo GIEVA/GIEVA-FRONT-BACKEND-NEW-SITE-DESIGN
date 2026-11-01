@@ -1,6 +1,6 @@
 // controllers/roomControls.controller.js
-import { loadSession, canManageSession } from "../services/sessionAccess.js";
-import { muteAll, muteOne, sendControl, announce } from "../services/roomControls.service.js";
+import { loadSession, canManageSession } from "../service/sessionAccess.js";
+import { muteAll, muteOne, sendControl, announce } from "../service/roomControls.service.js";
 
 const identityOf = (userId) => `user-${userId}`;
 
