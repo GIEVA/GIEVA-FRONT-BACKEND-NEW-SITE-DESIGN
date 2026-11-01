@@ -27,7 +27,7 @@ import {
   exportRecordingDocx,
 } from "../controllers/sessionRecording.controller.js";
 
-import { muteAllParticipants, askToUnmute } from "../controllers/roomControls.controller.js";
+import { muteAllParticipants, askToUnmute, muteOneParticipant } from "../controllers/roomControls.controller.js";
 
 const router = express.Router();
 router.use(authenticate);
@@ -53,6 +53,8 @@ router.get("/recordings/:recordingId/export.docx", exportRecordingDocx);
 
 // ── Room moderation ──
 router.post("/sessions/:sessionId/room/mute-all", muteAllParticipants);
+router.post("/sessions/:sessionId/room/mute/:identity", muteOneParticipant);
+
 router.post("/sessions/:sessionId/room/ask-unmute/:identity", askToUnmute);
 
 export default router;

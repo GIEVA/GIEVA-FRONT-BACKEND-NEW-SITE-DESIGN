@@ -44,6 +44,20 @@ export const muteAll = async (roomName, exceptIdentities = []) => {
   return muted;
 };
 
+// Mutes ONE person's microphone (any identity: "user-12", "guest-5", ...). Returns how many tracks it muted.
+export const muteOne = async (roomName, identity) => {
+  const participants = await rooms().listParticipants(roomName);
+  const p = participants.find((x) => x.identity === identity);
+  if (!p) return { found: false, muted: 0 };
+  let muted = 0;
+  for (const track of micTracks(p)) {
+    if (track.muted) continue;
+    await rooms().mutePublishedTrack(roomName, p.identity, track.sid, true);
+    muted += 1;
+  }
+  return { found: true, muted };
+};
+
 // Sends a private data message to one participant (topic "control").
 export const sendControl = async (roomName, identity, payload) => {
   await rooms().sendData(

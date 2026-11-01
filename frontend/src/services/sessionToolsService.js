@@ -52,6 +52,10 @@ export const regenerateNotes = (recordingId) =>
 export const muteAllParticipants = async (sessionId) =>
   (await api.post(`${base}/sessions/${sessionId}/room/mute-all`)).data;
 
+// Mute ONE person (host / alt host / co-host). Works for signed-in users and webinar/public guests.
+export const muteOneParticipant = async (sessionId, identity) =>
+  (await api.post(`${base}/sessions/${sessionId}/room/mute/${encodeURIComponent(identity)}`)).data;
+
 export const askParticipantToUnmute = async (sessionId, identity) =>
   (await api.post(`${base}/sessions/${sessionId}/room/ask-unmute/${encodeURIComponent(identity)}`)).data;
 

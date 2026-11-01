@@ -46,7 +46,7 @@ import {
   joinWebinar, endWebinar, promoteToPanelist, demoteToAttendee, getWebinarGuestStatus,
   getWebinarGuests, moderateWebinarGuest,
 } from "../services/webinarService";
-import { muteAllParticipants, askParticipantToUnmute } from "../services/sessionToolsService";
+import { muteAllParticipants, askParticipantToUnmute, muteOneParticipant } from "../services/sessionToolsService";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 
 import {
@@ -669,7 +669,7 @@ const ParticipantsDrawer = ({ open, onClose, role, sessionId, onToast, webinar }
   // Track which identities have a pending mute request in flight
   const [mutingSet, setMutingSet] = useState(new Set());
 
-  const isHost = role === "host";
+  const isHost = role === "host" || !!webinar?.canManage; // host, alt host, co-host
   const [mutingAll, setMutingAll] = useState(false);
 
   const handleMuteAll = async () => {
@@ -723,8 +723,7 @@ const ParticipantsDrawer = ({ open, onClose, role, sessionId, onToast, webinar }
         });
         return;
       }
-      const nextMuted = true;
-      await muteParticipant(sessionId, identity, nextMuted);
+      await muteOneParticipant(sessionId, identity);
       // LiveKit server pushes "track muted" event to room automatically —
       // participant.isMicrophoneEnabled will update reactively,
       // so we don't need to flip any local state here.
@@ -792,7 +791,7 @@ const ParticipantsDrawer = ({ open, onClose, role, sessionId, onToast, webinar }
 
           // Show mute button if: viewer is host AND participant is not
           // the local (you can't mute yourself here) AND not in lobby
-          const showMuteBtn = isHost && !isLocal && !isLobby && (!webinar?.active || canPub);
+          const showMuteBtn = isHost && !isLocal && !isLobby && (micIsOn || !webinar?.active || canPub);
 
           return (
             <ListItem
@@ -1137,9 +1136,16 @@ const ControlBar = ({
           </CtrlBtn>
         </Box>
       ) : (
-        <Typography sx={{ color: MUTED_D, fontSize: 13, px: 1.5, maxWidth: 190, lineHeight: 1.3 }}>
-          You are watching as an attendee. Raise your hand to ask to speak.
-        </Typography>
+        // Attendees see the mic and camera buttons too. They are locked until the host lets them speak;
+        // pressing one raises their hand so the host knows they want to talk.
+        <Box sx={{ display: "flex", gap: 1 }}>
+          <CtrlBtn title="Your mic is off. Click to ask the host to let you speak" onClick={() => { if (!handRaised) onToggleHand?.(); }}>
+            <MicOff />
+          </CtrlBtn>
+          <CtrlBtn title="Your camera is off. Click to ask the host to let you speak" onClick={() => { if (!handRaised) onToggleHand?.(); }}>
+            <VideocamOff />
+          </CtrlBtn>
+        </Box>
       )}
 
       <Box sx={{ width: "1px", height: 36, bgcolor: "rgba(255,255,255,0.08)", mx: 0.5, flexShrink: 0 }} />
@@ -1417,6 +1423,13 @@ const RoomInner = ({
   useEffect(() => { qaOpenRef.current = qaOpen; if (qaOpen) setQaUnread(0); }, [qaOpen]);
   const strokeLogRef   = useRef([]);
   const reactionTimers = useRef({});
+  const [floaters, setFloaters] = useState([]);   // emojis floating up the screen
+  const floaterId = useRef(0);
+  const pushFloater = useCallback((emoji, name) => {
+    const id = ++floaterId.current;
+    setFloaters((f) => [...f.slice(-14), { id, emoji, name, left: 4 + Math.random() * 22, drift: Math.round(Math.random() * 60 - 30) }]);
+    setTimeout(() => setFloaters((f) => f.filter((x) => x.id !== id)), 4200);
+  }, []);
   const myIdentityRef  = useRef(localParticipant?.identity);
 
   useEffect(() => { myIdentityRef.current = localParticipant?.identity; }, [localParticipant?.identity]);
@@ -1536,12 +1549,13 @@ useEffect(() => {
   }, [localParticipant, broadcast]);
 
   const handleLocalReaction = useCallback(({ identity, fullName, emoji }) => {
+    pushFloater(emoji, "You");
     setReactions((prev) => ({ ...prev, [identity]: { emoji, fullName } }));
     clearTimeout(reactionTimers.current[identity]);
     reactionTimers.current[identity] = setTimeout(() => {
       setReactions((prev) => { const n = { ...prev }; delete n[identity]; return n; });
     }, 2500);
-  }, []);
+  }, [pushFloater]);
 
   const handleOpenWhiteboard = useCallback(async () => {
     setWhiteboardOpen(true);
@@ -1664,6 +1678,7 @@ useEffect(() => {
 
       if (data.type === MSG.REACTION) {
         const id = data.identity; if (!id) return;
+        pushFloater(data.emoji, firstName(data.fullName || "Someone"));
         setReactions((prev) => ({ ...prev, [id]: { emoji: data.emoji, fullName: data.fullName } }));
         clearTimeout(reactionTimers.current[id]);
         reactionTimers.current[id] = setTimeout(() => {
@@ -1699,7 +1714,7 @@ useEffect(() => {
 
     room.on("dataReceived", handleData);
     return () => { room.off("dataReceived", handleData); };
-  }, [room, role, phase, sessionId, navigate, upgrading, onRequestTokenSwap, isHost, broadcast, flushStrokes, guestId]);
+  }, [room, role, phase, sessionId, navigate, upgrading, onRequestTokenSwap, isHost, broadcast, flushStrokes, pushFloater, guestId]);
 
   const handleAdmit = async (id) => {
     try {
@@ -1794,6 +1809,25 @@ useEffect(() => {
       </Box>
 
       <ParticipantGrid raisedHands={raisedHands} reactions={reactions} webinar={webinarCtx} />
+
+      {/* Reactions float up the screen with the reactor's name (like Zoom / Meet) for everybody */}
+      <Box sx={{ position: "fixed", left: 0, bottom: 110, width: 220, height: 0, zIndex: 1350, pointerEvents: "none",
+                 "@keyframes floatUp": {
+                   "0%":   { transform: "translate(0,0) scale(0.6)", opacity: 0 },
+                   "10%":  { opacity: 1, transform: "translate(0,-30px) scale(1)" },
+                   "80%":  { opacity: 1 },
+                   "100%": { transform: "translate(var(--drift),-380px) scale(1.1)", opacity: 0 },
+                 } }}>
+        {floaters.map((f) => (
+          <Box key={f.id} sx={{ position: "absolute", bottom: 0, left: `${f.left}%`, "--drift": `${f.drift}px`,
+                                animation: "floatUp 4s ease-out forwards", textAlign: "center" }}>
+            <Typography sx={{ fontSize: 38, lineHeight: 1, filter: "drop-shadow(0 2px 4px rgba(0,0,0,.5))" }}>{f.emoji}</Typography>
+            <Typography sx={{ fontSize: 11.5, fontWeight: 700, color: "#fff", bgcolor: "rgba(0,0,0,0.6)", px: 0.9, py: 0.15, borderRadius: 1, mt: 0.25, whiteSpace: "nowrap" }}>
+              {f.name}
+            </Typography>
+          </Box>
+        ))}
+      </Box>
       <RoomAudioRenderer />
 
       <ControlBar
