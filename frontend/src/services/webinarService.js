@@ -85,3 +85,6 @@ export const askGuestWebinarQuestion = (sessionId, accessKey, text, anonymous) =
   api.post(`${base}/${sessionId}/guest-questions`, { accessKey, text, anonymous }).then(d);
 export const voteGuestWebinarQuestion = (questionId, accessKey) =>
   api.post(`${base}/questions/${questionId}/guest-vote`, { accessKey }).then(d);
+
+export const promoteGuest = (sessionId, guestId) => api.post(`${base}/sessions/${sessionId}/promote-guest/${guestId}`).then(d);
+export const demoteGuest = (sessionId, guestId) => api.post(`${base}/sessions/${sessionId}/demote-guest/${guestId}`).then(d);

@@ -10,6 +10,7 @@ import {
   getMyWebinarRole, updateWebinarSettings, listTeam, searchUsers, assignTeamMember, removeTeamMember,
   promoteToPanelist, demoteToAttendee, listQuestions, askQuestion, voteQuestion, updateQuestion,
   deleteQuestion, exportQuestionsCsv, startLiveStream, stopLiveStream, liveStreamStatus, getPublicWebinarInfo,
+  promoteGuest, demoteGuest,
 } from "../controllers/webinar.controller.js";
 
 import {
@@ -77,5 +78,8 @@ router.delete("/questions/:questionId", deleteQuestion);
 router.get("/sessions/:sessionId/stream", liveStreamStatus);
 router.post("/sessions/:sessionId/stream/start", startLiveStream);
 router.post("/sessions/:sessionId/stream/stop", stopLiveStream);
+
+router.post("/sessions/:sessionId/promote-guest/:guestId", promoteGuest);
+router.post("/sessions/:sessionId/demote-guest/:guestId", demoteGuest);
 
 export default router;

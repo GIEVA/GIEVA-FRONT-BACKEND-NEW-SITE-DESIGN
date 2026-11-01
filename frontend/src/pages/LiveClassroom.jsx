@@ -43,7 +43,7 @@ import StreamDialog from "../components/live/StreamDialog";
 import { RoomEvent } from "livekit-client";
 import { QuestionAnswer, LiveTv, Stars } from "@mui/icons-material";
 import {
-  joinWebinar, endWebinar, promoteToPanelist, demoteToAttendee, getWebinarGuestStatus,
+  joinWebinar, endWebinar, promoteToPanelist, demoteToAttendee, promoteGuest, demoteGuest, getWebinarGuestStatus,
   getWebinarGuests, moderateWebinarGuest,
 } from "../services/webinarService";
 import { muteAllParticipants, askParticipantToUnmute, muteOneParticipant } from "../services/sessionToolsService";
@@ -662,7 +662,7 @@ const ChatDrawer = ({ open, onClose, messages, onSend, currentUser }) => {
 //           and renders a mute/unmute button per participant
 //           (visible only when role === "host")
 // ─────────────────────────────────────────────────────────────
-const ParticipantsDrawer = ({ open, onClose, role, sessionId, onToast, webinar }) => {
+const ParticipantsDrawer = ({ open, onClose, role, sessionId, onToast, webinar, raisedHands = {} }) => {
   const participants         = useParticipants();
   const { localParticipant } = useLocalParticipant();
 
@@ -690,15 +690,19 @@ const ParticipantsDrawer = ({ open, onClose, role, sessionId, onToast, webinar }
     localParticipant,
     ...participants.filter((p) => p.identity !== localParticipant?.identity),
   ].filter(Boolean).filter((p) => !audienceView || p === localParticipant || p.permissions?.canPublish);
+  all.sort((a, b) => (raisedHands[b.identity] ? 1 : 0) - (raisedHands[a.identity] ? 1 : 0));
   const hiddenCount = audienceView ? Math.max(0, participants.length + 1 - all.length) : 0;
 
   const [roleBusy, setRoleBusy] = useState(null);
   const changeRole = async (p, makePanelist) => {
     const m = /^user-(\d+)$/.exec(p.identity);
-    if (!m) { onToast?.({ msg: "Guests cannot be promoted", severity: "error" }); return; }
+    const g = /^guest-(\d+)$/.exec(p.identity);
+    if (!m && !g) { onToast?.({ msg: "This person cannot be promoted", severity: "error" }); return; }
     setRoleBusy(p.identity);
     try {
-      const r = await (makePanelist ? promoteToPanelist(sessionId, m[1]) : demoteToAttendee(sessionId, m[1]));
+      const r = g
+        ? await (makePanelist ? promoteGuest(sessionId, g[1]) : demoteGuest(sessionId, g[1]))
+        : await (makePanelist ? promoteToPanelist(sessionId, m[1]) : demoteToAttendee(sessionId, m[1]));
       onToast?.({ msg: r.message, severity: "success" });
     } catch (err) {
       onToast?.({ msg: err?.response?.data?.message || "Could not change the role", severity: "error" });
@@ -818,6 +822,10 @@ const ParticipantsDrawer = ({ open, onClose, role, sessionId, onToast, webinar }
                       <Chip label="Panelist" size="small"
                         sx={{ ml: 1, bgcolor: "#7C3AED", color: "#fff", height: 18, fontSize: 10 }} />
                     )}
+                    {raisedHands[p.identity] && (
+                      <Chip label="✋ Wants to speak" size="small"
+                        sx={{ ml: 1, bgcolor: GOLD, color: NAVY, height: 18, fontSize: 10, fontWeight: 800 }} />
+                    )}
                     {isLobby && (
                       <Chip label="Waiting" size="small"
                         sx={{ ml: 1, bgcolor: "rgba(239,68,68,0.2)", color: "#fca5a5",
@@ -844,7 +852,7 @@ const ParticipantsDrawer = ({ open, onClose, role, sessionId, onToast, webinar }
 
               {/* ── WEBINAR: promote / demote (host and alt host only) ── */}
               {webinar?.active && webinar.canHost && !isLocal && !isHst && (
-                <Tooltip title={canPub ? "Move back to attendees" : "Promote to panelist"}>
+                <Tooltip title={canPub ? "Take away mic & camera (back to audience)" : "Let them speak (allow mic & camera)"}>
                   <span>
                     <IconButton size="small" disabled={roleBusy === p.identity} onClick={() => changeRole(p, !canPub)}
                       sx={{ width: 34, height: 34, borderRadius: 2, mr: 0.5,
@@ -1859,6 +1867,7 @@ useEffect(() => {
         sessionId={sessionId}
         onToast={setToast}
         webinar={webinarCtx}
+        raisedHands={raisedHands}
       />
 
       {webinarCtx && (
