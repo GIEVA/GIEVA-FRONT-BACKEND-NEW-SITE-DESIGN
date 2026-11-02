@@ -323,7 +323,7 @@ export const portalNavigation = [
 
       {
         label: "Programs",
-        path: "/programs",
+        path: "/our-programs",
       },
 
       {
