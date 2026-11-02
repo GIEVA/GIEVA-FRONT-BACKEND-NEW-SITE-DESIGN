@@ -4,6 +4,14 @@ import { cloudinary } from "../config/cloudinary.js";
 
 const { StudentProfile, ActivityLog } = models;
 
+// Forms send "" for empty fields. An empty date must be stored as NULL, never as "Invalid date".
+const cleanDate = (v, fallback = null) => {
+  if (v === undefined) return fallback;           // field not sent: keep what is stored
+  if (v === null || String(v).trim() === "") return null; // cleared: store NULL
+  const d = new Date(v);
+  return Number.isNaN(d.getTime()) ? fallback : d;
+};
+
 
 //
 // ================= CREATE PROFILE =================
@@ -47,7 +55,7 @@ export const createStudentProfile = async (req, res) => {
       cloudinary_id: cloudinaryId,
       phone: req.body.phone,
       bio: req.body.bio,
-      dob: req.body.dob,
+      dob: cleanDate(req.body.dob),
       level: req.body.level,
       school: req.body.school,
       address: req.body.address,
@@ -120,11 +128,9 @@ export const updateStudentProfile = async (req, res) => {
     }
 
     // ===== IMAGE UPDATE =====
+    // The old picture is deleted only AFTER the save succeeds, so a failed save never loses it.
+    const oldCloudinaryId = req.file ? profile.cloudinary_id : null;
     if (req.file) {
-      if (profile.cloudinary_id) {
-        await cloudinary.uploader.destroy(profile.cloudinary_id);
-      }
-
       profile.profilePicUrl = req.file.path;
       profile.cloudinary_id = req.file.filename;
     }
@@ -132,14 +138,21 @@ export const updateStudentProfile = async (req, res) => {
     // ===== UPDATE OTHER FIELDS =====
     profile.phone = req.body.phone ?? profile.phone;
     profile.bio = req.body.bio ?? profile.bio;
-    profile.dob = req.body.dob ?? profile.dob;
+    profile.dob = cleanDate(req.body.dob, profile.dob);
     profile.level = req.body.level ?? profile.level;
     profile.school = req.body.school ?? profile.school;
     profile.address = req.body.address ?? profile.address;
     profile.guardianName = req.body.guardianName ?? profile.guardianName;
     profile.guardianPhone = req.body.guardianPhone ?? profile.guardianPhone;
 
-    await profile.save();
+    try {
+      await profile.save();
+    } catch (err) {
+      // the new upload is orphaned if the save failed; remove it
+      if (req.file?.filename) cloudinary.uploader.destroy(req.file.filename).catch(() => {});
+      throw err;
+    }
+    if (oldCloudinaryId) cloudinary.uploader.destroy(oldCloudinaryId).catch(() => {});
 
     await ActivityLog.create({
       userId,

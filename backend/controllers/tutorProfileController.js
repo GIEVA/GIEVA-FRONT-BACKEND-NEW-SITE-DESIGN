@@ -1,8 +1,16 @@
 import models from "../models/index.js";
 import { cloudinary } from "../config/cloudinary.js";
 
+// Forms send "" for empty fields. An empty date must be stored as NULL, never as "Invalid date".
+const cleanDate = (v, fallback = null) => {
+  if (v === undefined) return fallback;           // field not sent: keep what is stored
+  if (v === null || String(v).trim() === "") return null; // cleared: store NULL
+  const d = new Date(v);
+  return Number.isNaN(d.getTime()) ? fallback : d;
+};
 const {
   TutorProfile,
+
   ActivityLog,
   Notification,
   User,
@@ -128,7 +136,7 @@ export const createTutorProfile =
             req.body.bio,
 
           dob:
-            req.body.dob,
+            cleanDate(req.body.dob),
 
           address:
             req.body.address,
@@ -400,14 +408,11 @@ export const updateTutorProfile =
       // IMAGE UPDATE
       // ======================================================
 
+      // Old picture is deleted only after the save succeeds
+      const oldCloudinaryId =
+        req.file ? profile.cloudinary_id : null;
+
       if (req.file) {
-
-        if (profile.cloudinary_id) {
-
-          await cloudinary.uploader.destroy(
-            profile.cloudinary_id
-          );
-        }
 
         profile.profilePicUrl =
           req.file.path;
@@ -448,8 +453,7 @@ export const updateTutorProfile =
         profile.bio;
 
       profile.dob =
-        req.body.dob ??
-        profile.dob;
+        cleanDate(req.body.dob, profile.dob);
 
       profile.address =
         req.body.address ??
@@ -487,7 +491,18 @@ export const updateTutorProfile =
       profile.lastActiveAt =
         new Date();
 
-      await profile.save();
+      try {
+        await profile.save();
+      } catch (saveErr) {
+        if (req.file?.filename) {
+          cloudinary.uploader.destroy(req.file.filename).catch(() => {});
+        }
+        throw saveErr;
+      }
+
+      if (oldCloudinaryId) {
+        cloudinary.uploader.destroy(oldCloudinaryId).catch(() => {});
+      }
 
       // ======================================================
       // LOG
@@ -596,6 +611,3 @@ export const deleteTutorProfile =
       });
     }
   };
-
-
-
