@@ -176,14 +176,6 @@ export const userMenu = {
       label: "Visa Applications",
       path: "/visa/applications",
     },
-    {
-      label: "Bookings",
-      path: "/bookings",
-    },
-    {
-      label: "Settings",
-      path: "/settings",
-    },
   ],
 
   tutor: [
@@ -202,14 +194,6 @@ export const userMenu = {
     {
       label: "My Courses",
       path: "/courses",
-    },
-    {
-      label: "Bookings",
-      path: "/bookings",
-    },
-    {
-      label: "Settings",
-      path: "/settings",
     },
   ],
 
