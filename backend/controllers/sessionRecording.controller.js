@@ -6,6 +6,7 @@ import {
   getActiveRecording,
   startSessionRecording,
   stopSessionRecording,
+  reconcileRecording,
 } from "../service/recording.service.js";
 import { regenerateNotes } from "../service/aiNotes.service.js";
 import { getPlaybackUrl } from "../config/storage.js";
@@ -93,6 +94,11 @@ export const getRecording = async (req, res) => {
       order: [["id", "DESC"]],
     });
     if (!rec) return res.json({ recording: null });
+
+    // Stuck on "recording"/"processing" after the session ended? Ask LiveKit for the real result.
+    if (["recording", "processing"].includes(rec.status)) {
+      await reconcileRecording(rec).catch((e) => console.error("[recording] reconcile:", e.message));
+    }
 
     let playbackUrl = null;
     if (rec.status === "ready" && rec.videoKey) {

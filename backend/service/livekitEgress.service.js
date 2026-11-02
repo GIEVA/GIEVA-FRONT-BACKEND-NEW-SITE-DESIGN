@@ -76,4 +76,10 @@ export const startRoomRecording = async (roomName, sessionId, recordingId, { aud
   return { videoEgressId: video.egressId, videoKey, audioEgressId, audioKey };
 };
 
+// Asks LiveKit for the real state of an egress (used to finish recordings whose webhook never arrived).
+export const getEgressInfo = async (egressId) => {
+  const list = await getClient().listEgress({ egressId });
+  return list?.[0] || null;
+};
+
 export const stopEgress = (egressId) => getClient().stopEgress(egressId);

@@ -3,7 +3,7 @@
 
 import { Op } from "sequelize";
 import models from "../models/index.js";
-import { startRoomRecording, stopEgress } from "./livekitEgress.service.js";
+import { startRoomRecording, stopEgress, getEgressInfo } from "./livekitEgress.service.js";
 import { processRecording } from "./aiNotes.service.js";
 import { broadcast } from "./liveRoomSignals.js";
 
@@ -78,6 +78,58 @@ export const stopSessionRecording = async (session) => {
 
   await broadcast(session.roomName, "recording", { type: "stopped" });
   return { recording: rec };
+};
+
+// ── Safety net for recordings stuck on "Recording in progress" / "processing" ──
+// Normally LiveKit's "egress_ended" webhook finishes a recording. If that webhook never arrives (not configured,
+// blocked, or the room name was rejected) the row would stay stuck forever. This asks LiveKit directly.
+const ACTIVE_EGRESS = [0, 1, 2, "EGRESS_STARTING", "EGRESS_ACTIVE", "EGRESS_ENDING"];
+
+export const reconcileRecording = async (rec, { force = false } = {}) => {
+  if (!["recording", "processing"].includes(rec.status)) return false;
+  const session = await ClassSession.findByPk(rec.classSessionId);
+  const ended = !session || ["ended", "cancelled"].includes(session.status);
+  const ageMs = Date.now() - new Date(rec.startedAt || rec.createdAt).getTime();
+  if (!force && !ended && ageMs < 6 * 3600 * 1000) return false; // a live session is allowed to keep recording
+
+  const ids = [rec.videoEgressId, rec.audioEgressId].filter(Boolean);
+  let videoInfo = null;
+  for (const id of ids) {
+    let info = null;
+    try { info = await getEgressInfo(id); } catch (err) { console.error("[recording] listEgress", id, err.message); }
+    if (id === rec.videoEgressId) videoInfo = info;
+    if (!info) continue;
+    if (ACTIVE_EGRESS.includes(info.status)) {
+      // Session is over but LiveKit is still recording: stop it, the next sweep collects the result.
+      await stopEgress(id).catch(() => {});
+      continue;
+    }
+    await handleEgressEnded({ egressInfo: info }).catch((e) => console.error("[recording] reconcile", e.message));
+  }
+
+  await rec.reload();
+  if (["recording", "processing"].includes(rec.status) && !videoInfo) {
+    await rec.update({
+      status: "failed",
+      endedAt: rec.endedAt || new Date(),
+      errorMessage: "The recording never finished (LiveKit has no result for it). Check the LiveKit webhook and your recording minutes.",
+    });
+    await ClassSession.update({ recordingStatus: "failed" }, { where: { id: rec.classSessionId } }).catch(() => {});
+  }
+  return true;
+};
+
+export const reconcileStaleRecordings = async () => {
+  const rows = await SessionRecording.findAll({ where: { status: { [Op.in]: ["recording", "processing"] } }, limit: 50 });
+  for (const rec of rows) {
+    await reconcileRecording(rec).catch((e) => console.error("[recording] sweep", rec.id, e.message));
+  }
+};
+
+// Call once at server start: sweeps now, then every 5 minutes.
+export const startRecordingReconciler = () => {
+  setTimeout(() => reconcileStaleRecordings().catch(() => {}), 15 * 1000);
+  return setInterval(() => reconcileStaleRecordings().catch(() => {}), 5 * 60 * 1000);
 };
 
 // Called from the LiveKit webhook for event === "egress_ended".
