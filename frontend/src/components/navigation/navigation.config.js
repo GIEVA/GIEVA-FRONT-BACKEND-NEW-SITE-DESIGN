@@ -69,9 +69,9 @@ export const publicNavigation = [
   label: "Services",
   children: [
     {
-      label: "What We Do",
-      description: "Explore all educational services offered by GIEVA.",
-      path: "/services",
+      label: "Test Registration",
+      description: "Browse all available international examinations.",
+      path: "/exam-catalog",
     },
     {
       label: "HEALS Membership",
@@ -79,19 +79,21 @@ export const publicNavigation = [
       path: "/heals/apply",
     },
     {
-      label: "Test Registration",
-      description: "Browse all available international examinations.",
-      path: "/exam-catalog",
-    },
-    {
-      label: "TOEFL ASR Form",
-      description: "Request TOEFL Additional Score Reports.",
-      path: "/toefl-asr",
-    },
-    {
-      label: "Visa Processing",
+      label: "Visa Application",
       description: "Professional visa guidance and processing.",
       path: "/visa",
+    },
+    {
+      // Opens a side menu on hover / click
+      label: "Additional Services",
+      description: "More ways GIEVA can help you.",
+      children: [
+        {
+          label: "What We Do",
+          description: "Explore all educational services offered by GIEVA.",
+          path: "/services",
+        },
+      ],
     },
   ],
 },
