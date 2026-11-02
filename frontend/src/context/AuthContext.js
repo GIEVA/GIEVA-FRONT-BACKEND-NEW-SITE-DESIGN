@@ -61,8 +61,18 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   };
 
+  // Merge new fields (e.g. the profile picture) into the signed-in user and keep localStorage in sync
+  const updateUser = (patch) => {
+    setUser((prev) => {
+      if (!prev) return prev;
+      const next = { ...prev, ...patch };
+      localStorage.setItem("user", JSON.stringify(next));
+      return next;
+    });
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, updateUser }}>
       {children}
     </AuthContext.Provider>
   );
