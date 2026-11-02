@@ -112,6 +112,9 @@ import { healsPaystackWebhook } from "./controllers/healsPaymentController.js";
 
 import sessionToolsRoutes from './routes/sessionTools.routes.js'
 
+import healsPublicRoutes from "./routes/healsPublic.routes.js"; 
+
+
 import visaRoutes from "./routes/visa.routes.js";
 import { visaPaymentWebhook } from "./controllers/visaPayment.controller.js";
 
@@ -179,6 +182,8 @@ app.use(
   "/api/campaigns",
   campaignRoutes
 );
+
+app.use("/api/heals-public", healsPublicRoutes);
 
 app.use("/api/live/quiz", liveQuizeRoutes);
 

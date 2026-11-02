@@ -163,7 +163,7 @@ import AdminVisaApplications from "./pages/AdminVisaApplications";
 import WebinarJoin from "./pages/WebinarJoin";
 import AdminWebinars from "./pages/AdminWebinars";
 import VisaGuide from "./pages/VisaGuide";
-
+import HealsGuide from "./pages/HealsGuide";
 
 import "katex/dist/katex.min.css";
 
@@ -213,6 +213,8 @@ function App() {
           path="/services"
           element={<WhatWeDo />}
         />
+
+        <Route path="/heals" element={<HealsGuide />} />
 
         <Route path="/services/:id" element={<ServiceDetail />} />
 

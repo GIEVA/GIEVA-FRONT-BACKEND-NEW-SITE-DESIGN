@@ -76,7 +76,7 @@ export const publicNavigation = [
     {
       label: "HEALS Membership",
       description: "Join the HEALS programme.",
-      path: "/heals/apply",
+      path: "/heals",
     },
     {
       label: "Visa Application",
