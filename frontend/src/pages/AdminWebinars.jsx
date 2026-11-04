@@ -25,6 +25,7 @@ import {
   Add,
   ContentCopy,
   Groups,
+  Event,
   Cancel,
   OpenInNew,
   Delete,
@@ -47,6 +48,8 @@ import {
   moderateWebinarGuest,
   exportWebinarGuests,
 } from "../services/webinarService";
+
+import RescheduleWebinarDialog from "../components/live/RescheduleWebinarDialog";
 
 const NAVY = "#0B1F3A";
 const GOLD = "#D4A017";
@@ -800,6 +803,8 @@ export default function AdminWebinars({ embedded = false }) {
   const [teamFor, setTeamFor] = useState(null);
   const [guestsFor, setGuestsFor] = useState(null);
   const [toast, setToast] = useState(null);
+  const [rescheduleFor, setRescheduleFor] = useState(null);
+
 
   const say = useCallback((message, severity = "info") => {
     setToast({ msg: message, severity });
@@ -1018,6 +1023,17 @@ export default function AdminWebinars({ embedded = false }) {
                 </Tooltip>
 
                 {webinar.status === "scheduled" && (
+                  <Tooltip title="Reschedule webinar">
+                    <IconButton
+                      aria-label={`Reschedule ${webinar.title}`}
+                      onClick={() => setRescheduleFor(webinar)}
+                    >
+                      <Event fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                )}
+
+                {webinar.status === "scheduled" && (
                   <Tooltip title="Cancel webinar">
                     <IconButton
                       aria-label={`Cancel ${webinar.title}`}
@@ -1039,6 +1055,16 @@ export default function AdminWebinars({ embedded = false }) {
         onCreated={() => {
           setOpen(false);
           say("Webinar scheduled. The team has been emailed.", "success");
+          load();
+        }}
+      />
+
+      <RescheduleWebinarDialog
+        webinar={rescheduleFor}
+        onClose={() => setRescheduleFor(null)}
+        onDone={(r) => {
+          setRescheduleFor(null);
+          say(r.message || "Rescheduled", "success");
           load();
         }}
       />

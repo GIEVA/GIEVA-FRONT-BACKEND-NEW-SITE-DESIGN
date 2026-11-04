@@ -16,7 +16,7 @@ import { broadcast } from "../service/liveRoomSignals.js";
 import { stopStream } from "../service/webinarStream.js";
 import sendEmail from "../utils/sendMail.js";
 
-const { ClassSession, SessionRole, User } = models;
+const { ClassSession, SessionRole, User, WebinarRegistration } = models;
 
 const isAdmin = (u) => ADMIN_ROLES.includes(u.role);
 const NAME_COLS = ["fullName", "name", "firstName", "lastName"].filter((c) => User?.rawAttributes?.[c]);
@@ -125,12 +125,45 @@ export const createWebinar = async (req, res) => {
 };
 
 // ── ADMIN: edit details (team is edited through /sessions/:id/team) ──
+const whenLabel = (d) =>
+  new Date(d).toLocaleString("en-NG", { timeZone: "Africa/Lagos", weekday: "long", day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" }) + " (Lagos time)";
+ 
+const escapeHtml = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+ 
+// Emails the hosting team and every registered guest (not rejected ones) about the new time. Never blocks the save.
+const notifyWebinarRescheduled = async (s, reason) => {
+  const link = `${process.env.FRONTEND_URL}/webinar/${s.id}`;
+  const note = reason ? `<p><b>Reason:</b> ${escapeHtml(reason)}</p>` : "";
+  const body = (name) =>
+    `<p>Hello ${escapeHtml(name)},</p><p>The webinar <b>${escapeHtml(s.title)}</b> has been rescheduled.</p>` +
+    `<p><b>New time:</b> ${whenLabel(s.scheduledAt)} · ${s.durationMinutes} minutes</p>${note}` +
+    `<p>Your link has not changed: <a href="${link}">${link}</a></p>`;
+ 
+  const recipients = new Map(); // email -> name
+ 
+  const team = await SessionRole.findAll({ where: { classSessionId: s.id }, attributes: ["userId"] });
+  if (team.length) {
+    const users = await User.findAll({ where: { id: team.map((t) => t.userId) }, attributes: USER_ATTRS });
+    users.forEach((u) => u.email && recipients.set(u.email.toLowerCase(), nameOf(u)));
+  }
+  if (WebinarRegistration) {
+    const guests = await WebinarRegistration.findAll({ where: { classSessionId: s.id }, attributes: ["fullName", "email", "status"] });
+    guests.filter((g) => g.status !== "rejected" && g.email).forEach((g) => recipients.set(g.email.toLowerCase(), g.fullName));
+  }
+ 
+  for (const [email, name] of recipients) {
+    sendEmail(email, `Webinar rescheduled: ${s.title}`, body(name)).catch((e) => console.error("[webinar] reschedule email failed:", e.message));
+  }
+  return recipients.size;
+};
+ 
+// ── ADMIN: edit details (team is edited through /sessions/:id/team) ──
 export const updateWebinar = async (req, res) => {
   try {
     if (!isAdmin(req.user)) return res.status(403).json({ message: "Only admins can edit webinars" });
     const s = await ClassSession.findOne({ where: { id: req.params.id, isWebinar: true } });
     if (!s) return res.status(404).json({ message: "Webinar not found" });
-    if (["live", "ended"].includes(s.status)) return res.status(400).json({ message: "A live or finished webinar cannot be edited" });
+    if (["live", "ended", "cancelled"].includes(s.status)) return res.status(400).json({ message: "A live, finished or cancelled webinar cannot be edited" });
     const b = req.body || {};
     const patch = {};
     if (b.title !== undefined) patch.title = String(b.title).trim().slice(0, 255);
@@ -138,14 +171,28 @@ export const updateWebinar = async (req, res) => {
     if (b.scheduledAt !== undefined) {
       const d = new Date(b.scheduledAt);
       if (Number.isNaN(d.getTime())) return res.status(400).json({ message: "Bad date" });
+      if (d.getTime() < Date.now() - 5 * 60 * 1000) return res.status(400).json({ message: "The new date and time must be in the future" });
       patch.scheduledAt = d;
     }
     if (b.durationMinutes !== undefined) patch.durationMinutes = Math.min(Math.max(parseInt(b.durationMinutes, 10) || 60, 15), 480);
     if (b.capacity !== undefined) patch.webinarCapacity = Math.min(Math.max(parseInt(b.capacity, 10) || 500, 10), 5000);
     if (b.qaEnabled !== undefined) patch.qaEnabled = !!b.qaEnabled;
     if (b.recordingEnabled !== undefined) patch.recordingEnabled = !!b.recordingEnabled;
+ 
+    const timeChanged =
+      (patch.scheduledAt && patch.scheduledAt.getTime() !== new Date(s.scheduledAt).getTime()) ||
+      (patch.durationMinutes !== undefined && patch.durationMinutes !== s.durationMinutes);
+ 
     await s.update(patch);
-    res.json({ message: "Saved", webinar: await serialize(s) });
+ 
+    let notified = 0;
+    if (timeChanged && b.notify !== false) {
+      notified = await notifyWebinarRescheduled(s, String(b.reason || "").trim().slice(0, 500)).catch((e) => {
+        console.error("[webinar] reschedule notify:", e.message);
+        return 0;
+      });
+    }
+    res.json({ message: timeChanged ? `Rescheduled. ${notified} people notified.` : "Saved", notified, webinar: await serialize(s) });
   } catch (err) {
     console.error("[webinar] update", err);
     res.status(500).json({ message: "Could not save" });

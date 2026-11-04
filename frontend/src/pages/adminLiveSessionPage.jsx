@@ -16,7 +16,8 @@ import {
   PlayCircle, StopCircle, Cancel, Delete,
   Edit, Download, Visibility, Add, Refresh, FiberManualRecord,
   CheckCircle, CalendarMonth, BarChart, PersonAdd,
-  LinkOutlined, Close, Send, HourglassTop, AutoAwesome,
+  LinkOutlined, Close, Send, HourglassTop, AutoAwesome, 
+   Groups, Event
 } from "@mui/icons-material";
 
 import { Public, ContentCopy, OpenInNew, LiveTv } from "@mui/icons-material";
@@ -26,6 +27,8 @@ import {
   Tooltip as ReTooltip, ResponsiveContainer, BarChart as RechartBar,
   Bar, Legend,
 } from "recharts";
+
+import RescheduleWebinarDialog from "../components/live/RescheduleWebinarDialog";
 
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";

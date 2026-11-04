@@ -3,6 +3,11 @@
 //
 // Env: OPENAI_API_KEY, ANTHROPIC_API_KEY, ANTHROPIC_MODEL (optional, default below)
 
+import { execFile } from "child_process";
+import { promisify } from "util";
+import os from "os";
+import path from "path";
+import fs from "fs/promises";
 import OpenAI, { toFile } from "openai";
 import Anthropic from "@anthropic-ai/sdk";
 import models from "../models/index.js";
@@ -11,6 +16,8 @@ import { downloadObject } from "../config/storage.js";
 const { SessionRecording, ClassSession } = models;
 
 const WHISPER_MAX_BYTES = 24 * 1024 * 1024; // Whisper API hard limit is 25 MB
+const CHUNK_SECONDS = 600;                  // long recordings are cut into 10-minute pieces (about 2 MB each)
+const execFileP = promisify(execFile);
 const MAX_TRANSCRIPT_CHARS = 600_000;
 const NOTES_MODEL = () => process.env.ANTHROPIC_MODEL || "claude-sonnet-5-5";
 
@@ -22,32 +29,83 @@ const getAnthropic = () => (anthropic ||= new Anthropic({ apiKey: process.env.AN
 // ─────────────────────────────────────────────────────────────
 // 1. TRANSCRIBE
 // ─────────────────────────────────────────────────────────────
-export const transcribeAudio = async (audioKey) => {
-  const buffer = await downloadObject(audioKey);
-
-  if (buffer.length > WHISPER_MAX_BYTES) {
-    throw new Error(
-      `Audio is ${(buffer.length / 1048576).toFixed(1)} MB, over Whisper's 25 MB limit. ` +
-        "The video recording is still available."
-    );
+// ffmpeg: the bundled one from the "ffmpeg-static" package if installed (npm i ffmpeg-static), else the one on PATH.
+const ffmpegPath = async () => {
+  try {
+    const mod = await import("ffmpeg-static");
+    return mod.default || mod;
+  } catch {
+    return "ffmpeg";
   }
+};
 
-  const file = await toFile(buffer, "meeting.ogg", { type: "audio/ogg" });
+// Re-encodes the audio as small mono speech-quality Opus and cuts it into CHUNK_SECONDS pieces.
+// Returns [{ buffer, offset }] where offset is the piece's start time in seconds.
+export const splitAudio = async (buffer, chunkSeconds = CHUNK_SECONDS) => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "gieva-audio-"));
+  try {
+    const input = path.join(dir, "in.ogg");
+    await fs.writeFile(input, buffer);
+    const bin = await ffmpegPath();
+    await execFileP(bin, [
+      "-hide_banner", "-loglevel", "error", "-i", input,
+      "-vn", "-ac", "1", "-ar", "16000", "-c:a", "libopus", "-b:a", "24k",
+      "-f", "segment", "-segment_time", String(chunkSeconds), "-reset_timestamps", "1",
+      path.join(dir, "part-%03d.ogg"),
+    ], { maxBuffer: 10 * 1024 * 1024 });
+
+    const names = (await fs.readdir(dir)).filter((n) => n.startsWith("part-")).sort();
+    if (!names.length) throw new Error("ffmpeg produced no audio");
+    const parts = [];
+    for (let i = 0; i < names.length; i += 1) {
+      parts.push({ buffer: await fs.readFile(path.join(dir, names[i])), offset: i * chunkSeconds });
+    }
+    return parts;
+  } catch (err) {
+    if (err.code === "ENOENT") {
+      throw new Error("This recording is too long for one transcription and ffmpeg is not installed. Run: npm i ffmpeg-static");
+    }
+    throw err;
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true }).catch(() => {});
+  }
+};
+
+const whisperOne = async (buf, offset = 0) => {
+  const file = await toFile(buf, "meeting.ogg", { type: "audio/ogg" });
   const res = await getOpenAI().audio.transcriptions.create({
     file,
     model: "whisper-1",
     response_format: "verbose_json",
     timestamp_granularities: ["segment"],
   });
-
   return {
     text: (res.text || "").trim(),
     segments: (res.segments || []).map((s) => ({
-      start: Math.round(s.start),
-      end: Math.round(s.end),
+      start: Math.round(s.start) + offset,
+      end: Math.round(s.end) + offset,
       text: String(s.text || "").trim(),
     })),
   };
+};
+
+export const transcribeAudio = async (audioKey) => {
+  const buffer = await downloadObject(audioKey);
+
+  // Small enough: one request, as before.
+  if (buffer.length <= WHISPER_MAX_BYTES) return whisperOne(buffer);
+
+  // Too big for Whisper (25 MB): compress, cut into pieces, transcribe each, then stitch them together.
+  console.log(`[aiNotes] audio is ${(buffer.length / 1048576).toFixed(1)} MB, transcribing in pieces`);
+  const parts = await splitAudio(buffer);
+  const texts = [];
+  const segments = [];
+  for (const part of parts) {
+    const r = await whisperOne(part.buffer, part.offset);
+    if (r.text) texts.push(r.text);
+    segments.push(...r.segments);
+  }
+  return { text: texts.join(" ").trim(), segments };
 };
 
 // ─────────────────────────────────────────────────────────────
@@ -167,7 +225,15 @@ export const processRecording = async (recordingId) => {
 // Re-run only the Claude step (e.g. after a transient failure). Transcript must already exist.
 export const regenerateNotes = async (recordingId) => {
   const rec = await SessionRecording.findByPk(recordingId);
-  if (!rec?.transcript) throw new Error("No transcript available for this recording");
+  if (!rec) throw new Error("Recording not found");
+
+  // The transcription itself failed earlier (e.g. the file was too big): run the whole pipeline again.
+  if (!rec.transcript && rec.audioKey) {
+    await processRecording(recordingId);
+    await rec.reload();
+    return rec;
+  }
+  if (!rec.transcript) throw new Error("No transcript available for this recording");
 
   const session = await ClassSession.findByPk(rec.classSessionId, {
     attributes: ["id", "title", "description"],
