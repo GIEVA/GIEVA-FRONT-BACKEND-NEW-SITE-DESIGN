@@ -1,842 +1,311 @@
+import { useEffect, useRef, useState } from "react";
+import { useParams } from "react-router-dom";
 import {
-  useEffect,
-  useState,
-} from "react";
-
-import {
-  useParams,
-} from "react-router-dom";
-
-import {
-
-  Box,
-  Typography,
-  Container,
-  Grid,
-  Chip,
-  Stack,
-  Button,
-  CircularProgress,
-  Paper,
-  Divider,
-  Avatar,
-
+  Alert, Box, Button, Chip, CircularProgress, Container, Divider,
+  Grid, Paper, Stack, TextField, Typography,
 } from "@mui/material";
+import { CalendarMonth, AccessTime } from "@mui/icons-material";
+import DOMPurify from "dompurify";
 
 import {
-
-  CalendarMonth,
-  Visibility,
-  AdsClick,
-  ArrowForward,
-  AccessTime,
-
-} from "@mui/icons-material";
-
-import {
-
   getPublicCampaign,
   trackCampaignClick,
-
 } from "../services/publicCampaignService";
+import { createCampaignRegistration } from "../services/campaignRegistrationService";
 
-import CampaignRegistrationModal
-from "../pages/CampaignRegistrationModal";
+const fmt = (d) =>
+  d
+    ? new Date(d).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })
+    : null;
 
+const PublicCampaignDetails = () => {
+  const { id } = useParams();
+  const formRef = useRef(null);
 
+  const [campaign, setCampaign] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-const PublicCampaignDetails =
-() => {
+  const [form, setForm] = useState({ fullName: "", email: "" });
+  const [submitting, setSubmitting] = useState(false);
+  const [success, setSuccess] = useState("");
+  const [error, setError] = useState("");
 
-  const { id } =
-    useParams();
-
-
-
-  const [campaign,
-    setCampaign] =
-      useState(null);
-
-  const [loading,
-    setLoading] =
-      useState(true);
-
-  const [openRegister,
-    setOpenRegister] =
-      useState(false);
-
-
-
-  // ======================================================
-  // FETCH
-  // ======================================================
-
+  // ---------------- FETCH ----------------
   useEffect(() => {
-
-    const fetchCampaign =
-      async () => {
-
-        try {
-
-          const res =
-            await getPublicCampaign(
-              id
-            );
-
-
-
-          setCampaign(
-            res.campaign
-          );
-
-        } catch (error) {
-
-          console.error(error);
-
-        } finally {
-
-          setLoading(false);
-        }
-      };
-
-
-
-    fetchCampaign();
-
+    (async () => {
+      try {
+        const res = await getPublicCampaign(id);
+        setCampaign(res?.campaign ?? res);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    })();
   }, [id]);
 
+  // ---------------- COUNTDOWN ----------------
+  const getRemainingTime = () => {
+    if (!campaign?.startDate) return null;
+    const diff = new Date(campaign.startDate) - new Date();
+    if (diff <= 0) return "Campaign Started";
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    return `${days}d ${hours}h remaining`;
+  };
 
+  // ---------------- REGISTRATION MODE ----------------
+  const hasExternalLink = !!campaign?.registrationLink;
+  const needsInternalRegistration =
+    !!campaign?.requiresRegistration && !hasExternalLink;
 
-  // ======================================================
-  // COUNTDOWN
-  // ======================================================
+  // ---------------- ACTIONS ----------------
+  const handleRegisterClick = async () => {
+    try {
+      await trackCampaignClick(campaign.id);
+    } catch (err) {
+      console.error(err);
+    }
 
-  const getRemainingTime =
-    () => {
+    if (hasExternalLink) {
+      window.open(campaign.registrationLink, "_blank", "noopener,noreferrer");
+    } else {
+      formRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  };
 
-      if (!campaign?.startDate)
-        return null;
+  const handleChange = (e) =>
+    setForm({ ...form, [e.target.name]: e.target.value });
 
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
 
+    if (!form.fullName.trim() || !form.email.trim()) {
+      setError("Please enter your full name and email.");
+      return;
+    }
 
-      const now =
-        new Date();
+    try {
+      setSubmitting(true);
+      const res = await createCampaignRegistration({
+        fullName: form.fullName.trim(),
+        email: form.email.trim(),
+        campaignId: campaign.id,
+      });
+      setSuccess(res?.message || "Registration successful");
+      setForm({ fullName: "", email: "" });
+    } catch (err) {
+      setError(err.response?.data?.message || "Registration failed");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
-      const target =
-        new Date(
-          campaign.startDate
-        );
-
-
-
-      const diff =
-        target - now;
-
-
-
-      if (diff <= 0)
-        return "Campaign Started";
-
-
-
-      const days =
-        Math.floor(
-          diff /
-          (1000 * 60 * 60 * 24)
-        );
-
-
-
-      const hours =
-        Math.floor(
-          (
-            diff %
-            (1000 * 60 * 60 * 24)
-          ) /
-          (1000 * 60 * 60)
-        );
-
-
-
-      return `${days}d ${hours}h remaining`;
-    };
-
-
-
-  // ======================================================
-  // CTA
-  // ======================================================
-
-  const handleRegister =
-    async () => {
-
-      try {
-
-        await trackCampaignClick(
-          campaign.id
-        );
-
-      } catch (error) {
-
-        console.error(error);
-      }
-
-
-
-      setOpenRegister(true);
-    };
-
-
-
-  // ======================================================
-  // LOADING
-  // ======================================================
-
+  // ---------------- STATES ----------------
   if (loading) {
-
     return (
-
-      <Box
-        textAlign="center"
-        py={12}
-      >
-
+      <Box textAlign="center" py={12}>
         <CircularProgress />
-
       </Box>
     );
   }
-
-
-
-  // ======================================================
-  // EMPTY
-  // ======================================================
 
   if (!campaign) {
-
     return (
-
-      <Box
-        textAlign="center"
-        py={10}
-      >
-
-        <Typography
-          variant="h5"
-        >
-
-          Campaign not found
-
-        </Typography>
-
+      <Box textAlign="center" py={10}>
+        <Typography variant="h5">Campaign not found</Typography>
       </Box>
     );
   }
 
-
+  const remaining = getRemainingTime();
 
   return (
-
     <Box>
-
-      {/* ======================================================
-          HERO
-      ====================================================== */}
-
-      <Box
-
-        sx={{
-
-          position:
-            "relative",
-
-          minHeight: {
-            xs: 500,
-            md: 720,
-          },
-
-          display: "flex",
-
-          alignItems:
-            "center",
-
-          overflow:
-            "hidden",
-
-          backgroundImage:
-            `url(${campaign.imageUrl})`,
-
-          backgroundSize:
-            "cover",
-
-          backgroundPosition:
-            "center",
-        }}
-      >
-
-        {/* OVERLAY */}
-
-        <Box
-
-          sx={{
-
-            position:
-              "absolute",
-
-            inset: 0,
-
-            background:
-              `
-                linear-gradient(
-                  90deg,
-                  rgba(0,0,0,0.88) 0%,
-                  rgba(0,0,0,0.65) 45%,
-                  rgba(0,0,0,0.3) 100%
-                )
-              `,
-          }}
-        />
-
-
-
-        {/* CONTENT */}
-
-        <Container
-          maxWidth="xl"
-        >
-
+      <Container maxWidth="lg" sx={{ pt: { xs: 2, md: 4 } }}>
+        {/* ============ BANNER: image only, nothing on top ============ */}
+        {campaign.imageUrl && (
           <Box
-
+            component="img"
+            src={campaign.imageUrl}
+            alt={campaign.title}
             sx={{
-
-              position:
-                "relative",
-
-              zIndex: 2,
-
-              maxWidth: 760,
+              display: "block",
+              width: "100%",
+              height: "auto",
+              borderRadius: { xs: 2, md: 4 },
             }}
-          >
-
-            {/* TYPE */}
-
-            <Chip
-
-              label={
-                campaign.type
-              }
-
-              sx={{
-
-                mb: 3,
-
-                bgcolor:
-                  "rgba(255,255,255,0.15)",
-
-                color:
-                  "#fff",
-
-                backdropFilter:
-                  "blur(12px)",
-
-                textTransform:
-                  "capitalize",
-
-                fontWeight:
-                  700,
-              }}
-            />
-
-
-
-            {/* TITLE */}
-
-            <Typography
-
-              variant="h1"
-
-              fontWeight="bold"
-
-              sx={{
-
-                color: "#fff",
-
-                mb: 3,
-
-                lineHeight: 1.05,
-
-                fontSize: {
-
-                  xs: "2.7rem",
-
-                  md: "5rem",
-                },
-              }}
-            >
-
-              {campaign.title}
-
-            </Typography>
-
-
-
-            {/* DESCRIPTION */}
-
-            <Typography
-
-              sx={{
-
-                color:
-                  "rgba(255,255,255,0.9)",
-
-                fontSize: {
-
-                  xs: "1rem",
-
-                  md: "1.25rem",
-                },
-
-                lineHeight: 1.9,
-
-                mb: 4,
-              }}
-            >
-
-              {
-
-                campaign.description
-                  ?.replace(
-                    /<[^>]+>/g,
-                    ""
-                  )
-              }
-
-            </Typography>
-
-
-
-            {/* STATS */}
-
-            <Stack
-
-              direction="row"
-
-              spacing={2}
-
-              flexWrap="wrap"
-
-              mb={5}
-            >
-
-              <Chip
-
-                icon={
-                  <CalendarMonth />
-                }
-
-                label={
-                  new Date(
-                    campaign.startDate
-                  ).toLocaleDateString()
-                }
-
-                sx={{
-                  bgcolor:
-                    "rgba(255,255,255,0.1)",
-                  color: "#fff",
-                }}
-              />
-
-
-
-              <Chip
-
-                icon={
-                  <AccessTime />
-                }
-
-                label={
-                  getRemainingTime()
-                }
-
-                sx={{
-                  bgcolor:
-                    "rgba(255,255,255,0.1)",
-                  color: "#fff",
-                }}
-              />
-
-
-
-              <Chip
-
-                icon={
-                  <Visibility />
-                }
-
-                label={`${campaign.views || 0} views`}
-
-                sx={{
-                  bgcolor:
-                    "rgba(255,255,255,0.1)",
-                  color: "#fff",
-                }}
-              />
-
-
-
-              <Chip
-
-                icon={
-                  <AdsClick />
-                }
-
-                label={`${campaign.clicks || 0} clicks`}
-
-                sx={{
-                  bgcolor:
-                    "rgba(255,255,255,0.1)",
-                  color: "#fff",
-                }}
-              />
-
-            </Stack>
-
-
-
-            {/* CTA */}
-
-            <Stack
-              direction="row"
-              spacing={2}
-            >
-
-              <Button
-
-                size="large"
-
-                variant="contained"
-
-                endIcon={
-                  <ArrowForward />
-                }
-
-                onClick={
-                  handleRegister
-                }
-
-                sx={{
-
-                  px: 5,
-
-                  py: 1.8,
-
-                  borderRadius:
-                    100,
-
-                  fontWeight:
-                    700,
-
-                  fontSize:
-                    "1rem",
-
-                  textTransform:
-                    "none",
-
-                  bgcolor:
-                    "#fff",
-
-                  color:
-                    "#111",
-
-                  "&:hover": {
-
-                    bgcolor:
-                      "#f5f5f5",
-                  },
-                }}
-              >
-
-                Register Now
-
-              </Button>
-
-            </Stack>
-
-          </Box>
-
-        </Container>
-
-      </Box>
-
-
-
-      {/* ======================================================
-          CONTENT SECTION
-      ====================================================== */}
-
-      <Container
-        maxWidth="lg"
-        sx={{
-          py: 8,
-        }}
-      >
-
-        <Grid
-          container
-          spacing={5}
-        >
-
-          {/* MAIN */}
-
-          <Grid
-            item
-            xs={12}
-            md={8}
-          >
-
-            <Paper
-
-              sx={{
-
-                p: 5,
-
-                borderRadius: 5,
-
-                boxShadow:
-                  "0 10px 30px rgba(0,0,0,0.05)",
-              }}
-            >
-
-              <Typography
-
-                variant="h4"
-
-                fontWeight="bold"
-
-                mb={4}
-              >
-
-                About This Campaign
-
-              </Typography>
-
-
-
-              <Divider
-                sx={{
-                  mb: 4,
-                }}
-              />
-
-
-
-              <Box
-
-                sx={{
-
-                  lineHeight: 2,
-
-                  fontSize:
-                    "1.05rem",
-
-                  color:
-                    "text.secondary",
-                }}
-
-                dangerouslySetInnerHTML={{
-                  __html:
-                    campaign.description,
-                }}
-              />
-
-            </Paper>
-
-          </Grid>
-
-
-
-          {/* SIDEBAR */}
-
-          <Grid
-            item
-            xs={12}
-            md={4}
-          >
-
-            <Paper
-
-              sx={{
-
-                p: 4,
-
-                borderRadius: 5,
-
-                position:
-                  "sticky",
-
-                top: 120,
-
-                boxShadow:
-                  "0 10px 30px rgba(0,0,0,0.06)",
-              }}
-            >
-
-              <Typography
-
-                variant="h5"
-
-                fontWeight="bold"
-
-                mb={3}
-              >
-
-                Campaign Details
-
-              </Typography>
-
-
-
-              <Stack
-                spacing={3}
-              >
-
-                <Box>
-
-                  <Typography
-                    fontWeight="bold"
-                  >
-
-                    Start Date
-
-                  </Typography>
-
-
-
-                  <Typography
-                    color="text.secondary"
-                  >
-
-                    {
-
-                      new Date(
-                        campaign.startDate
-                      ).toLocaleString()
-                    }
-
-                  </Typography>
-
-                </Box>
-
-
-
-                <Box>
-
-                  <Typography
-                    fontWeight="bold"
-                  >
-
-                    Campaign Type
-
-                  </Typography>
-
-
-
-                  <Typography
-                    color="text.secondary"
-                    textTransform="capitalize"
-                  >
-
-                    {campaign.type}
-
-                  </Typography>
-
-                </Box>
-
-
-
-                <Box>
-
-                  <Typography
-                    fontWeight="bold"
-                  >
-
-                    Availability
-
-                  </Typography>
-
-
-
-                  <Typography
-                    color="success.main"
-                  >
-
-                    Active Registration
-
-                  </Typography>
-
-                </Box>
-
-
-
-                <Button
-
-                  fullWidth
-
-                  size="large"
-
-                  variant="contained"
-
-                  onClick={
-                    handleRegister
-                  }
-
-                  sx={{
-
-                    py: 1.5,
-
-                    borderRadius: 100,
-
-                    fontWeight:
-                      700,
-                  }}
-                >
-
-                  Register For Campaign
-
-                </Button>
-
-              </Stack>
-
-            </Paper>
-
-          </Grid>
-
-        </Grid>
-
+          />
+        )}
       </Container>
 
+      <Container maxWidth="lg" sx={{ py: { xs: 4, md: 6 } }}>
+        <Grid container spacing={5}>
+          {/* ============ MAIN ============ */}
+          <Grid item xs={12} md={8}>
+            <Stack direction="row" spacing={1} mb={2} flexWrap="wrap" useFlexGap>
+              {campaign.type && (
+                <Chip
+                  label={campaign.type}
+                  color="primary"
+                  size="small"
+                  sx={{ textTransform: "capitalize", fontWeight: 700 }}
+                />
+              )}
+              {campaign.featured && (
+                <Chip label="Featured" color="warning" size="small" />
+              )}
+            </Stack>
 
+            <Typography
+              variant="h3"
+              fontWeight="bold"
+              mb={3}
+              sx={{ fontSize: { xs: "1.9rem", md: "2.8rem" }, lineHeight: 1.15 }}
+            >
+              {campaign.title}
+            </Typography>
 
-      {/* ======================================================
-          REGISTER MODAL
-      ====================================================== */}
+            <Divider sx={{ mb: 3 }} />
 
-      <CampaignRegistrationModal
+            <Box
+              sx={{
+                lineHeight: 1.9,
+                fontSize: "1.05rem",
+                color: "text.secondary",
+                "& p": { mb: 1.5 },
+                "& strong": { fontWeight: 700, color: "text.primary" },
+                "& ul, & ol": { pl: 3, mb: 1.5 },
+                "& a": { color: "primary.main" },
+                "& img": { maxWidth: "100%", height: "auto", borderRadius: 2 },
+              }}
+              dangerouslySetInnerHTML={{
+                __html: DOMPurify.sanitize(campaign.description || ""),
+              }}
+            />
+          </Grid>
 
-        open={openRegister}
+          {/* ============ SIDEBAR: details + form ============ */}
+          <Grid item xs={12} md={4}>
+            <Paper
+              ref={formRef}
+              sx={{
+                p: 4,
+                borderRadius: 4,
+                position: { md: "sticky" },
+                top: 120,
+                boxShadow: "0 10px 30px rgba(0,0,0,0.06)",
+              }}
+            >
+              <Typography variant="h6" fontWeight="bold" mb={2}>
+                Campaign Details
+              </Typography>
 
-        onClose={() =>
-          setOpenRegister(false)
-        }
+              <Stack spacing={1.5} mb={3}>
+                {fmt(campaign.startDate) && (
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <CalendarMonth fontSize="small" color="action" />
+                    <Typography variant="body2">
+                      Starts: {fmt(campaign.startDate)}
+                    </Typography>
+                  </Stack>
+                )}
+                {fmt(campaign.endDate) && (
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <CalendarMonth fontSize="small" color="action" />
+                    <Typography variant="body2">
+                      Ends: {fmt(campaign.endDate)}
+                    </Typography>
+                  </Stack>
+                )}
+                {remaining && (
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <AccessTime fontSize="small" color="action" />
+                    <Typography variant="body2">{remaining}</Typography>
+                  </Stack>
+                )}
+              </Stack>
 
-        campaign={campaign}
-      />
+              <Divider sx={{ mb: 3 }} />
 
+              {/* External registration */}
+              {hasExternalLink && (
+                <Button
+                  fullWidth
+                  size="large"
+                  variant="contained"
+                  onClick={handleRegisterClick}
+                  sx={{ py: 1.4, borderRadius: 100, fontWeight: 700 }}
+                >
+                  Register Now
+                </Button>
+              )}
+
+              {/* Internal registration form */}
+              {needsInternalRegistration && (
+                <>
+                  <Typography fontWeight="bold" mb={2}>
+                    Register for this campaign
+                  </Typography>
+
+                  {success ? (
+                    <Alert severity="success">
+                      {success}. A confirmation email is on its way.
+                    </Alert>
+                  ) : (
+                    <Box component="form" onSubmit={handleSubmit} noValidate>
+                      <Stack spacing={2}>
+                        {error && <Alert severity="error">{error}</Alert>}
+
+                        <TextField
+                          fullWidth
+                          required
+                          label="Full Name"
+                          name="fullName"
+                          value={form.fullName}
+                          onChange={handleChange}
+                        />
+
+                        <TextField
+                          fullWidth
+                          required
+                          type="email"
+                          label="Email Address"
+                          name="email"
+                          value={form.email}
+                          onChange={handleChange}
+                        />
+
+                        <Button
+                          type="submit"
+                          size="large"
+                          variant="contained"
+                          disabled={submitting}
+                          sx={{ py: 1.4, borderRadius: 100, fontWeight: 700 }}
+                        >
+                          {submitting ? (
+                            <CircularProgress size={24} sx={{ color: "#fff" }} />
+                          ) : (
+                            "Register"
+                          )}
+                        </Button>
+                      </Stack>
+                    </Box>
+                  )}
+                </>
+              )}
+
+              {/* No registration needed */}
+              {!hasExternalLink && !needsInternalRegistration && (
+                <Alert severity="info">No registration is required for this campaign.</Alert>
+              )}
+            </Paper>
+          </Grid>
+        </Grid>
+      </Container>
     </Box>
   );
 };
 
-export default
-PublicCampaignDetails;
+export default PublicCampaignDetails;

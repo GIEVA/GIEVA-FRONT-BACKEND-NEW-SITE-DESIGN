@@ -43,12 +43,8 @@ const PublicCampaigns =
 
         try {
 
-          const res =
-            await getPublicCampaigns();
-
-          setCampaigns(
-            res.campaigns || []
-          );
+         const res = await getPublicCampaigns();
+         setCampaigns(Array.isArray(res) ? res : res?.campaigns || []);
 
         } catch (error) {
 

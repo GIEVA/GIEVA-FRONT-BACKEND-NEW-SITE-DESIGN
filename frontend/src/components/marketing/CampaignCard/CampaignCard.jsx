@@ -10,7 +10,7 @@ import {
     Typography,
     Box,
 } from "@mui/material";
-
+import { useNavigate } from "react-router-dom";
 import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
 
 export default function CampaignCard({
@@ -19,6 +19,13 @@ export default function CampaignCard({
     sx = {},
 }) {
     const stripHtml = (html = "") => html.replace(/<[^>]*>/g, "");
+
+    const navigate = useNavigate();
+
+const handleClick = () => {
+    if (onClick) return onClick(campaign);
+    navigate(`/campaigns/${campaign.slug || campaign.id}`);
+};
 
     return (
         <Card
@@ -38,10 +45,8 @@ export default function CampaignCard({
                 ...sx,
             }}
         >
-            <CardActionArea
-                sx={{ height: "100%" }}
-                onClick={() => onClick?.(campaign)}
-            >
+            <CardActionArea sx={{ height: "100%" }} onClick={handleClick}>
+
                 <CardMedia
                     component="img"
                     height="220"
@@ -133,6 +138,8 @@ CampaignCard.propTypes = {
         imageUrl: PropTypes.string,
 
         featured: PropTypes.bool,
+
+        slug: PropTypes.string,
 
         type: PropTypes.string,
     }).isRequired,
