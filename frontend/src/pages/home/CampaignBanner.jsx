@@ -194,11 +194,7 @@ export default function CampaignBanner() {
                 )}
             </Box>
 
-            <CampaignModal
-                open={modalOpen}
-                campaignId={selectedId}
-                onClose={() => setModalOpen(false)}
-            />
+            
         </>
     );
 }
