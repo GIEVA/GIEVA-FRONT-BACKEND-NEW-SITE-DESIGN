@@ -45,7 +45,11 @@ export const registerWebinarGuest = async (req, res) => {
 
     const fullName = String(req.body.fullName || "").trim();
     const email = String(req.body.email || "").trim().toLowerCase();
-    const age = Number(req.body.age);
+        const rawAge = req.body.age;
+    const age =
+      rawAge === undefined || rawAge === null || String(rawAge).trim() === ""
+        ? null
+        : Number(rawAge);
     const consent = req.body.consent === true;
 
     if (fullName.length < 2 || fullName.length > 150) {
@@ -59,8 +63,8 @@ export const registerWebinarGuest = async (req, res) => {
       return res.status(400).json({ message: "Enter a valid email address" });
     }
 
-    if (!Number.isInteger(age) || age < 1 || age > 120) {
-      return res.status(400).json({ message: "Enter a valid age" });
+    if (age !== null && (!Number.isInteger(age) || age < 1 || age > 120)) {
+      return res.status(400).json({ message: "If you enter an age, it must be between 1 and 120" });
     }
 
     if (!consent) {

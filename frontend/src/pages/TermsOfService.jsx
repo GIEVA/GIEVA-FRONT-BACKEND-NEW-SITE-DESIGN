@@ -125,6 +125,19 @@ export default function TermsOfService() {
           </P>
         </Section>
 
+                <Section title="5A. Webinars and Live Events">
+          <List
+            items={[
+              "Webinars and other live events hosted by GIEVA may be joined by registered users or by guests who register with a name and email address. By registering for or joining a webinar, you confirm that the information you give is accurate and that you accept these Terms and our Privacy Policy.",
+              "Admission to a webinar is at the discretion of the host and GIEVA. We may refuse, remove, or restrict any participant whose conduct disrupts the event or breaches these Terms, without refund where a fee was paid.",
+              "Webinars may be audio and video recorded, and may be transcribed or summarised using automated tools. Recordings, transcripts, and notes may include your name, voice, image, chat messages, questions, and whiteboard contributions. If you do not want to be recorded, do not turn on your microphone or camera, and do not submit questions or chat messages.",
+              "GIEVA may make a recording or summary available to registrants and may use it to provide and promote our services.",
+              "By registering for a webinar, you agree that GIEVA may email you about that webinar (confirmations, reminders, schedule changes, and follow-up materials) and about future webinars, events, courses, and services that we believe may interest you. You may opt out of promotional emails at any time using the unsubscribe link in any such email or by writing to contact@gieva.org. Opting out does not stop service messages about a webinar you registered for.",
+              "You must not record, screen-capture, redistribute, or publish any webinar content without our written permission.",
+            ]}
+          />
+        </Section>
+
         <Section title="6. Intellectual Property">
           <P>
             All content on the Platform, including but not limited to text, graphics, logos, course materials,

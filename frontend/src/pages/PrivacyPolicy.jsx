@@ -68,7 +68,10 @@ export default function PrivacyPolicy() {
               "Documents you upload: passports, transcripts, statements of purpose, recommendation letters, bank statements, and other files submitted for HEALS applications, exam registration, or consultancy services.",
               "Communications: messages sent via contact forms, consultation bookings, campaign registrations, or support requests.",
               "Content you submit: course progress, quiz responses, live class attendance, and any material you upload as a tutor or student.",
-            ]}
+              "Webinar registration information: for guests without an account, your full name, email address, and (optionally) age, together with your admission status and join and leave times.",
+              "Webinar participation data: questions you ask, votes, reactions, chat messages, whiteboard contributions, and audio or video you choose to share, which may be captured in session recordings.",
+            ]
+          }
           />
           <P><strong>b. Information collected automatically:</strong></P>
           <List
@@ -89,6 +92,18 @@ export default function PrivacyPolicy() {
               "To monitor, maintain, and improve the security, performance, and functionality of the Platform.",
               "To detect, investigate, and prevent fraud, abuse, or violations of our Terms and Conditions.",
               "To comply with legal obligations, including tax, financial reporting, and regulatory requirements.",
+            ]}
+          />
+        </Section>
+
+                <Section title="2A. Webinars, Recordings, and Event Communications">
+          <List
+            items={[
+              "Registration and admission: we use your name and email address to register you, let the host admit you, and send you your confirmation, reminders, and any schedule change.",
+              "Recordings and notes: webinars may be recorded. Recordings may be processed by third-party transcription and AI tools to produce transcripts and summary notes. They may be stored with our cloud storage providers and shared with registrants.",
+              "Future events and marketing: when you register for a webinar and accept our Terms and this Privacy Policy, you agree that we may email you about future webinars, events, courses, and services. We do not sell your email address, and we do not share it with third parties for their own marketing.",
+              "Opting out: every promotional email contains an unsubscribe link. You can also withdraw this consent at any time by emailing contact@gieva.org. We will stop sending promotional emails promptly. Withdrawing consent does not affect messages needed for a webinar you have already registered for.",
+              "Retention: we keep webinar registration details for as long as needed to run the event, keep attendance records, and, until you opt out, to tell you about future events.",
             ]}
           />
         </Section>

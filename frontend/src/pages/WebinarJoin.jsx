@@ -303,23 +303,21 @@ export default function WebinarJoin() {
 
     const fullName = guestForm.fullName.trim();
     const email = guestForm.email.trim();
-    const age = Number(guestForm.age);
+    const ageText = String(guestForm.age ?? "").trim();
+    const age = ageText === "" ? null : Number(ageText);
 
     if (!guestForm.consent) {
       setError("Please provide consent before registering.");
       return;
     }
 
-    if (
-      !fullName ||
-      !email ||
-      !Number.isFinite(age) ||
-      age < 1 ||
-      age > 120
-    ) {
-      setError(
-        "Please enter your full name, a valid email address, and an age between 1 and 120."
-      );
+        if (!fullName || !email) {
+      setError("Please enter your full name and a valid email address.");
+      return;
+    }
+
+    if (age !== null && (!Number.isFinite(age) || age < 1 || age > 120)) {
+      setError("If you enter an age, it must be between 1 and 120.");
       return;
     }
 
@@ -633,17 +631,13 @@ export default function WebinarJoin() {
                 sx={{ mb: 2 }}
               />
 
-              <TextField
+                           <TextField
                 fullWidth
-                required
                 type="number"
-                label="Age"
+                label="Age (optional)"
                 value={guestForm.age}
                 onChange={(e) =>
-                  setGuestForm((prev) => ({
-                    ...prev,
-                    age: e.target.value,
-                  }))
+                  setGuestForm((prev) => ({ ...prev, age: e.target.value }))
                 }
                 inputProps={{ min: 1, max: 120 }}
                 sx={{ mb: 2 }}
@@ -661,7 +655,14 @@ export default function WebinarJoin() {
                     }
                   />
                 }
-                label="I consent to the processing of my registration details for this webinar."
+                label={
+                  <Typography sx={{ fontSize: 13.5 }}>
+                    I agree to the{" "}
+                    <a href="/terms" target="_blank" rel="noreferrer">Terms and Conditions</a> and{" "}
+                    <a href="/privacy" target="_blank" rel="noreferrer">Privacy Policy</a>, and to
+                    receive emails about this webinar and GIEVA's future events. I can unsubscribe at any time.
+                  </Typography>
+                }
               />
 
               <Button
