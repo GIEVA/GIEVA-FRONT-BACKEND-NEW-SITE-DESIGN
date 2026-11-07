@@ -169,7 +169,6 @@ import "katex/dist/katex.min.css";
 
 import RootRedirect from "./components/RootRedirect";
 
-import CampaignRegister from "./pages/CampaignRegister";
 
 
 
@@ -231,9 +230,6 @@ function App() {
           path="/campaigns"
           element={<PublicCampaigns />}
         />
-
-        <Route path="/campaigns/:id/register" element={<CampaignRegister />} />
-
 
         <Route
           path="/campaigns/:id"
