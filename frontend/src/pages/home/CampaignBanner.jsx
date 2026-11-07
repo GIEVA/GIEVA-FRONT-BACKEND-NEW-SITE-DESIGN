@@ -1,11 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Box, Typography, IconButton } from "@mui/material";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import ArrowForwardRoundedIcon from "@mui/icons-material/ArrowForwardRounded";
 
 import { getPublicCampaigns } from "../../services/publicCampaignService";
-import CampaignModal from "../../components/marketing/CampaignModal/CampaignModal";
 
 const NAVY   = "#0B1F3A";
 const GREEN  = "#1E7F4F";
@@ -16,40 +16,39 @@ const DISMISS_KEY = "gieva-campaign-banner-dismissed";
 
 const daysUntil = (dateStr) => {
     if (!dateStr) return null;
-    const diff = new Date(dateStr) - new Date();
-    const days = Math.ceil(diff / 86400000);
-    return days;
+    return Math.ceil((new Date(dateStr) - new Date()) / 86400000);
+};
+
+const readDismissed = () => {
+    try { return sessionStorage.getItem(DISMISS_KEY) === "true"; }
+    catch { return false; }
 };
 
 export default function CampaignBanner() {
     const prefersReducedMotion = useReducedMotion();
+    const navigate = useNavigate();
 
     const [campaigns, setCampaigns] = useState([]);
     const [index, setIndex] = useState(0);
-    const [dismissed, setDismissed] = useState(
-        () => sessionStorage.getItem(DISMISS_KEY) === "true"
-    );
-    const [selectedId, setSelectedId] = useState(null);
-    const [modalOpen, setModalOpen] = useState(false);
+    const [dismissed, setDismissed] = useState(readDismissed);
 
     useEffect(() => {
         let isMounted = true;
         getPublicCampaigns()
             .then((data) => {
                 if (!isMounted) return;
-                const list = Array.isArray(data) ? data : [];
-                // Prioritize featured campaigns; fall back to all active ones.
+                const list = Array.isArray(data) ? data : data?.campaigns || [];
                 const featured = list.filter((c) => c.featured);
                 const pool = featured.length > 0 ? featured : list;
-                // Soonest deadline first — most urgent gets shown sooner.
-                const sorted = [...pool].sort((a, b) => {
-                    const da = a.endDate ? new Date(a.endDate) : Infinity;
-                    const db = b.endDate ? new Date(b.endDate) : Infinity;
-                    return da - db;
-                });
+                const time = (c) =>
+                    c.endDate ? new Date(c.endDate).getTime() : Number.MAX_SAFE_INTEGER;
+                const sorted = [...pool].sort((a, b) => time(a) - time(b));
                 setCampaigns(sorted.slice(0, 5));
             })
-            .catch(() => setCampaigns([]));
+            .catch((err) => {
+                console.error("Campaign banner fetch failed:", err);
+                setCampaigns([]);
+            });
         return () => { isMounted = false; };
     }, []);
 
@@ -64,14 +63,13 @@ export default function CampaignBanner() {
     const current = campaigns[index];
 
     const handleDismiss = () => {
-        sessionStorage.setItem(DISMISS_KEY, "true");
+        try { sessionStorage.setItem(DISMISS_KEY, "true"); } catch { /* ignore */ }
         setDismissed(true);
     };
 
     const handleOpen = () => {
         if (!current) return;
-        setSelectedId(current.id);
-        setModalOpen(true);
+        navigate(`/campaigns/${current.slug || current.id}`);
     };
 
     if (dismissed || campaigns.length === 0 || !current) return null;
