@@ -148,45 +148,17 @@ export const initializeCoursePayment = async (req, res) => {
  * ================================
  * Body: { reference }
  */
-export const verifyPayment = async (req, res) => {
+// ================================
+// SHARED: used by verify + webhook
+// ================================
+export const finalizeCoursePayment = async (reference, paymentData) => {
   const t = await sequelize.transaction();
+  let payment, user, course, amountPaid;
 
   try {
-    const { reference } = req.body;
+    amountPaid = paymentData.amount / 100;
 
-    if (!reference) {
-      return res.status(400).json({
-        message: "Payment reference required",
-      });
-    }
-
-    // ================= VERIFY WITH PAYSTACK =================
-    const response = await axios.get(
-      `${PAYSTACK_BASE}/transaction/verify/${reference}`,
-      {
-        headers: {
-          Authorization: `Bearer ${PAYSTACK_SECRET}`,
-        },
-      }
-    );
-
-    const paymentData = response.data.data;
-
-    if (!paymentData || paymentData.status !== "success") {
-      await Payment.update(
-        { status: "failed" },
-        { where: { transactionRef: reference } }
-      );
-
-      return res.status(400).json({
-        message: "Payment failed",
-      });
-    }
-
-    const amountPaid = paymentData.amount / 100;
-
-    // ================= LOCK PAYMENT ROW =================
-    const payment = await Payment.findOne({
+    payment = await Payment.findOne({
       where: { transactionRef: reference },
       transaction: t,
       lock: t.LOCK.UPDATE,
@@ -194,63 +166,40 @@ export const verifyPayment = async (req, res) => {
 
     if (!payment) {
       await t.rollback();
-      return res.status(404).json({
-        message: "Payment not found",
-      });
+      return { error: "Payment not found", status: 404 };
     }
 
-    // ================= IDEMPOTENCY =================
     if (payment.status === "success") {
       await t.commit();
-      return res.json({
-        message: "Payment already verified",
-        amountPaid,
-      });
+      return { alreadyDone: true, amountPaid };
     }
 
-    const startDate = new Date();
-
-    const endDate = new Date();
-
-    endDate.setMonth(
-      endDate.getMonth() + payment.durationMonths
-    );
-
-    payment.subscriptionStartDate = startDate;
-    payment.subscriptionEndDate = endDate;
-
-    // ================= SECURITY CHECK =================
     if (amountPaid !== Number(payment.amount)) {
       await t.rollback();
-      return res.status(400).json({
-        message: "Amount mismatch. Possible fraud detected.",
-      });
+      return { error: "Amount mismatch. Possible fraud detected.", status: 400 };
     }
 
-    // ================= FETCH RELATED DATA =================
-    const user = await User.findByPk(payment.userId, { transaction: t });
-    const course = await Course.findByPk(payment.courseId, { transaction: t });
+    user = await User.findByPk(payment.userId, { transaction: t });
+    course = await Course.findByPk(payment.courseId, { transaction: t });
 
     if (!user || !course) {
       await t.rollback();
-      return res.status(404).json({
-        message: "User or Course not found",
-      });
+      return { error: "User or Course not found", status: 404 };
     }
 
-    // ================= UPDATE PAYMENT =================
+    const startDate = new Date();
+    const endDate = new Date();
+    endDate.setMonth(endDate.getMonth() + payment.durationMonths);
+
+    payment.subscriptionStartDate = startDate;
+    payment.subscriptionEndDate = endDate;
     payment.status = "success";
     payment.paidAt = new Date();
     payment.gatewayResponse = paymentData;
-
     await payment.save({ transaction: t });
 
-    // ================= ENROLL USER =================
     const existingEnrollment = await Enrollment.findOne({
-      where: {
-        studentId: payment.userId,
-        courseId: payment.courseId,
-      },
+      where: { studentId: payment.userId, courseId: payment.courseId },
       transaction: t,
     });
 
@@ -267,20 +216,15 @@ export const verifyPayment = async (req, res) => {
       );
     }
 
-    // ================= LOG =================
     await ActivityLog.create(
       {
         userId: payment.userId,
         action: "PAYMENT_SUCCESS",
-        meta: {
-          paymentId: payment.id,
-          courseId: payment.courseId,
-        },
+        meta: { paymentId: payment.id, courseId: payment.courseId },
       },
       { transaction: t }
     );
 
-    // ================= NOTIFICATION =================
     await Notification.create(
       {
         userId: payment.userId,
@@ -292,12 +236,14 @@ export const verifyPayment = async (req, res) => {
       { transaction: t }
     );
 
-    // ✅ COMMIT BEFORE EXTERNAL CALLS
     await t.commit();
+  } catch (err) {
+    try { await t.rollback(); } catch { /* already finished */ }
+    throw err;
+  }
 
-    // ================= SIDE EFFECTS (OUTSIDE TX) =================
-
-    // 📄 Generate receipt
+  // ===== Side effects AFTER commit: a failure here only gets logged =====
+  try {
     const pdfBuffer = await generateReceiptPDF({
       fullName: user.fullName,
       email: user.email,
@@ -310,20 +256,13 @@ export const verifyPayment = async (req, res) => {
       duration: payment.durationMonths,
     });
 
-    // 📧 Send receipt email
     await sendEmail(
       user.email,
       "🧾 Payment Receipt",
       paymentReceiptTemplate(user.fullName, course.title, amountPaid),
-      [
-        {
-          filename: "receipt.pdf",
-          content: pdfBuffer,
-        },
-      ]
+      [{ filename: "receipt.pdf", content: pdfBuffer }]
     );
 
-    // 👨‍🏫 Notify tutor
     if (course.tutorProfileId) {
       const tutor = await TutorProfile.findOne({
         where: { id: course.tutorProfileId },
@@ -338,26 +277,100 @@ export const verifyPayment = async (req, res) => {
         );
       }
     }
-
-    return res.json({
-      message: "Payment verified successfully",
-      amountPaid,
-      courseUnlocked: true,
-    });
-
   } catch (err) {
-    console.error(err.response?.data || err.message);
+    console.error("[course payment] receipt/email failed:", err?.message || err);
+  }
 
-    // 🔥 VERY IMPORTANT
-    try {
-      await t.rollback();
-    } catch (rollbackErr) {
-      console.error("Rollback failed:", rollbackErr.message);
+  return { payment, amountPaid };
+};
+
+// ================================
+// VERIFY PAYMENT (callback page)
+// Body: { reference }
+// ================================
+export const verifyPayment = async (req, res) => {
+  try {
+    const { reference } = req.body;
+    if (!reference) {
+      return res.status(400).json({ message: "Payment reference required" });
     }
 
-    return res.status(500).json({
-      message: "Payment verification failed",
+    const response = await axios.get(
+      `${PAYSTACK_BASE}/transaction/verify/${encodeURIComponent(reference)}`,
+      { headers: { Authorization: `Bearer ${PAYSTACK_SECRET}` } }
+    );
+    const paymentData = response.data.data;
+
+    if (!paymentData || paymentData.status !== "success") {
+      await Payment.update(
+        { status: "failed" },
+        { where: { transactionRef: reference, status: "pending" } }
+      );
+      return res.status(400).json({ message: "Payment failed" });
+    }
+
+    const result = await finalizeCoursePayment(reference, paymentData);
+
+    if (result.error) {
+      return res.status(result.status || 400).json({ message: result.error });
+    }
+
+    return res.json({
+      message: result.alreadyDone
+        ? "Payment already verified"
+        : "Payment verified successfully",
+      amountPaid: result.amountPaid,
+      courseUnlocked: true,
     });
+  } catch (err) {
+    console.error(err.response?.data || err.message);
+    return res.status(500).json({ message: "Payment verification failed" });
+  }
+};
+
+// ================================
+// WEBHOOK (Paystack → server)
+// ================================
+export const coursePaymentWebhook = async (req, res) => {
+  try {
+    const raw = Buffer.isBuffer(req.body)
+      ? req.body
+      : Buffer.from(JSON.stringify(req.body || {}));
+
+    const expected = crypto
+      .createHmac("sha512", PAYSTACK_SECRET)
+      .update(raw)
+      .digest("hex");
+    const given = String(req.get("x-paystack-signature") || "");
+
+    const ok =
+      given.length === expected.length &&
+      crypto.timingSafeEqual(Buffer.from(given), Buffer.from(expected));
+    if (!ok) return res.sendStatus(401);
+
+    const event = JSON.parse(raw.toString("utf8"));
+    const reference = event?.data?.reference;
+
+    if (event.event === "charge.success" && reference) {
+      // Course references are Paystack-generated (no prefix), so we
+      // recognise them by looking the reference up in our own table.
+      const known = await Payment.findOne({ where: { transactionRef: reference } });
+
+      if (known) {
+        const { data } = await axios.get(
+          `${PAYSTACK_BASE}/transaction/verify/${encodeURIComponent(reference)}`,
+          { headers: { Authorization: `Bearer ${PAYSTACK_SECRET}` } }
+        );
+        if (data.data.status === "success") {
+          await finalizeCoursePayment(reference, data.data);
+        }
+      }
+    }
+
+    return res.sendStatus(200);
+  } catch (err) {
+    console.error("[course] webhook", err.response?.data || err);
+    return res.sendStatus(500); // Paystack will retry
   }
 };
 

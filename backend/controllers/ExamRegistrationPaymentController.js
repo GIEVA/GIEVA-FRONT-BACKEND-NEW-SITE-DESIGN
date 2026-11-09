@@ -1,5 +1,5 @@
-// controllers/ExamRegistrationPaymentController.js
 import axios from "axios";
+import crypto from "crypto";
 import { Op } from "sequelize";
 import models from "../models/index.js";
 
@@ -9,10 +9,12 @@ const {
   ActivityLog,
   User,
   StudentProfile,
-  ExamType, // ← new
+  ExamType,
 } = models;
 
-const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET_KEY;
+const PAYSTACK_BASE = process.env.PAYSTACK_BASE || "https://api.paystack.co";
+const secret = () => process.env.PAYSTACK_SECRET_KEY;
+const paystackAuth = () => ({ headers: { Authorization: `Bearer ${secret()}` } });
 
 const safePaymentInclude = {
   model:      ExamPayment,
@@ -88,7 +90,7 @@ export const initializeExamPayment = async (req, res) => {
 
     if (!payment) {
       const paystackRes = await axios.post(
-        "https://api.paystack.co/transaction/initialize",
+       `${PAYSTACK_BASE}/transaction/initialize`,
         {
           email:  user.email,
           amount: amountKobo,
@@ -102,7 +104,7 @@ export const initializeExamPayment = async (req, res) => {
           },
           callback_url: `${process.env.FRONTEND_URL}/exam-payments/verify`,
         },
-        { headers: { Authorization: `Bearer ${PAYSTACK_SECRET}` } }
+        paystackAuth()
       );
 
       const { reference, authorization_url } = paystackRes.data.data;
@@ -141,18 +143,93 @@ export const initializeExamPayment = async (req, res) => {
 // ─────────────────────────────────────────────────────────────
 // VERIFY PAYMENT
 // ─────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
+// SHARED: used by verify + webhook. Safe to run twice.
+// ─────────────────────────────────────────────────────────────
+export const finalizeExamPayment = async (reference, tx) => {
+  const t = await ExamPayment.sequelize.transaction();
+  let payment, registration;
+
+  try {
+    payment = await ExamPayment.findOne({
+      where: { transactionRef: reference },
+      transaction: t,
+      lock: t.LOCK.UPDATE,
+    });
+
+    if (!payment) {
+      await t.rollback();
+      return { error: "Payment record not found", status: 404 };
+    }
+
+    if (payment.status === "success") {
+      await t.rollback();
+      return { payment, alreadyDone: true };
+    }
+
+    // Paystack amount is in kobo; we stored NGN
+    if (Math.round(Number(payment.amount) * 100) !== Number(tx.amount)) {
+      await t.rollback();
+      return { error: "Amount paid does not match the expected amount", status: 400 };
+    }
+
+    registration = await ExamRegistration.findByPk(payment.registrationId, {
+      transaction: t,
+      lock: t.LOCK.UPDATE,
+    });
+
+    await payment.update(
+      {
+        status: "success",
+        gatewayResponse: tx,
+        paidAt: new Date(),
+        channel: tx.channel,
+      },
+      { transaction: t }
+    );
+
+    if (registration) {
+      await registration.update(
+        {
+          status: "submitted",
+          paymentStatus: "success",
+          submittedAt: new Date(),
+        },
+        { transaction: t }
+      );
+    }
+
+    await t.commit();
+  } catch (err) {
+    try { await t.rollback(); } catch { /* already finished */ }
+    throw err;
+  }
+
+  // After commit, so a logging failure can't undo a successful payment
+  await ActivityLog.create({
+    userId: payment.userId,
+    action: "EXAM_PAYMENT_SUCCESS",
+    meta: { reference, paymentId: payment.id },
+  }).catch(() => {});
+
+  return { payment, registration };
+};
+
+// ─────────────────────────────────────────────────────────────
+// VERIFY PAYMENT (callback page)
+// ─────────────────────────────────────────────────────────────
 export const verifyExamPayment = async (req, res) => {
   try {
-    const userId        = req.user.id;
+    const userId = req.user.id;
     const { reference } = req.body;
 
     if (!reference) {
       return res.status(400).json({ message: "reference is required" });
     }
 
+    // userId in the filter: users can only verify their own payments
     const payment = await ExamPayment.findOne({
-      where:   { transactionRef: reference },
-      include: [{ model: ExamRegistration, as: "registration", required: false }],
+      where: { transactionRef: reference, userId },
     });
 
     if (!payment) {
@@ -161,53 +238,112 @@ export const verifyExamPayment = async (req, res) => {
 
     if (payment.status === "success") {
       return res.json({
-        message:   "Payment already verified",
-        success:   true,
+        message: "Payment already verified",
+        success: true,
         payment,
         paymentId: payment.id,
       });
     }
 
-    const paystackRes = await axios.get(
-      `https://api.paystack.co/transaction/verify/${reference}`,
-      { headers: { Authorization: `Bearer ${PAYSTACK_SECRET}` } }
+    const { data } = await axios.get(
+      `${PAYSTACK_BASE}/transaction/verify/${encodeURIComponent(reference)}`,
+      paystackAuth()
     );
+    const tx = data.data;
 
-    const txData    = paystackRes.data.data;
-    const isSuccess = txData.status === "success";
+    if (tx.status === "success") {
+      const result = await finalizeExamPayment(reference, tx);
 
-    await payment.update({
-      status:           isSuccess ? "success" : "failed",
-      gatewayResponse:  txData,
-      paidAt:           isSuccess ? new Date() : null,
-      channel:          txData.channel,
-    });
+      if (result.error) {
+        return res.status(result.status || 400).json({
+          message: result.error,
+          success: false,
+        });
+      }
 
-    if (isSuccess && payment.registration) {
-      await payment.registration.update({
-        status: "submitted",
-        paymentStatus: "success",
-        submittedAt: new Date(),
+      return res.json({
+        message: result.alreadyDone
+          ? "Payment already verified"
+          : "Payment verified successfully",
+        success: true,
+        payment: result.payment,
+        paymentId: result.payment.id,
       });
-    } else if (payment.registration) {
-      await payment.registration.update({ paymentStatus: "failed" });
     }
 
-    await ActivityLog.create({
-      userId,
-      action: isSuccess ? "EXAM_PAYMENT_SUCCESS" : "EXAM_PAYMENT_FAILED",
-      meta:   { reference, paymentId: payment.id },
-    }).catch(() => {});
+    // Only mark failed when Paystack says so; "pending"/"ongoing" may still complete
+    if (["failed", "abandoned"].includes(tx.status)) {
+      await payment.update({
+        status: "failed",
+        gatewayResponse: tx,
+        channel: tx.channel,
+      });
+      await ExamRegistration.update(
+        { paymentStatus: "failed" },
+        { where: { id: payment.registrationId } }
+      );
+      await ActivityLog.create({
+        userId,
+        action: "EXAM_PAYMENT_FAILED",
+        meta: { reference, paymentId: payment.id },
+      }).catch(() => {});
+    }
 
-    res.json({
-      message:   isSuccess ? "Payment verified successfully" : "Payment failed",
-      success:   isSuccess,
+    return res.status(400).json({
+      message: "Payment not completed",
+      success: false,
       payment,
       paymentId: payment.id,
     });
   } catch (error) {
     console.error("verifyExamPayment error:", error?.response?.data || error);
     res.status(500).json({ message: "Failed to verify payment" });
+  }
+};
+
+// ─────────────────────────────────────────────────────────────
+// WEBHOOK (Paystack → server)
+// ─────────────────────────────────────────────────────────────
+export const examPaymentWebhook = async (req, res) => {
+  try {
+    const raw = Buffer.isBuffer(req.body)
+      ? req.body
+      : Buffer.from(JSON.stringify(req.body || {}));
+
+    const expected = crypto
+      .createHmac("sha512", secret())
+      .update(raw)
+      .digest("hex");
+    const given = String(req.get("x-paystack-signature") || "");
+
+    const ok =
+      given.length === expected.length &&
+      crypto.timingSafeEqual(Buffer.from(given), Buffer.from(expected));
+    if (!ok) return res.sendStatus(401);
+
+    const event = JSON.parse(raw.toString("utf8"));
+    const reference = event?.data?.reference;
+
+    if (event.event === "charge.success" && reference) {
+      // Exam references are Paystack-generated (no prefix), so recognise
+      // them by looking the reference up in our own table.
+      const known = await ExamPayment.findOne({ where: { transactionRef: reference } });
+
+      if (known) {
+        const { data } = await axios.get(
+          `${PAYSTACK_BASE}/transaction/verify/${encodeURIComponent(reference)}`,
+          paystackAuth()
+        );
+        if (data.data.status === "success") {
+          await finalizeExamPayment(reference, data.data);
+        }
+      }
+    }
+
+    return res.sendStatus(200);
+  } catch (err) {
+    console.error("[exam] webhook", err.response?.data || err);
+    return res.sendStatus(500); // Paystack will retry
   }
 };
 

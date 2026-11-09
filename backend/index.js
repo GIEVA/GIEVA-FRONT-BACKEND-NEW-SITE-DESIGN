@@ -97,6 +97,10 @@ import adminProjectRoutes from "./routes/adminProject.routes.js"
 import projectRoutes from "./routes/project.routes.js"
 import adminHealsRoutes from "./routes/adminHeals.routes.js";
 
+import { paystackWebhook } from "./controllers/paystackWebhook.controller.js";
+
+
+
 
 import { createServer } from "http";
 import { Server } from "socket.io";
@@ -145,6 +149,13 @@ startCampaignEmailScheduler();
 startEmailScheduler();
 
 // Paystack webhook needs the raw body to verify the signature, so it must come BEFORE express.json()
+
+app.post(
+  "/api/paystack/webhook",
+  express.raw({ type: "application/json" }),
+  paystackWebhook
+);
+
 app.post(
   "/api/heals-payments/webhook",
   express.raw({ type: "application/json" }),
