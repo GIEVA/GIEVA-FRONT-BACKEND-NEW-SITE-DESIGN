@@ -1222,16 +1222,18 @@ const ControlBar = ({
         </Tooltip>
         )}
 
-        <Tooltip title="Participants">
-          <Badge badgeContent={participantCount} color="primary" max={99}>
-            <IconButton onClick={onParticipants}
-              sx={{ width: 48, height: 48, borderRadius: 2.5,
-                    bgcolor: "rgba(255,255,255,0.06)", color: MUTED_D,
-                    "&:hover": { bgcolor: "rgba(255,255,255,0.12)" } }}>
-              <PeopleAlt />
-            </IconButton>
-          </Badge>
-        </Tooltip>
+        {(!webinar?.active || webinar.canManage) && (
+          <Tooltip title="Participants">
+            <Badge badgeContent={participantCount} color="primary" max={99}>
+              <IconButton onClick={onParticipants}
+                sx={{ width: 48, height: 48, borderRadius: 2.5,
+                      bgcolor: "rgba(255,255,255,0.06)", color: MUTED_D,
+                      "&:hover": { bgcolor: "rgba(255,255,255,0.12)" } }}>
+                <PeopleAlt />
+              </IconButton>
+            </Badge>
+          </Tooltip>
+        )}
 
         {role === "host" && (
           <Tooltip title="Waiting room">
@@ -1860,15 +1862,17 @@ useEffect(() => {
       />
 
       {/* ── CHANGE 5: pass role + sessionId + onToast into ParticipantsDrawer ── */}
-      <ParticipantsDrawer
-        open={participantsOpen}
-        onClose={() => setParticipantsOpen(false)}
-        role={role}
-        sessionId={sessionId}
-        onToast={setToast}
-        webinar={webinarCtx}
-        raisedHands={raisedHands}
-      />
+      {(!webinarCtx || webinarCtx.canManage) && (
+        <ParticipantsDrawer
+          open={participantsOpen}
+          onClose={() => setParticipantsOpen(false)}
+          role={role}
+          sessionId={sessionId}
+          onToast={setToast}
+          webinar={webinarCtx}
+          raisedHands={raisedHands}
+        />
+      )}
 
       {webinarCtx && (
         <>
