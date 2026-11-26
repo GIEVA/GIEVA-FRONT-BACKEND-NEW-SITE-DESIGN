@@ -1885,7 +1885,7 @@ useEffect(() => {
       {webinarCtx && (
         <>
           <Drawer anchor="right" open={qaOpen} onClose={() => setQaOpen(false)} keepMounted
-            PaperProps={{ sx: { width: { xs: "100%", sm: 400 }, bgcolor: DARK2, p: 2, zIndex: 1400 } }} sx={{ zIndex: 1400 }}>
+            PaperProps={{ sx: { width: { xs: "100%", sm: 400 }, bgcolor: DARK2, color: TEXT, p: 2, zIndex: 1400 } }} sx={{ zIndex: 1400 }}>
             <ThemeProvider theme={darkTheme}>
               <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
                 <IconButton onClick={() => setQaOpen(false)} sx={{ color: MUTED_D }}><Close /></IconButton>
@@ -1922,7 +1922,7 @@ useEffect(() => {
       
       {canUsePolls && (
         <Drawer anchor="right" open={pollsOpen} onClose={() => setPollsOpen(false)} keepMounted
-          PaperProps={{ sx: { width: { xs: "100%", sm: 380 }, bgcolor: DARK2, p: 2 } }}>
+          PaperProps={{ sx: { width: { xs: "100%", sm: 380 }, bgcolor: DARK2, color: TEXT, p: 2 } }}>
           <ThemeProvider theme={darkTheme}>
             <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
               <IconButton onClick={() => setPollsOpen(false)} sx={{ color: MUTED_D }}><Close /></IconButton>

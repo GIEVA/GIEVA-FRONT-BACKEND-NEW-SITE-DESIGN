@@ -86,7 +86,16 @@ export default function QaPanel({ sessionId, room, canManage, qaEnabled = true, 
     } catch (e) { setMsg({ s: "error", t: err(e, "Export failed") }); }
   };
 
-  const shown = (items || []).filter((q) => (tab === "open" ? ["open", "live"].includes(q.status) : tab === "answered" ? q.status === "answered" : q.status === "dismissed"));
+  //const shown = (items || []).filter((q) => (tab === "open" ? ["open", "live"].includes(q.status) : tab === "answered" ? q.status === "answered" : q.status === "dismissed"));
+  const shown = (items || []).filter((q) => {
+  // Attendees and guests see every question (open, live and answered). The server already hides dismissed ones.
+  if (!canManage) return q.status !== "dismissed";
+  return tab === "open"
+    ? ["open", "live"].includes(q.status)
+    : tab === "answered"
+      ? q.status === "answered"
+      : q.status === "dismissed";
+});
   const counts = {
     open: (items || []).filter((q) => ["open", "live"].includes(q.status)).length,
     answered: (items || []).filter((q) => q.status === "answered").length,
