@@ -67,7 +67,7 @@ import VisaPaymentModel from './VisaPayment.js'
 import VisaSettingModel from './VisaSetting.js'
 import VisaStatusEventModel from './VisaStatusEvent.js'
 import WebinarRegistrationModel from "./WebinarRegistration.js";
-
+import SessionPollGuestResponseModel from "./SessionPollGuestResponse.js"
 
 
 
@@ -140,6 +140,7 @@ const VisaNote = VisaNoteModel(sequelize, DataTypes);
 const VisaPayment = VisaPaymentModel(sequelize, DataTypes);
 const VisaSetting = VisaSettingModel(sequelize, DataTypes);
 const VisaStatusEvent = VisaStatusEventModel(sequelize, DataTypes);
+const SessionPollGuestResponse = SessionPollGuestResponseModel(sequelize, DataTypes)
 
 
 
@@ -218,7 +219,7 @@ export const models = {
   VisaPayment,
   VisaSetting,
   VisaStatusEvent,
-
+SessionPollGuestResponse,
 };
 
 // Run associations

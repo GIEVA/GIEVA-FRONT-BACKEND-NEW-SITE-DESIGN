@@ -23,14 +23,31 @@ import {
 
 import { listGuestQuestions, askGuestQuestion, voteGuestQuestion } from "../controllers/webinarGuestQa.controller.js";
 
+import {
+  listGuestWebinarPolls,
+  respondToGuestWebinarPoll,
+} from "../controllers/sessionPoll.controller.js";
+
 
 
 const router = express.Router();
+
+
+
+// Public guest poll routes — must be before router.use(authenticate)
+
+// Public routes, protected by the guest's webinar access key
+router.post("/:id/guest-polls", listGuestWebinarPolls);
+router.post("/polls/:pollId/guest-respond", respondToGuestWebinarPoll);
 
 router.get("/info/:sessionId", getPublicWebinarInfo); // no login: the room needs it to pick its layout
 // Public guest routes — no GIEVA login required.
 router.post("/:id/guest-register", registerWebinarGuest);
 router.post("/:id/guest-status", getWebinarGuestStatus);
+
+router.use(authenticate);
+
+
 
 
 router.post("/:id/guest-questions/list", listGuestQuestions);

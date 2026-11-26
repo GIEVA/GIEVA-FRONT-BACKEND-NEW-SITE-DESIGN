@@ -1633,8 +1633,16 @@ useEffect(() => {
       if (topic === "webinar") return;
       if (topic === "qa") { if (!qaOpenRef.current) setQaUnread((n) => n + 1); return; }
       // A poll was launched: open the polls drawer for logged-in attendees.
+      // if (topic === "poll") {
+      //   if (data.type === "launched" && !isHost && !guestId) setPollsOpen(true);
+      //   return;
+      // }
+
       if (topic === "poll") {
-        if (data.type === "launched" && !isHost && !guestId) setPollsOpen(true);
+        if (data.type === "launched" && !isHost) {
+          setPollsOpen(true);
+        }
+
         return;
       }
 
@@ -1918,7 +1926,18 @@ useEffect(() => {
             <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
               <IconButton onClick={() => setPollsOpen(false)} sx={{ color: MUTED_D }}><Close /></IconButton>
             </Box>
-            <PollPanel sessionId={sessionId} room={room} isHost={isHost} />
+            <PollPanel
+                sessionId={sessionId}
+                room={room}
+                isHost={isHost}
+                isWebinarGuest={isWebinarGuest}
+                guestAccessKey={
+                  isWebinarGuest
+                    ? sessionStorage.getItem(`webinarAccessKey:${sessionId}`)
+                    : null
+                }
+              />
+            {/* <PollPanel sessionId={sessionId} room={room} isHost={isHost} /> */}
           </ThemeProvider>
         </Drawer>
       )}

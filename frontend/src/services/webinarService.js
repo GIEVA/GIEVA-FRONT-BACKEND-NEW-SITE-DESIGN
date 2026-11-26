@@ -88,3 +88,22 @@ export const voteGuestWebinarQuestion = (questionId, accessKey) =>
 
 export const promoteGuest = (sessionId, guestId) => api.post(`${base}/sessions/${sessionId}/promote-guest/${guestId}`).then(d);
 export const demoteGuest = (sessionId, guestId) => api.post(`${base}/sessions/${sessionId}/demote-guest/${guestId}`).then(d);
+
+
+
+/* Guest webinar polls — public routes, validated by guest access key */
+
+// Fetch active/closed polls available to an admitted guest
+export const listGuestWebinarPolls = (sessionId, accessKey) =>
+  api
+    .post(`${base}/${sessionId}/guest-polls`, { accessKey })
+    .then(d);
+
+// Submit a guest's answer to a live poll
+export const respondToGuestWebinarPoll = (pollId, accessKey, answers) =>
+  api
+    .post(`${base}/polls/${pollId}/guest-respond`, {
+      accessKey,
+      answers,
+    })
+    .then(d);

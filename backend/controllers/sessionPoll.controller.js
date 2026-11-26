@@ -9,8 +9,11 @@ import models from "../models/index.js";
 import sendEmail from "../utils/sendMail.js";
 import { broadcast } from "../service/liveRoomSignals.js";
 import { loadSession, canManageSession, isAttendee } from "../service/sessionAccess.js";
+import crypto from "crypto";
 
-const { SessionPoll, SessionPollResponse, SessionAttendance, User, Notification, ActivityLog } = models;
+
+const { SessionPoll, SessionPollGuestResponse, SessionPollResponse, 
+  SessionAttendance, WebinarRegistration, User, Notification, ActivityLog } = models;
 
 const QUESTION_TYPES = ["single", "multiple", "rating", "text"];
 const MAX_QUESTIONS = { poll: 5, survey: 20 };
@@ -108,8 +111,29 @@ const aggregate = (poll, responses) =>
   });
 
 const loadResults = async (poll) => {
-  const responses = await SessionPollResponse.findAll({ where: { pollId: poll.id } });
-  return { responseCount: responses.length, results: aggregate(poll, responses), responses };
+  const userResponses = await SessionPollResponse.findAll({
+    where: { pollId: poll.id },
+  });
+
+  const guestResponses = await SessionPollGuestResponse.findAll({
+    where: { pollId: poll.id },
+  });
+
+  const allResponses = [
+    ...userResponses,
+    ...guestResponses,
+  ];
+
+  return {
+    responseCount: allResponses.length,
+    results: aggregate(poll, allResponses),
+
+    // Keep this as authenticated responses because the existing
+    // controller uses userId to build the named respondent list.
+    responses: userResponses,
+
+    guestResponseCount: guestResponses.length,
+  };
 };
 
 const serialize = (poll, extra = {}, { manager = false } = {}) => ({
@@ -126,6 +150,33 @@ const serialize = (poll, extra = {}, { manager = false } = {}) => ({
   closedAt: poll.closedAt,
   ...extra,
 });
+
+
+const hashGuestAccessKey = (key) =>
+  crypto.createHash("sha256").update(String(key)).digest("hex");
+
+const getAdmittedWebinarGuest = async (sessionId, accessKey) => {
+  if (!accessKey) return null;
+
+  const session = await loadSession(sessionId);
+
+  if (!session || !session.isWebinar) return null;
+
+  const accessKeyHash = hashGuestAccessKey(accessKey);
+
+  const registration = await WebinarRegistration.findOne({
+    where: {
+      classSessionId: session.id,
+      accessKeyHash,
+      status: "admitted",
+    },
+  });
+
+  if (!registration) return null;
+
+  return { session, registration };
+};
+
 
 // ─────────────────────────────────────────────────────────────
 // LAUNCH (shared by the endpoint, "launch now" on create, and auto-send on session end)
@@ -378,7 +429,15 @@ export const respondToPoll = async (req, res) => {
     }
 
     if (poll.kind === "poll") {
-      const count = await SessionPollResponse.count({ where: { pollId: poll.id } });
+      const userCount = await SessionPollResponse.count({
+          where: { pollId: poll.id },
+        });
+
+        const guestCount = await SessionPollGuestResponse.count({
+          where: { pollId: poll.id },
+        });
+
+        const count = userCount + guestCount;
       await broadcast(session.roomName, "poll", { type: "response", pollId: poll.id, count });
     }
 
@@ -483,5 +542,171 @@ export const deletePoll = async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Failed to delete" });
+  }
+};
+
+
+
+// Guest webinar polls.
+// POST /api/webinars/:id/guest-polls
+export const listGuestWebinarPolls = async (req, res) => {
+  try {
+    const { accessKey } = req.body;
+
+    const guest = await getAdmittedWebinarGuest(
+      req.params.id,
+      accessKey
+    );
+
+    if (!guest) {
+      return res.status(403).json({
+        message: "Invalid or unapproved webinar guest",
+      });
+    }
+
+    const polls = await SessionPoll.findAll({
+      where: {
+        classSessionId: guest.session.id,
+        kind: "poll",
+        status: ["live", "closed"],
+      },
+      order: [["createdAt", "DESC"]],
+    });
+
+    const pollIds = polls.map((poll) => poll.id);
+
+    const guestResponses = pollIds.length
+      ? await SessionPollGuestResponse.findAll({
+          where: {
+            pollId: pollIds,
+            webinarRegistrationId: guest.registration.id,
+          },
+        })
+      : [];
+
+    const responseByPoll = new Map(
+      guestResponses.map((response) => [
+        response.pollId,
+        response,
+      ])
+    );
+
+    const output = [];
+
+    for (const poll of polls) {
+      const response = responseByPoll.get(poll.id);
+
+      const item = serialize(poll, {
+        hasResponded: !!response,
+      });
+
+      // Show results to guests only when the poll is closed
+      // and the host enabled participant results.
+      if (
+        poll.status === "closed" &&
+        poll.showResultsToParticipants
+      ) {
+        const userResponses = await SessionPollResponse.findAll({
+          where: { pollId: poll.id },
+        });
+
+        const guestPollResponses =
+          await SessionPollGuestResponse.findAll({
+            where: { pollId: poll.id },
+          });
+
+        const allResponses = [
+          ...userResponses,
+          ...guestPollResponses,
+        ];
+
+        item.responseCount = allResponses.length;
+        item.results = aggregate(poll, allResponses);
+      }
+
+      output.push(item);
+    }
+
+    return res.json({ polls: output });
+  } catch (err) {
+    console.error("[guest polls] list failed:", err);
+    return res.status(500).json({
+      message: "Failed to load webinar polls",
+    });
+  }
+};
+
+
+// POST /api/webinars/polls/:pollId/guest-respond
+export const respondToGuestWebinarPoll = async (req, res) => {
+  try {
+    const { accessKey, answers } = req.body;
+
+    const poll = await SessionPoll.findByPk(req.params.pollId);
+
+    if (!poll || poll.kind !== "poll" || poll.status !== "live") {
+      return res.status(400).json({
+        message: "This poll is no longer open",
+      });
+    }
+
+    const guest = await getAdmittedWebinarGuest(
+      poll.classSessionId,
+      accessKey
+    );
+
+    if (!guest) {
+      return res.status(403).json({
+        message: "Invalid or unapproved webinar guest",
+      });
+    }
+
+    const validated = validateAnswers(poll.questions, answers);
+
+    if (validated.error) {
+      return res.status(400).json({
+        message: validated.error,
+      });
+    }
+
+    try {
+      await SessionPollGuestResponse.create({
+        pollId: poll.id,
+        webinarRegistrationId: guest.registration.id,
+        answers: validated.answers,
+      });
+    } catch (err) {
+      if (err.name === "SequelizeUniqueConstraintError") {
+        return res.status(409).json({
+          message: "You have already responded to this poll",
+        });
+      }
+
+      throw err;
+    }
+
+    const userCount = await SessionPollResponse.count({
+      where: { pollId: poll.id },
+    });
+
+    const guestCount = await SessionPollGuestResponse.count({
+      where: { pollId: poll.id },
+    });
+
+    await broadcast(guest.session.roomName, "poll", {
+      type: "response",
+      pollId: poll.id,
+      count: userCount + guestCount,
+    });
+
+    return res.status(201).json({
+      message: "Response recorded",
+    });
+  } catch (err) {
+    console.error("[guest polls] response failed:", err);
+
+    return res.status(500).json({
+      message: "Failed to submit poll response",
+    });
   }
 };

@@ -21,6 +21,7 @@ import { RoomEvent } from "livekit-client";
 import {
   listPolls, createPoll, launchPoll, closePoll, respondToPoll, deletePoll, exportPollCSV,
 } from "../../services/sessionToolsService";
+import {listGuestWebinarPolls, respondToGuestWebinarPoll} from "../../services/webinarService";
 import { PollForm, PollResults } from "./PollForm";
 import PollBuilderDialog from "./PollBuilderDialog";
 
@@ -41,7 +42,8 @@ const StatusChip = ({ status }) => (
   />
 );
 
-export default function PollPanel({ sessionId, room, isHost = false }) {
+export default function PollPanel({ sessionId, room, isHost = false, isWebinarGuest = false,
+  guestAccessKey = null, }) {
   const [polls, setPolls] = useState([]);
   const [loading, setLoading] = useState(true);
   const [builderOpen, setBuilderOpen] = useState(false);
@@ -50,18 +52,43 @@ export default function PollPanel({ sessionId, room, isHost = false }) {
   const [toast, setToast] = useState(null);
   const reloadTimer = useRef(null);
 
-  const load = useCallback(async () => {
-    try {
-      const res = await listPolls(sessionId);
-      setPolls(res.polls || []);
-    } catch (err) {
-      console.error("[PollPanel] load failed", err);
-    } finally {
-      setLoading(false);
-    }
-  }, [sessionId]);
+  // const load = useCallback(async () => {
+  //   try {
+  //     const res = await listPolls(sessionId);
+  //     setPolls(res.polls || []);
+  //   } catch (err) {
+  //     console.error("[PollPanel] load failed", err);
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // }, [sessionId]);
 
   // Initial load + slow fallback refresh
+  
+
+  const load = useCallback(async () => {
+  try {
+    let res;
+
+    if (isWebinarGuest) {
+      if (!guestAccessKey) {
+        setPolls([]);
+        return;
+      }
+
+      res = await listGuestWebinarPolls(sessionId, guestAccessKey);
+    } else {
+      res = await listPolls(sessionId);
+    }
+
+    setPolls(res.polls || []);
+  } catch (err) {
+    console.error("[PollPanel] load failed", err);
+  } finally {
+    setLoading(false);
+  }
+}, [sessionId, isWebinarGuest, guestAccessKey]);
+
   useEffect(() => {
     load();
     const t = setInterval(load, 20000);
@@ -263,7 +290,20 @@ export default function PollPanel({ sessionId, room, isHost = false }) {
               <PollForm
                 poll={p}
                 submitting={busyId === p.id}
-                onSubmit={(answers) => run(p.id, () => respondToPoll(p.id, answers), "Response sent")}
+                onSubmit={(answers) =>
+                  run(
+                    p.id,
+                    () =>
+                      isWebinarGuest
+                        ? respondToGuestWebinarPoll(
+                              p.id,
+                              guestAccessKey,
+                              answers
+                          )
+                        : respondToPoll(p.id, answers),
+                    "Response sent"
+                  )
+                }
               />
             )}
           </Paper>
