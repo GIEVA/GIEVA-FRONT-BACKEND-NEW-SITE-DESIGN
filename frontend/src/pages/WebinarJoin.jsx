@@ -329,7 +329,7 @@ export default function WebinarJoin() {
       const result = await registerWebinarGuest(id, {
         fullName,
         email,
-        age: age.trim() === "" ? null : Number(age),
+        age,
         consent: guestForm.consent,
       });
 
