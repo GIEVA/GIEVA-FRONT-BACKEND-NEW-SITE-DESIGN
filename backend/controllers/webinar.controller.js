@@ -298,14 +298,18 @@ export const voteQuestion = async (req, res) => {
     const q = await SessionQuestion.findByPk(req.params.questionId);
     if (!q) return res.status(404).json({ message: "Question not found" });
     const session = await loadSession(q.classSessionId);
+    if (q.status === "dismissed" && !canManageSession(req.user, session)) {
+      return res.status(404).json({ message: "Question not found" });
+    }
     const voters = new Set(q.voters || []);
     if (voters.has(req.user.id)) voters.delete(req.user.id); else voters.add(req.user.id);
     await q.update({ voters: [...voters] });
     broadcast(session.roomName, "qa", { type: "changed" });
     res.json({ votes: voters.size, voted: voters.has(req.user.id) });
   } catch (err) {
-    res.status(500).json({ message: "Could not vote" });
-  }
+  console.error("[webinar] vote", err);
+  res.status(500).json({ message: "Could not vote" });
+}
 };
 
 // Host / alt host / co-host: answer, mark live, dismiss, reopen

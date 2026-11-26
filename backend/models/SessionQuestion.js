@@ -5,7 +5,8 @@ export default (sequelize, DataTypes) => {
     {
       id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
       classSessionId: { type: DataTypes.INTEGER, allowNull: false },
-      userId: { type: DataTypes.INTEGER, allowNull: false },
+      userId: { type: DataTypes.INTEGER, allowNull: true },         
+      registrationId: { type: DataTypes.INTEGER, allowNull: true }, 
       askerName: { type: DataTypes.STRING(150), allowNull: true },
       text: { type: DataTypes.STRING(600), allowNull: false },
       isAnonymous: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
@@ -20,7 +21,7 @@ export default (sequelize, DataTypes) => {
       answeredBy: { type: DataTypes.INTEGER, allowNull: true },
       voters: { type: DataTypes.JSON, allowNull: false }, // user ids who upvoted (set in beforeValidate)
     },
-    { tableName: "session_questions", indexes: [{ fields: ["classSessionId"] }] }
+    { tableName: "session_questions", indexes: [{ fields: ["classSessionId"] }, { fields: ["registrationId"] }] }
   );
 
   SessionQuestion.beforeValidate((q) => {

@@ -87,6 +87,8 @@ export const voteGuestQuestion = async (req, res) => {
   try {
     const q = await SessionQuestion.findByPk(req.params.questionId);
     if (!q) return res.status(404).json({ message: "Question not found" });
+    if (q.status === "dismissed") return res.status(404).json({ message: "Question not found" });
+    
     req.params.id = q.classSessionId; // authGuest checks the key against THIS question's webinar
     const ctx = await authGuest(req, res);
     if (!ctx) return;
