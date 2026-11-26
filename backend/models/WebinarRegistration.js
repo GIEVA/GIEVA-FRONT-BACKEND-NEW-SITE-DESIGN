@@ -25,7 +25,7 @@ export default (sequelize) => {
       },
       age: {
         type: DataTypes.INTEGER,
-        allowNull: false,
+        allowNull: true,
         validate: { min: 1, max: 120 },
       },
       accessKeyHash: {

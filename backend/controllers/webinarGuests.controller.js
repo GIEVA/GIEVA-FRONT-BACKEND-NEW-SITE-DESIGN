@@ -46,10 +46,14 @@ export const registerWebinarGuest = async (req, res) => {
     const fullName = String(req.body.fullName || "").trim();
     const email = String(req.body.email || "").trim().toLowerCase();
         const rawAge = req.body.age;
+    // const age =
+    //   rawAge === undefined || rawAge === null || String(rawAge).trim() === ""
+    //     ? null
+    //     : Number(rawAge);
     const age =
-      rawAge === undefined || rawAge === null || String(rawAge).trim() === ""
+      req.body.age === "" || req.body.age == null
         ? null
-        : Number(rawAge);
+        : Number(req.body.age);
     const consent = req.body.consent === true;
 
     if (fullName.length < 2 || fullName.length > 150) {
