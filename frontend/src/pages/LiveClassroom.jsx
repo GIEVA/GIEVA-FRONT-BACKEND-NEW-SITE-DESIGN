@@ -1447,6 +1447,9 @@ const RoomInner = ({
   const totalParticipants = (localParticipant ? 1 : 0) + participants.length;
   const isHost = role === "host";
 
+  // Logged-in users and webinar guests can use polls. Public-meeting guests can't.
+  const canUsePolls = !guestId || isWebinarGuest;
+
   // Webinar: what I may publish comes from LiveKit itself, so promote/demote updates the UI at once.
   useEffect(() => {
     if (!room || !webinar?.active) return undefined;
@@ -1638,11 +1641,8 @@ useEffect(() => {
       //   return;
       // }
 
-      if (topic === "poll") {
-        if (data.type === "launched" && !isHost) {
-          setPollsOpen(true);
-        }
-
+     if (topic === "poll") {
+        if (data.type === "launched" && !isHost && canUsePolls) setPollsOpen(true);
         return;
       }
 
@@ -1732,7 +1732,7 @@ useEffect(() => {
 
     room.on("dataReceived", handleData);
     return () => { room.off("dataReceived", handleData); };
-  }, [room, role, phase, sessionId, navigate, upgrading, onRequestTokenSwap, isHost, broadcast, flushStrokes, pushFloater, guestId]);
+  }, [room, role, phase, sessionId, navigate, upgrading, onRequestTokenSwap, isHost, broadcast, flushStrokes, pushFloater, guestId, canUsePolls]);
 
   const handleAdmit = async (id) => {
     try {
@@ -1814,9 +1814,9 @@ useEffect(() => {
             isHost={isHost}
             guest={!!guestId}
           />
-          {!guestId && (
+          {canUsePolls && (
             <Button
-              size="small" variant="outlined" startIcon={<Poll />} onClick={() => setPollsOpen(true)}
+               size="small" variant="outlined" startIcon={<Poll />} onClick={() => setPollsOpen(true)}
               sx={{ textTransform: "none", fontWeight: 700, borderRadius: 2, ml: 1,
                     borderColor: "rgba(255,255,255,0.2)", color: TEXT }}
             >
@@ -1919,7 +1919,8 @@ useEffect(() => {
         currentUser={{ ...currentUser, identity: localParticipant?.identity }}
       />
 
-      {!guestId && (
+      
+      {canUsePolls && (
         <Drawer anchor="right" open={pollsOpen} onClose={() => setPollsOpen(false)} keepMounted
           PaperProps={{ sx: { width: { xs: "100%", sm: 380 }, bgcolor: DARK2, p: 2 } }}>
           <ThemeProvider theme={darkTheme}>

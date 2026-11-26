@@ -72,10 +72,10 @@ export default function PollPanel({ sessionId, room, isHost = false, isWebinarGu
 
     if (isWebinarGuest) {
       if (!guestAccessKey) {
+        console.warn("[PollPanel] webinar guest has no access key");
         setPolls([]);
         return;
       }
-
       res = await listGuestWebinarPolls(sessionId, guestAccessKey);
     } else {
       res = await listPolls(sessionId);
@@ -83,10 +83,13 @@ export default function PollPanel({ sessionId, room, isHost = false, isWebinarGu
 
     setPolls(res.polls || []);
   } catch (err) {
-    console.error("[PollPanel] load failed", err);
-  } finally {
-    setLoading(false);
+  console.error("[PollPanel] load failed", err);
+  if (err?.response?.status === 403) {
+    setToast({ msg: err.response.data?.message || "Can't load polls", severity: "error" });
   }
+} finally {
+  setLoading(false);
+}
 }, [sessionId, isWebinarGuest, guestAccessKey]);
 
   useEffect(() => {

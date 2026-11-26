@@ -248,6 +248,11 @@ export const sendPostSessionSurvey = async (session) => {
   }
 };
 
+const canParticipate = async (user, session) =>
+  canManageSession(user, session) ||
+  session.isWebinar ||
+  (await isAttendee(user.id, session.id));
+
 // ─────────────────────────────────────────────────────────────
 // HANDLERS
 // ─────────────────────────────────────────────────────────────
@@ -300,7 +305,7 @@ export const listPolls = async (req, res) => {
     if (!session) return res.status(404).json({ message: "Session not found" });
 
     const manager = canManageSession(req.user, session);
-    if (!manager && !(await isAttendee(req.user.id, session.id))) {
+    if (!(await canParticipate(req.user, session))) {
       return res.status(403).json({ message: "You are not part of this session" });
     }
 
@@ -343,7 +348,7 @@ export const getPoll = async (req, res) => {
 
     const session = await loadSession(poll.classSessionId);
     const manager = canManageSession(req.user, session);
-    if (!manager && !(await isAttendee(req.user.id, session.id))) {
+    if (!(await canParticipate(req.user, session))) {
       return res.status(403).json({ message: "You are not part of this session" });
     }
     if (!manager && poll.status === "draft") return res.status(404).json({ message: "Not found" });
@@ -412,7 +417,7 @@ export const respondToPoll = async (req, res) => {
 
     const session = await loadSession(poll.classSessionId);
     const manager = canManageSession(req.user, session);
-    if (!manager && !(await isAttendee(req.user.id, session.id))) {
+    if (!(await canParticipate(req.user, session))) {
       return res.status(403).json({ message: "You are not part of this session" });
     }
 
@@ -460,16 +465,45 @@ export const getPollResults = async (req, res) => {
 
     let respondents = null;
     if (!poll.isAnonymous) {
+      // Logged-in respondents
       const users = await User.findAll({
         where: { id: responses.map((r) => r.userId) },
         attributes: ["id", "fullName"],
       });
       const names = new Map(users.map((u) => [u.id, u.fullName]));
-      respondents = responses.map((r) => ({
+
+      const memberRespondents = responses.map((r) => ({
         userId: r.userId,
         fullName: names.get(r.userId) || "Unknown",
         submittedAt: r.createdAt,
+        isGuest: false,
       }));
+
+      // Webinar guest respondents
+      const guestResponses = await SessionPollGuestResponse.findAll({
+        where: { pollId: poll.id },
+      });
+
+      let guestRespondents = [];
+      if (guestResponses.length) {
+        const registrations = await WebinarRegistration.findAll({
+          where: { id: guestResponses.map((g) => g.webinarRegistrationId) },
+          attributes: ["id", "fullName"],
+        });
+        const guestNames = new Map(registrations.map((r) => [r.id, r.fullName]));
+
+        guestRespondents = guestResponses.map((g) => ({
+          userId: null,
+          guestId: g.webinarRegistrationId,
+          fullName: guestNames.get(g.webinarRegistrationId) || "Unknown guest",
+          submittedAt: g.createdAt,
+          isGuest: true,
+        }));
+      }
+
+      respondents = [...memberRespondents, ...guestRespondents].sort(
+        (a, b) => new Date(a.submittedAt) - new Date(b.submittedAt)
+      );
     }
 
     res.json({ poll: serialize(poll, { responseCount, results, respondents }, { manager: true }) });
@@ -494,21 +528,59 @@ export const exportPollCSV = async (req, res) => {
     const session = await loadSession(poll.classSessionId);
     if (!canManageSession(req.user, session)) return res.status(403).json({ message: "Only the host can do this" });
 
-    const responses = await SessionPollResponse.findAll({
+    // Logged-in responses
+    const userResponses = await SessionPollResponse.findAll({
       where: { pollId: poll.id },
       include: poll.isAnonymous ? [] : [{ model: User, attributes: ["fullName", "email"] }],
       order: [["createdAt", "ASC"]],
     });
 
+    // Webinar guest responses (looked up separately so no model association is required)
+    const guestResponses = await SessionPollGuestResponse.findAll({
+      where: { pollId: poll.id },
+      order: [["createdAt", "ASC"]],
+    });
+
+    let guestById = new Map();
+    if (!poll.isAnonymous && guestResponses.length) {
+      const registrations = await WebinarRegistration.findAll({
+        where: { id: guestResponses.map((g) => g.webinarRegistrationId) },
+        attributes: ["id", "fullName", "email"],
+      });
+      guestById = new Map(registrations.map((r) => [r.id, r]));
+    }
+
+    // Normalise both kinds into one shape, then sort by submission time
+    const entries = [
+      ...userResponses.map((r) => ({
+        type: "Member",
+        name: r.User?.fullName,
+        email: r.User?.email,
+        createdAt: r.createdAt,
+        answers: r.answers,
+      })),
+      ...guestResponses.map((g) => {
+        const reg = guestById.get(g.webinarRegistrationId);
+        return {
+          type: "Guest",
+          name: reg?.fullName,
+          email: reg?.email,
+          createdAt: g.createdAt,
+          answers: g.answers,
+        };
+      }),
+    ].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+
     const headers = [
-      ...(poll.isAnonymous ? [] : ["Name", "Email"]),
+      ...(poll.isAnonymous ? [] : ["Name", "Email", "Type"]),
       "Submitted",
       ...poll.questions.map((q) => q.text),
     ];
-    const rows = responses.map((r) => [
-      ...(poll.isAnonymous ? [] : [r.User?.fullName, r.User?.email]),
-      r.createdAt.toISOString(),
-      ...poll.questions.map((q) => r.answers?.[q.id]),
+
+    const rows = entries.map((e) => [
+      ...(poll.isAnonymous ? [] : [e.name, e.email, e.type]),
+      new Date(e.createdAt).toISOString(),
+      ...poll.questions.map((q) => e.answers?.[q.id]),
     ]);
 
     const csv = [headers, ...rows].map((row) => row.map(csvCell).join(",")).join("\n");
@@ -533,6 +605,7 @@ export const deletePoll = async (req, res) => {
 
     const wasLive = poll.status === "live";
     await SessionPollResponse.destroy({ where: { pollId: poll.id } });
+    await SessionPollGuestResponse.destroy({ where: { pollId: poll.id } }); 
     await poll.destroy();
 
     if (wasLive && poll.kind === "poll") {
