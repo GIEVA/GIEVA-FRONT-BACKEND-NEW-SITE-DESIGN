@@ -45,7 +45,7 @@ router.get("/info/:sessionId", getPublicWebinarInfo); // no login: the room need
 router.post("/:id/guest-register", registerWebinarGuest);
 router.post("/:id/guest-status", getWebinarGuestStatus);
 
-router.use(authenticate);
+// router.use(authenticate);
 
 
 
