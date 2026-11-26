@@ -118,10 +118,18 @@ export const registerWebinarGuest = async (req, res) => {
       accessKey,
       status: registration.status,
     });
-  } catch (err) {
-    console.error("[webinar guest] register", err);
-    return res.status(500).json({ message: "Could not register for this webinar" });
-  }
+ } catch (err) {
+  console.error("[webinar guest] register failed:", err);
+
+  console.error("Error name:", err.name);
+  console.error("Error message:", err.message);
+  console.error("Error details:", err.errors);
+
+  return res.status(500).json({
+    message: "Could not register for this webinar",
+    debug: err.message,
+  });
+}
 };
 
 // PUBLIC: Check waiting-room status using the private access key.

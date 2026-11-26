@@ -345,7 +345,7 @@ app.use("/api/visa", visaRoutes);
 app.use("/api/webinars", webinarRoutes);
 
     // Sync models AFTER models are loaded
-    await sequelize.sync({alter:true});
+    await sequelize.sync();
     console.log("🚀 Sequelize models synced");
 
   const httpServer = createServer(app);
