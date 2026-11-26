@@ -46,14 +46,10 @@ export const registerWebinarGuest = async (req, res) => {
     const fullName = String(req.body.fullName || "").trim();
     const email = String(req.body.email || "").trim().toLowerCase();
         const rawAge = req.body.age;
-    // const age =
-    //   rawAge === undefined || rawAge === null || String(rawAge).trim() === ""
-    //     ? null
-    //     : Number(rawAge);
     const age =
-      req.body.age === "" || req.body.age == null
+      rawAge === undefined || rawAge === null || String(rawAge).trim() === ""
         ? null
-        : Number(req.body.age);
+        : Number(rawAge);
     const consent = req.body.consent === true;
 
     if (fullName.length < 2 || fullName.length > 150) {
@@ -118,18 +114,10 @@ export const registerWebinarGuest = async (req, res) => {
       accessKey,
       status: registration.status,
     });
- } catch (err) {
-  console.error("[webinar guest] register failed:", err);
-
-  console.error("Error name:", err.name);
-  console.error("Error message:", err.message);
-  console.error("Error details:", err.errors);
-
-  return res.status(500).json({
-    message: "Could not register for this webinar",
-    debug: err.message,
-  });
-}
+  } catch (err) {
+    console.error("[webinar guest] register", err);
+    return res.status(500).json({ message: "Could not register for this webinar" });
+  }
 };
 
 // PUBLIC: Check waiting-room status using the private access key.
